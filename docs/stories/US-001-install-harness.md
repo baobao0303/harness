@@ -1,0 +1,80 @@
+# US-001 Install Harness Into A Project
+
+## Status
+
+implemented
+
+## Lane
+
+normal
+
+## Product Contract
+
+A user can apply the Harness v0 operating files and folder structure to a
+target project directory without introducing an application stack, package
+scripts, CI, tests, or product implementation.
+
+## Relevant Product Docs
+
+- `README.md`
+- `docs/HARNESS.md`
+- `docs/FEATURE_INTAKE.md`
+- `scripts/README.md`
+
+## Acceptance Criteria
+
+- The installer defaults to the current directory when no target is provided.
+- The installer accepts a specific target path through a command-line option or
+  positional argument.
+- Existing files are not overwritten by default.
+- Forced overwrites create a timestamped backup before replacing files.
+- A dry-run mode reports planned file operations without writing files.
+- The installer copies only Harness v0 operating files and does not scaffold
+  application code, package scripts, CI, or validation commands.
+- The installer script and this installer story are not copied into target
+  projects.
+
+## Design Notes
+
+- Commands: `scripts/install-harness.sh [--directory path] [--yes] [--force] [--dry-run]`
+- Remote install: `curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --yes`
+- Queries: none.
+- API: none.
+- Tables: none.
+- Domain rules: preserve Harness v0 as a generic, spec-intake-first operating
+  framework.
+- UI surfaces: terminal prompts and summary output only.
+
+## Validation
+
+| Layer | Expected proof |
+| --- | --- |
+| Unit | Shell syntax check for `scripts/install-harness.sh`. |
+| Integration | Dry-run into a temporary target reports expected file creation. |
+| E2E | Install into a temporary target creates the harness file structure. |
+| Platform | POSIX shell execution on the local macOS environment. |
+| Release | Not applicable until packaging exists. |
+
+## Harness Delta
+
+Adds the first real harness automation script while keeping installer internals
+out of target projects and preserving the Harness v0 rule that application
+implementation surfaces are not scaffolded.
+
+## Evidence
+
+- `bash -n scripts/install-harness.sh`
+- `scripts/install-harness.sh --directory "$DRY_TARGET" --yes --dry-run`
+- `scripts/install-harness.sh --directory "$TARGET" --yes`
+- `scripts/install-harness.sh --directory "$TARGET" --yes` after editing
+  `README.md` in the target
+- `scripts/install-harness.sh --directory "$TARGET" --yes --force`
+- `scripts/install-harness.sh --yes --dry-run`
+- `HARNESS_SOURCE_BASE_URL="file:///Users/themrb/Documents/personal/harness-experimental" bash -s -- --directory "$REMOTE_TARGET" --yes < scripts/install-harness.sh`
+- `curl -fsSL "file:///Users/themrb/Documents/personal/harness-experimental/scripts/install-harness.sh" | HARNESS_SOURCE_BASE_URL="file:///Users/themrb/Documents/personal/harness-experimental" bash -s -- --directory "$TARGET" --yes`
+
+Validated behaviors: dry-run writes no files, real install creates the harness
+structure, default reinstall skips existing files, forced reinstall overwrites
+after creating backups, self-targeted dry-run treats source files as skips,
+remote-source mode works when the script is piped into Bash, and target projects
+do not receive `scripts/install-harness.sh` or this installer story.

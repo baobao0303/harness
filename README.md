@@ -60,3 +60,22 @@ project/
 Implementation prompts do not go straight to code. They first pass through
 feature intake, become story-sized work when needed, and then carry both
 product validation and harness maintenance expectations.
+
+## Install Harness Into A Project
+
+From a target project directory, run:
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --yes
+```
+
+Or install into a specific path:
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --directory /path/to/project --yes
+```
+
+Existing files are skipped by default. Use `--dry-run` to preview changes, or
+`--force` to overwrite existing files after timestamped backups are created.
+The installer itself and this repository's installer story are not copied into
+the target project.

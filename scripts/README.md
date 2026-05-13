@@ -1,10 +1,22 @@
 # Scripts
 
-No executable scripts exist yet.
+This directory is reserved for harness automation.
 
-This directory is reserved for future harness automation. Do not add fake
-validation commands. Add scripts only when a story creates a real implementation
-surface that can be checked.
+## Installer
+
+The upstream installer applies the Harness v0 operating files and folder
+structure to a target project directory. It defaults to the current directory,
+accepts a target path, skips existing files by default, and can overwrite with
+timestamped backups when `--force` is provided.
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --yes
+```
+
+The installer must stay limited to harness files. Do not use it to scaffold
+application source folders, package scripts, CI, tests, platform shells, or fake
+validation commands. The installer script is not part of the installed project
+payload.
 
 ## Future Command Contract
 
