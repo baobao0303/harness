@@ -6,11 +6,18 @@ This directory is reserved for harness automation.
 
 The upstream installer applies the Harness v0 operating files and folder
 structure to a target project directory. It defaults to the current directory,
-accepts a target path, skips existing files by default, and can overwrite with
-timestamped backups when `--force` is provided.
+accepts a target path, and asks interactive users whether to `1. Merge`,
+`2. Override`, or `3. Stop` when the target already contains `AGENTS.md`,
+`docs/`, or `scripts/`.
+Non-interactive installs stop on those protected paths unless `--merge` or
+`--override` is provided.
 
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --yes
+```
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --yes
 ```
 
 The installer must stay limited to harness files. Do not use it to scaffold
