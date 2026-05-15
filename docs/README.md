@@ -17,6 +17,8 @@ future user-provided spec.
 - `product/`: current product truth, empty until a spec is derived.
 - `stories/`: feature packets and backlog.
 - `decisions/`: durable decisions and tradeoffs.
+- `demo/`: concrete walkthroughs that show how the harness transforms input
+  into agent-ready work.
 - `templates/`: reusable spec-intake, story, plan, decision, and validation
   formats.
 
