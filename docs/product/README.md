@@ -16,6 +16,7 @@ When behavior changes:
 
 1. Update the affected product doc.
 2. Update or create the story packet.
-3. Update `docs/TEST_MATRIX.md`.
+3. Update durable proof status with `scripts/harness story add` or
+   `scripts/harness story update`.
 4. Record a decision if the change affects architecture, scope, risk, or a
    previously settled product rule.

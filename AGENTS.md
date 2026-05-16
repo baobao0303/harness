@@ -18,7 +18,7 @@ Read in this order:
 5. `docs/product/` for current product contracts.
 6. `docs/ARCHITECTURE.md` before proposing implementation shape.
 7. `docs/stories/` for story packets and backlog.
-8. `docs/TEST_MATRIX.md` for proof status.
+8. `scripts/harness query matrix` for proof status.
 9. `docs/decisions/` for why important choices were made.
 
 ## Durable Layer

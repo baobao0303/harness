@@ -94,10 +94,15 @@ Validation:
 - E2E: create task from the visible task surface
 ```
 
-## Test Matrix
+## Proof Matrix
 
-The story then appears in `docs/TEST_MATRIX.md` so behavior and proof stay
-linked.
+The story then appears in the durable proof matrix so behavior and proof stay
+linked:
+
+```bash
+scripts/harness story add --id US-001 --title "Create a task" --lane normal --contract docs/product/tasks.md
+scripts/harness query matrix
+```
 
 Example row:
 
@@ -142,4 +147,4 @@ Add a reusable example-spec walkthrough or starter fixture.
 ```
 
 Small improvements can be made directly. Larger process changes should be
-proposed in `docs/HARNESS_BACKLOG.md`.
+recorded with `scripts/harness backlog add`.

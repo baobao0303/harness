@@ -108,8 +108,8 @@ docs/product/*
 docs/stories/*
   story-sized work packets and historical evidence
 
-docs/TEST_MATRIX.md
-  behavior-to-proof control panel
+scripts/harness query matrix
+  behavior-to-proof control panel backed by the durable layer
 
 docs/decisions/*
   why the contract changed
@@ -127,7 +127,7 @@ validation expectations during the first buildout.
 
 After the specification has been decomposed, do not keep extending it as the
 living product plan. Ongoing work should update the smaller product docs,
-stories, test matrix, and decision records.
+stories, durable proof records, and decision records.
 
 Ongoing work should enter the harness as one of these input types:
 
@@ -149,7 +149,7 @@ human intent or supplied spec
   -> create story packet or initiative notes when needed
   -> define validation proof
   -> implement or document the blocker
-  -> update product docs, stories, test matrix, and decisions
+  -> update product docs, stories, durable proof records, and decisions
   -> capture harness friction
 ```
 
@@ -157,7 +157,7 @@ Large product areas should use scoped initiative notes instead of a second
 monolithic specification. An initiative should explain the goal, affected
 product docs, candidate stories, validation shape, open decisions, and exit
 criteria. If initiative work becomes a repeated pattern, add a template or
-proposal to `docs/HARNESS_BACKLOG.md`.
+record the proposal with `scripts/harness backlog add`.
 
 ## Growth Rule
 
