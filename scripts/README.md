@@ -1,6 +1,29 @@
 # Scripts
 
-This directory is reserved for harness automation.
+This directory contains harness automation tools.
+
+## Harness CLI
+
+The `harness` script is the primary interface for the durable layer. It wraps
+SQLite so agents and humans can record and query operational data.
+
+```bash
+scripts/harness init          # Create the database
+scripts/harness intake ...    # Record a feature intake classification
+scripts/harness story ...     # Add or update a story (test matrix row)
+scripts/harness decision ...  # Add a decision or run its verification
+scripts/harness backlog ...   # Add or close a backlog item
+scripts/harness trace ...     # Record an agent execution trace
+scripts/harness query ...     # Query harness data
+scripts/harness migrate       # Apply pending schema migrations
+```
+
+Run `scripts/harness help` or `scripts/harness query help` for full usage.
+
+The schema lives in `scripts/schema/` and is version-controlled. The database
+file (`harness.db`) is `.gitignore`d.
+
+Requires: `sqlite3`.
 
 ## Installer
 
@@ -24,6 +47,12 @@ The installer must stay limited to harness files. Do not use it to scaffold
 application source folders, package scripts, CI, tests, platform shells, or fake
 validation commands. The installer script is not part of the installed project
 payload.
+
+## Schema Migrations
+
+Migration files live under `scripts/schema/` and are named `NNN-description.sql`
+where `NNN` is a zero-padded version number. Run `scripts/harness migrate` to
+apply pending migrations.
 
 ## Future Command Contract
 

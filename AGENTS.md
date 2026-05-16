@@ -21,6 +21,36 @@ Read in this order:
 8. `docs/TEST_MATRIX.md` for proof status.
 9. `docs/decisions/` for why important choices were made.
 
+## Durable Layer
+
+Operational data lives in a SQLite database (`harness.db`) managed by
+`scripts/harness`. Agents should use the CLI to record and query structured
+data instead of editing markdown tables by hand.
+
+Initialize the database if it does not exist:
+
+```bash
+scripts/harness init
+```
+
+Common commands:
+
+```bash
+scripts/harness intake  --type <type> --summary <text> --lane <lane>
+scripts/harness story   add --id <id> --title <text> --lane <lane>
+scripts/harness story   update --id <id> --status <status>
+scripts/harness trace   --summary <text> --outcome <outcome>
+scripts/harness query   matrix
+scripts/harness query   backlog
+scripts/harness query   stats
+```
+
+The database is `.gitignore`d because each project instance generates its own
+operational data. The schema under `scripts/schema/` is version-controlled.
+
+Policy docs (`HARNESS.md`, `FEATURE_INTAKE.md`, `ARCHITECTURE.md`) remain as
+human-readable references. The database stores the records agents produce.
+
 This harness does not ship with a project-specific `SPEC.md`. When the human
 provides a spec for a new project, treat that spec as input material for the
 first buildout. Derive product docs, story packets, architecture decisions, and
@@ -32,10 +62,9 @@ then become the living contract that agents should update as the system evolves.
 For every task:
 
 1. Classify the request with `docs/FEATURE_INTAKE.md`.
-2. Identify whether the input is a new spec, spec slice, change request, new
-   initiative, maintenance request, or harness improvement.
+2. Record the classification: `scripts/harness intake --type <type> --summary <text> --lane <lane>`.
 3. Locate the affected product docs and story files.
-4. Check `docs/TEST_MATRIX.md` for existing proof and gaps.
+4. Check proof status: `scripts/harness query matrix`.
 5. Work only inside the selected lane: tiny, normal, or high-risk.
 6. Before finishing, ask:
    - Did product truth change?
@@ -43,18 +72,20 @@ For every task:
    - Did architecture rules change?
    - Did we discover a repeated failure pattern?
    - Did the next agent need a clearer instruction?
-7. Update routine harness files directly, or add a proposal to
-   `docs/HARNESS_BACKLOG.md` when the change is structural.
+7. Record a trace: `scripts/harness trace --summary <text> --outcome <result>`.
+8. If harness friction was found, either fix it directly or record it:
+   `scripts/harness backlog add --title <text> --pain <text>`.
 
 ## Harness Change Policy
 
 Agents may update directly:
 
-- Story status and evidence.
-- `docs/TEST_MATRIX.md` rows.
+- Story status and evidence via `scripts/harness story update`.
+- Test matrix rows via `scripts/harness story add` and `scripts/harness story update`.
 - Links from story packets to product docs.
 - Validation notes and reports.
 - Small clarifications tied to the current task.
+- Intake records, traces, and backlog items via `scripts/harness`.
 
 Agents should ask for human confirmation before:
 
@@ -71,5 +102,6 @@ A task is done only when:
 - The requested change is completed or the blocker is documented.
 - Relevant docs, stories, and test matrix entries remain current.
 - Validation commands were run when they exist.
-- Missing harness capabilities were added to `docs/HARNESS_BACKLOG.md`.
+- A trace has been recorded: `scripts/harness trace --summary <text> --outcome <result>`.
+- Missing harness capabilities were recorded: `scripts/harness backlog add`.
 - The final response says what changed and what was not attempted.

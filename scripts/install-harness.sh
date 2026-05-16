@@ -380,6 +380,9 @@ docs/templates/high-risk-story/execplan.md
 docs/templates/high-risk-story/overview.md
 docs/templates/high-risk-story/validation.md
 scripts/README.md
+scripts/harness
+scripts/schema/001-init.sql
+.gitignore
 EOF
 
 log ""

@@ -66,6 +66,7 @@ Harness v0 includes:
 - Validation report template.
 - Test matrix placeholder.
 - Harness growth backlog.
+- Durable layer: SQLite database and CLI for operational records.
 
 Harness v0 deliberately excludes:
 
@@ -76,9 +77,24 @@ Harness v0 deliberately excludes:
 - Package scripts.
 - Test runner config.
 - CI workflows.
-- Database migrations or infrastructure.
 
 Those should arrive only when a selected story needs them.
+
+## Durable Layer
+
+Policy documents describe how to work. The durable layer stores what happened.
+
+Operational data — intake classifications, story status, decision outcomes,
+backlog items, and execution traces — lives in a SQLite database (`harness.db`)
+managed by `scripts/harness`. The database is local to each project instance
+and `.gitignore`d. The schema is version-controlled under `scripts/schema/`.
+
+This separation keeps policy docs stable and human-readable while giving agents
+a structured, queryable record of operational state. It also prepares the
+harness for future observability and automated evolution without adding more
+markdown files.
+
+See `AGENTS.md > Durable Layer` for CLI usage.
 
 ## Source Hierarchy
 
@@ -149,7 +165,18 @@ The harness grows from friction.
 
 When an agent is confused, repeats manual reasoning, needs a new validation
 command, discovers a missing rule, or sees a recurring failure pattern, it must
-either improve the harness directly or add a proposal to `HARNESS_BACKLOG.md`.
+either improve the harness directly or record the friction:
+
+```bash
+scripts/harness backlog add --title "<short name>" --pain "<what was hard>"
+```
+
+The `harness_friction` field on traces also captures per-task friction so
+patterns can be queried later:
+
+```bash
+scripts/harness query friction
+```
 
 ## Future Validation Ladder
 

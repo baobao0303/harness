@@ -29,8 +29,20 @@ work before implementation begins.
 A documentation, template, validation, backlog, or decision update that makes
 future agent work safer or easier.
 
+## Durable Layer
+
+The SQLite database and CLI (`scripts/harness`) that stores operational records
+(intakes, stories, decisions, backlog items, traces) as structured, queryable
+data. Policy docs describe how to work; the durable layer stores what happened.
+
 ## Product Delta
 
 A product-facing change such as code, tests, API shape, data model, or product
 documentation.
+
+## Trace
+
+A structured record of what an agent did during a task: actions taken, files
+read, files changed, decisions made, errors encountered, outcome, and any
+harness friction discovered.
 
