@@ -30,6 +30,11 @@ sql_pretty() { sqlite3 -header -column -cmd "PRAGMA foreign_keys = ON;" "$DB_PAT
 
 sql_file() { sqlite3 -batch -cmd "PRAGMA foreign_keys = ON;" "$DB_PATH" < "$1" >/dev/null; }
 
+trim() {
+  local input="$1"
+  printf '%s' "$input" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//'
+}
+
 normalize_token() {
   local input="$1"
   printf '%s' "$input" |
@@ -94,6 +99,19 @@ json_sql_value() {
   printf "'%s'" "$(sql_escape "$(json_array "$input")")"
 }
 
+proof_from_cell() {
+  local token
+  token="$(normalize_token "$1")"
+  case "$token" in
+    ""|no|no_*|none|n_a|na|planned|pending|pending_*|blocked|blocked_*|*pending*|*blocked*|*not_attempted*|*not_operator_reviewed*)
+      printf '0'
+      ;;
+    *)
+      printf '1'
+      ;;
+  esac
+}
+
 # ── init ───────────────────────────────────────────────────────────
 cmd_init() {
   if [ -f "$DB_PATH" ]; then
@@ -139,6 +157,221 @@ cmd_migrate() {
   else
     info "Applied $applied migration(s)."
   fi
+}
+
+# ── import ─────────────────────────────────────────────────────────
+cmd_import() {
+  need_db
+  local source="${1:-}"; shift 1 2>/dev/null || true
+
+  case "$source" in
+    brownfield)
+      import_brownfield "$@"
+      ;;
+    *)
+      die "import: expected 'brownfield'. Usage: harness import brownfield"
+      ;;
+  esac
+}
+
+import_brownfield() {
+  local matrix_path="$REPO_ROOT/docs/TEST_MATRIX.md"
+  local decisions_dir="$REPO_ROOT/docs/decisions"
+  local backlog_path="$REPO_ROOT/docs/HARNESS_BACKLOG.md"
+  [ -f "$matrix_path" ] || die "brownfield import: missing $matrix_path"
+  [ -d "$decisions_dir" ] || die "brownfield import: missing $decisions_dir"
+
+  local story_count=0 decision_count=0 backlog_count=0
+
+  local matrix_header_seen=0
+  local story_col=0 contract_col=0 unit_col=0 integration_col=0 e2e_col=0 platform_col=0 status_col=0 evidence_col=0
+  while IFS= read -r line; do
+    [[ "$line" == \|* ]] || continue
+    IFS='|' read -r -a fields <<< "$line"
+    [ "${#fields[@]}" -gt 2 ] || continue
+
+    if [ "$matrix_header_seen" -eq 0 ]; then
+      local idx header
+      local header_limit="${#fields[@]}"
+      if [ "$header_limit" -gt 0 ] && [ -z "$(trim "${fields[$((header_limit - 1))]:-}")" ]; then
+        header_limit=$((header_limit - 1))
+      fi
+      for ((idx = 1; idx < header_limit; idx++)); do
+        header="$(normalize_token "$(trim "${fields[$idx]:-}")")"
+        case "$header" in
+          story)       story_col=$idx ;;
+          contract)    contract_col=$idx ;;
+          unit)        unit_col=$idx ;;
+          integration) integration_col=$idx ;;
+          e2e)         e2e_col=$idx ;;
+          platform)    platform_col=$idx ;;
+          status)      status_col=$idx ;;
+          evidence)    evidence_col=$idx ;;
+        esac
+      done
+
+      if [ "$story_col" -gt 0 ] && [ "$status_col" -gt 0 ]; then
+        matrix_header_seen=1
+      fi
+      continue
+    fi
+
+    local id title unit integration e2e platform status evidence token
+    id="$(trim "${fields[$story_col]:-}")"
+    token="$(normalize_token "$id")"
+    case "$token" in
+      ""|story|tbd|todo|example|examples)
+        continue
+        ;;
+    esac
+    [[ "$id" =~ ^-+$ ]] && continue
+
+    title="$id"
+    if [ "$contract_col" -gt 0 ]; then
+      title="$(trim "${fields[$contract_col]:-}")"
+    fi
+    [ -n "$title" ] || title="$id"
+
+    unit=0
+    integration=0
+    e2e=0
+    platform=0
+    [ "$unit_col" -gt 0 ]        && unit="$(proof_from_cell "${fields[$unit_col]:-}")"
+    [ "$integration_col" -gt 0 ] && integration="$(proof_from_cell "${fields[$integration_col]:-}")"
+    [ "$e2e_col" -gt 0 ]         && e2e="$(proof_from_cell "${fields[$e2e_col]:-}")"
+    [ "$platform_col" -gt 0 ]    && platform="$(proof_from_cell "${fields[$platform_col]:-}")"
+
+    status="$(normalize_token "$(trim "${fields[$status_col]:-}")")"
+    case "$status" in
+      planned|in_progress|implemented|changed|retired) ;;
+      *) status="planned" ;;
+    esac
+
+    evidence=""
+    if [ "$evidence_col" -gt 0 ]; then
+      local evidence_limit="${#fields[@]}"
+      if [ "$evidence_limit" -gt 0 ] && [ -z "$(trim "${fields[$((evidence_limit - 1))]:-}")" ]; then
+        evidence_limit=$((evidence_limit - 1))
+      fi
+      for ((idx = evidence_col; idx < evidence_limit; idx++)); do
+        if [ -n "$evidence" ]; then
+          evidence="$evidence | ${fields[$idx]}"
+        else
+          evidence="${fields[$idx]}"
+        fi
+      done
+      evidence="$(trim "$evidence")"
+    fi
+
+    sql "INSERT INTO story (
+           id, title, risk_lane, contract_doc, status,
+           unit_proof, integration_proof, e2e_proof, platform_proof,
+           evidence, notes
+         ) VALUES (
+           $(sql_literal "$id"),
+           $(sql_literal "$title"),
+           'high_risk',
+           $(sql_or_null "$title"),
+           $(sql_literal "$status"),
+           $unit,
+           $integration,
+           $e2e,
+           $platform,
+           $(sql_or_null "$evidence"),
+           'Imported from docs/TEST_MATRIX.md by harness import brownfield.'
+         )
+         ON CONFLICT(id) DO UPDATE SET
+           title=excluded.title,
+           contract_doc=excluded.contract_doc,
+           status=excluded.status,
+           unit_proof=excluded.unit_proof,
+           integration_proof=excluded.integration_proof,
+           e2e_proof=excluded.e2e_proof,
+           platform_proof=excluded.platform_proof,
+           evidence=excluded.evidence,
+           notes=excluded.notes;"
+    story_count=$((story_count + 1))
+  done < "$matrix_path"
+
+  local decision_file
+  while IFS= read -r decision_file; do
+    local stem title status
+    stem="$(basename "$decision_file" .md)"
+    title="$(sed -n '1s/^# //p' "$decision_file")"
+    title="${title:-$stem}"
+    status="$(awk '
+      /^## Status[[:space:]]*$/ { found=1; next }
+      found && NF { print; exit }
+    ' "$decision_file")"
+    status="$(normalize_token "$status")"
+    case "$status" in
+      proposed|accepted|superseded|rejected) ;;
+      superseded_*) status="superseded" ;;
+      *) status="accepted" ;;
+    esac
+
+    sql "INSERT INTO decision (id, title, status, doc_path, notes)
+         VALUES (
+           $(sql_literal "$stem"),
+           $(sql_literal "$title"),
+           $(sql_literal "$status"),
+           $(sql_literal "docs/decisions/$(basename "$decision_file")"),
+           'Imported from docs/decisions by harness import brownfield.'
+         )
+         ON CONFLICT(id) DO UPDATE SET
+           title=excluded.title,
+           status=excluded.status,
+           doc_path=excluded.doc_path,
+           notes=excluded.notes;"
+    decision_count=$((decision_count + 1))
+  done < <(find "$decisions_dir" -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]-*.md' | sort)
+
+  if [ -f "$backlog_path" ]; then
+    local title discovered pain suggestion risk status
+    title=""
+    discovered=""
+    pain=""
+    suggestion=""
+    risk=""
+    status="proposed"
+
+    title="$(awk '/^## Items$/ { items=1; next } items && /^### Title$/ { want=1; next } want && NF { print; exit }' "$backlog_path")"
+    discovered="$(awk '/^## Items$/ { items=1; next } items && /^### Discovered While$/ { want=1; next } want && NF { print; exit }' "$backlog_path")"
+    pain="$(awk '/^## Items$/ { items=1; next } items && /^### Current Pain$/ { want=1; next } want && NF { print; exit }' "$backlog_path")"
+    suggestion="$(awk '/^## Items$/ { items=1; next } items && /^### Suggested Improvement$/ { want=1; next } want && NF { print; exit }' "$backlog_path")"
+    risk="$(awk '/^## Items$/ { items=1; next } items && /^### Risk$/ { want=1; next } want && NF { print; exit }' "$backlog_path")"
+    status="$(awk '/^## Items$/ { items=1; next } items && /^### Status$/ { want=1; next } want && NF { print; exit }' "$backlog_path")"
+    risk="$(normalize_risk "$risk")"
+    status="$(normalize_token "$status")"
+    case "$status" in
+      proposed|accepted|implemented|rejected) ;;
+      *) status="proposed" ;;
+    esac
+
+    if [ -n "$title" ] && [ "$title" != "Short name." ]; then
+      sql "INSERT INTO backlog (
+             title, discovered_while, current_pain, suggested_improvement,
+             risk, status, notes
+           )
+           SELECT
+             $(sql_literal "$title"),
+             $(sql_or_null "$discovered"),
+             $(sql_or_null "$pain"),
+             $(sql_or_null "$suggestion"),
+             $(sql_or_null "$risk"),
+             $(sql_literal "$status"),
+             'Imported from docs/HARNESS_BACKLOG.md by harness import brownfield.'
+           WHERE NOT EXISTS (
+             SELECT 1 FROM backlog WHERE title=$(sql_literal "$title")
+           );"
+      backlog_count=1
+    fi
+  fi
+
+  info "Brownfield import complete."
+  info "Stories imported or updated: $story_count"
+  info "Decisions imported or updated: $decision_count"
+  info "Backlog items discovered: $backlog_count"
 }
 
 # ── intake ─────────────────────────────────────────────────────────
@@ -526,6 +759,20 @@ Usage: harness migrate
 Apply schema migrations that have not been recorded in schema_version.
 EOF
       ;;
+    import)
+      cat <<'EOF'
+Usage: harness import brownfield
+
+Seed or refresh the durable database from existing brownfield markdown:
+  - docs/TEST_MATRIX.md -> story rows using the matrix header columns
+  - docs/decisions/*.md -> decision rows
+  - docs/HARNESS_BACKLOG.md -> backlog proposal rows
+
+Story IDs are project-specific; no prefix such as CA- or US- is assumed. The
+import is idempotent for stories and decisions and skips duplicate backlog
+titles.
+EOF
+      ;;
     intake)
       cat <<'EOF'
 Usage: harness intake --type <type> --summary <text> --lane <lane> [flags]
@@ -634,6 +881,7 @@ fi
 case "$cmd" in
   init)     cmd_init "$@" ;;
   migrate)  cmd_migrate "$@" ;;
+  import)   cmd_import "$@" ;;
   intake)   cmd_intake "$@" ;;
   story)    cmd_story "$@" ;;
   decision) cmd_decision "$@" ;;
@@ -647,6 +895,7 @@ harness — durable layer for the project harness.
 Commands:
   init                  Create the harness database
   migrate               Apply pending schema migrations
+  import  brownfield    Seed DB from existing markdown state
   intake  [flags]       Record a feature intake classification
   story   add|update    Add or update a story (test matrix row)
   decision add|verify   Add a decision or run its verification
