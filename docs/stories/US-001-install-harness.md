@@ -32,6 +32,9 @@ scripts, CI, tests, or product implementation.
 - If `AGENTS.md`, `docs/`, or `scripts/` already exists in the target, a
   non-interactive install stops before writing files unless `--merge` or
   `--override` is provided.
+- For repositories that already have Harness, `--merge` keeps existing
+  `AGENTS.md`, `docs/`, and `scripts/` paths in place and creates only missing
+  Harness files.
 - A piped `curl | bash` install can still ask interactive questions through the
   controlling terminal when `--yes` is not provided.
 - Existing non-protected files are not overwritten by default.
@@ -93,8 +96,9 @@ implementation surfaces are not scaffolded.
 Validated behaviors: dry-run writes no files, real install creates the harness
 structure, existing `README.md` is left untouched by default, non-interactive
 targets containing `AGENTS.md`, `docs/`, or `scripts/` stop with a warning
-before writing files unless `--merge` or `--override` is provided, interactive
-users can stop, merge missing files, or back up and override protected paths
-even when the script is piped into Bash, remote-source mode works when the
-script is piped into Bash, and target projects do not receive
+before writing files unless `--merge` or `--override` is provided, merge keeps
+existing protected paths in place while adding missing Harness files,
+interactive users can stop, merge missing files, or back up and override
+protected paths even when the script is piped into Bash, remote-source mode
+works when the script is piped into Bash, and target projects do not receive
 `scripts/install-harness.sh` or this installer story.

@@ -7,6 +7,34 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DB_PATH="${HARNESS_DB:-$REPO_ROOT/harness.db}"
 SCHEMA_DIR="$REPO_ROOT/scripts/schema"
+INSTALLED_RUST_CLI="$REPO_ROOT/scripts/bin/harness-cli"
+DEV_RUST_CLI="$REPO_ROOT/target/debug/harness-cli"
+RUST_CLI="${HARNESS_RUST_CLI:-}"
+
+if [ -z "$RUST_CLI" ]; then
+  if [ -x "$INSTALLED_RUST_CLI" ]; then
+    RUST_CLI="$INSTALLED_RUST_CLI"
+  else
+    RUST_CLI="$DEV_RUST_CLI"
+  fi
+fi
+
+rust_cli_supports() {
+  case "${1:-}:${2:-}" in
+    init:*|migrate:*|intake:*|story:add|story:update|decision:add|decision:verify|backlog:add|backlog:close|trace:*|query:matrix|query:backlog|query:decisions|query:intakes|query:traces|query:friction|query:stats|query:sql)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+if [ "${HARNESS_DISABLE_RUST_CLI:-0}" != "1" ] &&
+   [ -x "$RUST_CLI" ] &&
+   rust_cli_supports "${1:-}" "${2:-}"; then
+  HARNESS_REPO_ROOT="$REPO_ROOT" exec "$RUST_CLI" "$@"
+fi
 
 # ── helpers ────────────────────────────────────────────────────────
 die()  { printf 'error: %s\n' "$*" >&2; exit 1; }

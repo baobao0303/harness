@@ -10,17 +10,22 @@ Apply the Harness v0 files and folders to a target project directory.
 Options:
   -d, --directory <path>  Target directory. Defaults to the current directory.
   -y, --yes              Accept defaults and skip prompts.
-      --merge            On protected-path conflict, keep existing files and
-                         install only missing Harness files.
+      --merge            On protected-path conflict, keep existing files in
+                         place and install only missing Harness files.
       --override         On protected-path conflict, back up and replace
                          AGENTS.md, docs/, and scripts/.
       --force            Overwrite existing files after backing them up.
+      --skip-cli-download
+                         Install only harness files and skip the prebuilt Rust
+                         CLI download.
       --dry-run          Show what would change without writing files.
   -h, --help             Show this help.
 
 Safety:
   If AGENTS.md, docs/, or scripts/ already exist, interactive installs ask
-  whether to merge missing files, override after backup, or stop. Non-
+  whether to merge missing files, override after backup, or stop. Merge is the
+  safe update path for repositories that already have Harness: existing files
+  stay in place and new Harness files are appended by path. Non-
   interactive installs stop unless --merge or --override is provided. If a
   target .gitignore already exists, Harness appends its local database rules
   unless --force is used.
@@ -139,11 +144,13 @@ merge_gitignore() {
   local marker="# Harness durable layer"
   local rules="harness.db
 harness.db-wal
-harness.db-shm"
+harness.db-shm
+scripts/bin/harness-cli"
 
   if grep -Fxq "harness.db" "$target" &&
      grep -Fxq "harness.db-wal" "$target" &&
-     grep -Fxq "harness.db-shm" "$target"; then
+     grep -Fxq "harness.db-shm" "$target" &&
+     grep -Fxq "scripts/bin/harness-cli" "$target"; then
     log "skip     .gitignore (harness rules already present)"
     SKIPPED=$((SKIPPED + 1))
     return
@@ -174,6 +181,92 @@ write_source_file() {
 
   local url="$SOURCE_BASE_URL/$relative"
   curl -fsSL "$url" -o "$target" || fail "Could not download $url"
+}
+
+detect_cli_platform() {
+  local os arch
+  os="$(uname -s)"
+  arch="$(uname -m)"
+
+  case "$os:$arch" in
+    Darwin:arm64)  printf 'macos-arm64' ;;
+    Darwin:x86_64) printf 'macos-x64' ;;
+    Linux:x86_64)  printf 'linux-x64' ;;
+    Linux:aarch64|Linux:arm64) printf 'linux-arm64' ;;
+    *)
+      fail "Unsupported Harness CLI platform: $os/$arch. Re-run with --skip-cli-download to install the Bash fallback only."
+      ;;
+  esac
+}
+
+sha256_file() {
+  local file="$1"
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$file" | awk '{ print $1 }'
+  elif command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$file" | awk '{ print $1 }'
+  else
+    fail "shasum or sha256sum is required to verify the Harness CLI download"
+  fi
+}
+
+download_file() {
+  local url="$1"
+  local target="$2"
+  curl -fsSL "$url" -o "$target" || fail "Could not download $url"
+}
+
+install_harness_cli_binary() {
+  [ "$INSTALL_RUST_CLI" -eq 1 ] || return 0
+
+  local platform binary_name binary_url checksum_url target tmp_dir binary_tmp checksum_tmp expected actual
+  platform="${HARNESS_CLI_PLATFORM:-$(detect_cli_platform)}"
+  binary_name="harness-cli-$platform"
+  binary_url="$CLI_BASE_URL/$binary_name"
+  checksum_url="$binary_url.sha256"
+  target="$TARGET_DIR/scripts/bin/harness-cli"
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "download $binary_name -> scripts/bin/harness-cli"
+    log "verify   $binary_name.sha256"
+    CREATED=$((CREATED + 1))
+    return 0
+  fi
+
+  command -v curl >/dev/null 2>&1 || fail "curl is required to download the Harness CLI"
+
+  tmp_dir="$(mktemp -d)"
+  binary_tmp="$tmp_dir/$binary_name"
+  checksum_tmp="$tmp_dir/$binary_name.sha256"
+
+  download_file "$binary_url" "$binary_tmp"
+  download_file "$checksum_url" "$checksum_tmp"
+
+  expected="$(awk '{ print $1; exit }' "$checksum_tmp")"
+  [ -n "$expected" ] || fail "Checksum file is empty: $checksum_url"
+  actual="$(sha256_file "$binary_tmp")"
+  if [ "$actual" != "$expected" ]; then
+    rm -rf "$tmp_dir"
+    fail "Checksum mismatch for $binary_name: expected $expected, got $actual"
+  fi
+
+  mkdir -p "$(dirname "$target")"
+  if [ -e "$target" ]; then
+    if [ "$FORCE" -eq 1 ]; then
+      mkdir -p "$BACKUP_DIR/scripts/bin"
+      cp -p "$target" "$BACKUP_DIR/scripts/bin/harness-cli"
+    fi
+    UPDATED=$((UPDATED + 1))
+    log "updated  scripts/bin/harness-cli"
+  else
+    CREATED=$((CREATED + 1))
+    log "created  scripts/bin/harness-cli"
+  fi
+
+  cp "$binary_tmp" "$target"
+  chmod 755 "$target"
+  rm -rf "$tmp_dir"
+  log "verified scripts/bin/harness-cli ($platform)"
 }
 
 check_protected_target_paths() {
@@ -265,8 +358,15 @@ TARGET_INPUT="${HARNESS_TARGET_DIR:-$PWD}"
 YES=0
 FORCE=0
 DRY_RUN=0
+INSTALL_RUST_CLI="${HARNESS_SKIP_CLI_DOWNLOAD:-0}"
 REQUESTED_CONFLICT_ACTION=""
 POSITIONAL_TARGET=""
+
+if [ "$INSTALL_RUST_CLI" = "1" ]; then
+  INSTALL_RUST_CLI=0
+else
+  INSTALL_RUST_CLI=1
+fi
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -281,6 +381,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --force)
       FORCE=1
+      shift
+      ;;
+    --skip-cli-download)
+      INSTALL_RUST_CLI=0
       shift
       ;;
     --merge)
@@ -336,10 +440,20 @@ SOURCE_ROOT=""
 SOURCE_MODE="remote"
 SOURCE_BASE_URL="${HARNESS_SOURCE_BASE_URL:-https://raw.githubusercontent.com/hoangnb24/harness-experimental/main}"
 SOURCE_BASE_URL="${SOURCE_BASE_URL%/}"
+CLI_BASE_URL="${HARNESS_CLI_BASE_URL:-}"
+CLI_BASE_URL="${CLI_BASE_URL%/}"
 
 if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/../AGENTS.md" ] && [ -f "$SCRIPT_DIR/../docs/HARNESS.md" ]; then
   SOURCE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
   SOURCE_MODE="local"
+fi
+
+if [ -z "$CLI_BASE_URL" ]; then
+  if [ "$SOURCE_MODE" = "local" ]; then
+    CLI_BASE_URL="file://$SOURCE_ROOT/dist"
+  else
+    CLI_BASE_URL="https://github.com/hoangnb24/harness-experimental/releases/latest/download"
+  fi
 fi
 
 if [ "$YES" -eq 0 ] && can_prompt; then
@@ -384,6 +498,11 @@ else
   command -v curl >/dev/null 2>&1 || fail "curl is required for remote installation"
   log "Harness source: $SOURCE_BASE_URL"
 fi
+if [ "$INSTALL_RUST_CLI" -eq 1 ]; then
+  log "Harness CLI source: $CLI_BASE_URL"
+else
+  log "Harness CLI source: skipped"
+fi
 log "Target project: $TARGET_DIR"
 
 while IFS= read -r relative; do
@@ -402,6 +521,7 @@ docs/decisions/0001-harness-first-development.md
 docs/decisions/0002-post-spec-product-lifecycle.md
 docs/decisions/0003-generic-spec-intake-harness.md
 docs/decisions/0004-sqlite-durable-layer.md
+docs/decisions/0005-prebuilt-rust-harness-cli.md
 docs/decisions/README.md
 docs/product/README.md
 docs/stories/README.md
@@ -419,6 +539,8 @@ scripts/harness
 scripts/schema/001-init.sql
 .gitignore
 EOF
+
+install_harness_cli_binary
 
 log ""
 log "Done. Created: $CREATED, updated: $UPDATED, skipped: $SKIPPED."
