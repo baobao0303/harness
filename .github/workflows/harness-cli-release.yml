@@ -36,7 +36,10 @@ jobs:
         run: cargo test --workspace
 
       - name: Check shell scripts
-        run: bash -n scripts/install-harness.sh scripts/harness scripts/build-harness-cli-release.sh
+        run: |
+          bash -n scripts/install-harness.sh
+          bash -n scripts/harness
+          bash -n scripts/build-harness-cli-release.sh
 
   build:
     name: Build ${{ matrix.platform }}

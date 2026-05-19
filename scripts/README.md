@@ -4,8 +4,9 @@ This directory contains harness automation tools.
 
 ## Harness CLI
 
-The `harness` script is the primary interface for the durable layer. It wraps
-SQLite so agents and humans can record and query operational data.
+The Rust Harness CLI is the primary interface for the durable layer. Installed
+projects keep `scripts/harness` as the stable entrypoint; it uses the prebuilt
+Rust binary at `scripts/bin/harness-cli` for normal Harness work.
 
 ```bash
 scripts/harness init          # Create the database
@@ -23,18 +24,16 @@ Run `scripts/harness help` or `scripts/harness query help` for full usage.
 The schema lives in `scripts/schema/` and is version-controlled. The database
 file (`harness.db`) is `.gitignore`d.
 
-Requires: `sqlite3`.
+Requires: the prebuilt Rust CLI at `scripts/bin/harness-cli`.
 
-When the Rust delegated CLI is available for every routine command, `sqlite3`
-is still required by the Bash fallback and by humans who inspect the database
-directly. The future prebuilt Rust binary should reduce this runtime
-requirement for normal harness use.
+Direct database inspection may still use SQLite tools, but normal Harness use
+should go through the Rust CLI.
 
-### Rust CLI Migration
+### Rust CLI
 
-`scripts/harness` can delegate migrated command slices to the Rust CLI when a
-compiled binary exists at `target/debug/harness-cli` or at the path provided by
-`HARNESS_RUST_CLI`.
+`scripts/harness` uses the Rust CLI when a prebuilt binary exists at
+`scripts/bin/harness-cli`, a development binary exists at
+`target/debug/harness-cli`, or a path is provided by `HARNESS_RUST_CLI`.
 
 Current migrated commands:
 
@@ -66,8 +65,8 @@ from existing Harness v0 markdown in `docs/TEST_MATRIX.md`,
 Harness repos on the Rust CLI path without losing their populated operating
 docs.
 
-Set `HARNESS_DISABLE_RUST_CLI=1` to force the Bash implementation while parity
-work is in progress.
+`HARNESS_RUST_CLI` can point `scripts/harness` at an alternate Rust CLI binary
+for local development or release verification.
 
 ## Installer
 
@@ -79,8 +78,10 @@ accepts a target path, and asks interactive users whether to `1. Merge`,
 Non-interactive installs stop on those protected paths unless `--merge` or
 `--override` is provided. Use `--merge` as the safe update path for repositories
 that already have Harness: it keeps existing files in place and creates only
-missing Harness files. Use `--override` only when replacing the protected
-Harness surface is intentional.
+missing Harness files. Add `--refresh-agent-shim` when an older install has the
+full generated Harness guide in `AGENTS.md` and should move to the small stable
+shim. Use `--override` only when replacing the protected Harness surface is
+intentional.
 
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --yes
@@ -90,6 +91,16 @@ curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/mai
 curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --yes
 ```
 
+```bash
+curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --refresh-agent-shim --yes
+```
+
+`--refresh-agent-shim` backs up `AGENTS.md` before changing it. If the existing
+file is recognized as the old Harness-generated operating guide, the installer
+replaces it with the current shim. Otherwise it appends or replaces only the
+marked `<!-- HARNESS:BEGIN -->` block so project-specific instructions remain
+in place.
+
 The installer must stay limited to harness files. Do not use it to scaffold
 application source folders, package scripts, CI, tests, platform shells, or fake
 validation commands. The installer script is not part of the installed project
@@ -98,8 +109,8 @@ payload.
 By default the installer also downloads the prebuilt Rust Harness CLI for the
 current platform into `scripts/bin/harness-cli` and verifies its `.sha256`
 checksum before making it executable. Set `HARNESS_CLI_BASE_URL` to point at an
-alternate release artifact directory, or pass `--skip-cli-download` to install
-only the Bash fallback.
+alternate release artifact directory, such as a local `file:///.../dist`
+directory created by `scripts/build-harness-cli-release.sh`.
 
 ## Schema Migrations
 

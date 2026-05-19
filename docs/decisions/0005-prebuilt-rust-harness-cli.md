@@ -8,8 +8,8 @@ Accepted
 
 ## Context
 
-The durable layer started as a thin Bash wrapper around SQLite. That wrapper is
-now large enough to carry meaningful architecture risk: it mixes command
+The durable layer started as a thin shell wrapper around SQLite. That wrapper
+is now large enough to carry meaningful architecture risk: it mixes command
 parsing, SQL construction, migrations, import behavior, query rendering, and
 help text in one script.
 
@@ -45,7 +45,7 @@ The Rust CLI should follow the existing architecture rules:
 
 ## Alternatives Considered
 
-1. Keep the Bash CLI permanently. Rejected because the script has crossed from
+1. Keep the shell CLI permanently. Rejected because the script has crossed from
    a thin wrapper into a growing application surface with weak testability.
 2. Copy Rust source into every target project and build locally. Rejected
    because it makes Harness installation depend on a local Rust toolchain and
@@ -70,7 +70,7 @@ Tradeoffs:
 
 - The installer must learn platform detection and binary download behavior.
 - Release artifacts need checksums or another integrity check.
-- Offline installs need a fallback or a clear error path.
+- Unsupported platforms need a clear error path.
 - The project needs a repeatable release process for supported platforms.
 
 ## Follow-Up
@@ -79,4 +79,4 @@ Tradeoffs:
 - Decide whether `scripts/harness` is a launcher script or the downloaded
   binary path.
 - Add checksum verification for downloaded binaries.
-- Preserve Bash CLI behavior until Rust parity is proven.
+- Treat the Rust CLI as the primary durable-layer implementation.

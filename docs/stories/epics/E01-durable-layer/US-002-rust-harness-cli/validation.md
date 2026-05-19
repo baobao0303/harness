@@ -2,11 +2,9 @@
 
 ## Proof Strategy
 
-Prove parity before replacement. Each migrated command should be tested against
-a temporary SQLite database and compared to the current command contract.
-
-The Bash CLI can remain as a reference implementation until the Rust CLI proves
-the same durable-layer behavior.
+Prove the Rust CLI command contract against a temporary SQLite database. Each
+command should be tested through the stable `scripts/harness` entrypoint and
+verified against durable records.
 
 ## Test Plan
 
@@ -31,15 +29,17 @@ the same durable-layer behavior.
 ```bash
 cargo fmt --check
 cargo test --workspace
-bash -n scripts/harness scripts/install-harness.sh
+bash -n scripts/install-harness.sh
+bash -n scripts/harness
+bash -n scripts/build-harness-cli-release.sh
 scripts/build-harness-cli-release.sh
 scripts/harness query stats
 tmpdir=$(mktemp -d)
 HARNESS_DB="$tmpdir/harness.db" scripts/harness init
 HARNESS_DB="$tmpdir/harness.db" scripts/harness migrate
 HARNESS_DB="$tmpdir/harness.db" scripts/harness import brownfield
-HARNESS_DB="$tmpdir/harness.db" scripts/harness intake --type "Harness improvement" --summary "Rust delegated intake smoke" --lane high-risk --flags "public contracts" --docs "docs/decisions/0005-prebuilt-rust-harness-cli" --story US-002
-HARNESS_DB="$tmpdir/harness.db" scripts/harness story add --id US-SMOKE --title "Rust parity smoke story" --lane high-risk --contract docs/decisions/0005-prebuilt-rust-harness-cli
+HARNESS_DB="$tmpdir/harness.db" scripts/harness intake --type "Harness improvement" --summary "Rust CLI intake smoke" --lane high-risk --flags "public contracts" --docs "docs/decisions/0005-prebuilt-rust-harness-cli" --story US-002
+HARNESS_DB="$tmpdir/harness.db" scripts/harness story add --id US-SMOKE --title "Rust CLI smoke story" --lane high-risk --contract docs/decisions/0005-prebuilt-rust-harness-cli
 HARNESS_DB="$tmpdir/harness.db" scripts/harness story update --id US-SMOKE --status implemented --evidence "rust smoke" --unit 1 --integration 1
 HARNESS_DB="$tmpdir/harness.db" scripts/harness decision add --id 9999-smoke --title "Smoke Decision" --status accepted --doc docs/decisions/0005-prebuilt-rust-harness-cli --verify "true"
 HARNESS_DB="$tmpdir/harness.db" scripts/harness decision verify 9999-smoke
@@ -67,8 +67,11 @@ rm -rf "$target"
 ## Acceptance Evidence
 
 - `cargo fmt --check`: passed.
-- `cargo test --workspace`: passed, 9 tests.
-- `bash -n scripts/harness scripts/install-harness.sh`: passed.
+- `cargo test --workspace`: passed, 10 tests, including regression coverage
+  for repo-root decision verification and SQL `NULL` intake list storage.
+- `bash -n scripts/install-harness.sh`: passed.
+- `bash -n scripts/harness`: passed.
+- `bash -n scripts/build-harness-cli-release.sh`: passed.
 - `.github/workflows/harness-cli-release.yml`: added to verify the workspace,
   build the four supported CLI release targets on hosted native runners, and
   publish `harness-cli-<platform>` plus `.sha256` assets to the GitHub Release
@@ -90,8 +93,6 @@ rm -rf "$target"
   inside the target project.
 - Checksum failure test passed: a corrupt `.sha256` file caused the installer
   to stop before accepting the binary.
-- `--skip-cli-download` test passed: installer skipped the binary and
-  `scripts/harness init` still worked through Bash fallback.
 - Existing `.gitignore` merge test passed: custom rules were preserved while
   `harness.db` and `scripts/bin/harness-cli` ignore rules were appended.
 - Real tag release passed: `harness-cli-v0.1.2` completed the `Harness CLI

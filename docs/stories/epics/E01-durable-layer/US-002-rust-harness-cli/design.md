@@ -67,11 +67,12 @@ should be selected during implementation.
 
 The CLI should keep writing trace records through the durable layer. Installer
 download failures should produce actionable terminal errors that explain the
-platform, URL, and fallback path.
+platform and URL.
 
 ## Alternatives Considered
 
-1. Keep Bash only. Simpler distribution, weaker testability.
+1. Keep the legacy shell implementation. Simpler distribution, weaker
+   testability.
 2. Build Rust locally in every target repo. Better source transparency, much
    worse install friction.
 3. Require a global binary. Cleaner release model, weaker repo-local harness

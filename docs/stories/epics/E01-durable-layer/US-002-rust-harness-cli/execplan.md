@@ -2,7 +2,7 @@
 
 ## Goal
 
-Replace the growing Bash durable-layer CLI with a typed Rust implementation
+Replace the growing durable-layer CLI with a typed Rust implementation
 while preserving the repository-local `scripts/harness` command contract.
 
 ## Scope
@@ -14,7 +14,7 @@ In scope:
 - Preserve existing command names and flags during the first migration.
 - Ship the Rust CLI as a prebuilt binary downloaded by the installer.
 - Keep `scripts/harness` as the stable command path.
-- Add parity tests before retiring Bash behavior.
+- Add command-contract tests for the Rust CLI.
 
 Out of scope:
 
@@ -35,7 +35,6 @@ Risk flags:
 Hard gates:
 
 - Changing the stable command path.
-- Removing the Bash fallback before parity proof.
 - Weakening durable-layer validation expectations.
 
 ## Work Phases
@@ -44,10 +43,10 @@ Hard gates:
 2. Add typed CLI parsing and domain/application boundaries for one vertical
    command slice.
 3. Implement SQLite repository access with parameterized statements.
-4. Add temp-database parity tests for the migrated slice.
+4. Add temp-database command-contract tests for the migrated slice.
 5. Update the installer to download and verify a prebuilt binary.
-6. Port remaining command groups incrementally.
-7. Retire Bash internals only after all command groups have parity evidence.
+6. Finish the remaining command groups in Rust.
+7. Deprecate the legacy shell internals.
 8. Update docs, story evidence, and durable records.
 
 ## Stop Conditions
@@ -58,5 +57,3 @@ Pause for human confirmation if:
 - Prebuilt binary distribution requires a new hosting provider.
 - Checksum or release verification cannot be automated.
 - Current SQLite schema compatibility cannot be preserved.
-- Installer behavior would become unavailable offline without an accepted
-  fallback.

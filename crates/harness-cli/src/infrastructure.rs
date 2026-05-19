@@ -417,8 +417,8 @@ impl HarnessRepository for SqliteHarnessRepository {
                 input.input_type.as_db_value(),
                 input.summary,
                 input.risk_lane.as_db_value(),
-                input.risk_flags.as_json_text_or_null_literal(),
-                input.affected_docs.as_json_text_or_null_literal(),
+                input.risk_flags.as_json_text(),
+                input.affected_docs.as_json_text(),
                 input.story_id,
                 input.notes,
             ],
@@ -512,7 +512,11 @@ impl HarnessRepository for SqliteHarnessRepository {
             .filter(|value| !value.is_empty())
             .ok_or_else(|| HarnessInfraError::MissingDecisionVerifyCommand(id.to_owned()))?;
 
-        let status = Command::new("sh").arg("-c").arg(&verify_command).status()?;
+        let status = Command::new("sh")
+            .arg("-c")
+            .arg(&verify_command)
+            .current_dir(&self.repo_root)
+            .status()?;
         let result = if status.success() { "pass" } else { "fail" }.to_owned();
         connection.execute(
             "UPDATE decision
@@ -1013,8 +1017,8 @@ mod tests {
 
     use super::*;
     use crate::application::{
-        BacklogAddInput, BacklogCloseInput, IntakeInput, StoryAddInput, StoryUpdateInput,
-        TraceInput,
+        BacklogAddInput, BacklogCloseInput, DecisionAddInput, IntakeInput, StoryAddInput,
+        StoryUpdateInput, TraceInput,
     };
     use crate::domain::{BoolFlag, CsvList, InputType, RiskLane};
 
@@ -1065,6 +1069,56 @@ mod tests {
         assert_eq!(intakes[0].summary, "Port one CLI slice");
         assert_eq!(intakes[0].input_type, "harness_improvement");
         assert_eq!(intakes[0].risk_lane, "high_risk");
+
+        let connection = repository.open_existing().unwrap();
+        let missing_lists_are_null: (bool, bool) = connection
+            .query_row(
+                "SELECT risk_flags IS NULL, affected_docs IS NULL FROM intake WHERE id=?1;",
+                params![id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(missing_lists_are_null, (false, true));
+    }
+
+    #[test]
+    fn decision_verify_runs_from_repo_root() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let repo_root = temp_dir.path().join("repo");
+        fs::create_dir_all(&repo_root).unwrap();
+        let schema_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .ancestors()
+            .nth(2)
+            .unwrap()
+            .to_path_buf()
+            .join("scripts/schema");
+        let repository = SqliteHarnessRepository::new(
+            repo_root.clone(),
+            temp_dir.path().join("harness.db"),
+            schema_root,
+        );
+        repository.init().unwrap();
+
+        let pwd_output = temp_dir.path().join("verify-pwd.txt");
+        repository
+            .add_decision(DecisionAddInput {
+                id: "0001-test".to_owned(),
+                title: "Verify from root".to_owned(),
+                status: "accepted".to_owned(),
+                doc_path: None,
+                verify_command: Some(format!("pwd > {}", pwd_output.display())),
+                predicted_impact: None,
+                notes: None,
+            })
+            .unwrap();
+
+        let result = repository.verify_decision("0001-test").unwrap();
+
+        assert_eq!(result.result, "pass");
+        assert_eq!(
+            fs::canonicalize(fs::read_to_string(pwd_output).unwrap().trim()).unwrap(),
+            fs::canonicalize(repo_root).unwrap()
+        );
     }
 
     #[test]

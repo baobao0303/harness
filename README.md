@@ -45,7 +45,8 @@ engineering questions without relying only on chat history:
 
 In this repo, those answers live in:
 
-- `AGENTS.md` — the agent entrypoint and operating rules.
+- `AGENTS.md` — the stable agent shim with local project notes and Harness
+  doc links.
 - `docs/HARNESS.md` — the human-agent collaboration model.
 - `docs/FEATURE_INTAKE.md` — tiny, normal, and high-risk work classification.
 - `docs/ARCHITECTURE.md` — architecture discovery and boundary rules.
@@ -82,6 +83,18 @@ added Harness files without moving the existing `AGENTS.md`, `docs/`, or
 `scripts/` paths into backup. Existing files stay untouched; only missing
 Harness files are created.
 
+For older Harness installs whose `AGENTS.md` still contains the full generated
+operating guide, refresh it into the small stable shim:
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --refresh-agent-shim --yes
+```
+
+The refresh backs up the existing file. If it detects the old
+Harness-generated guide, it replaces it with the shim. If the file appears
+custom, it appends or updates a marked Harness block instead of overwriting the
+project's local instructions.
+
 Or install into a specific path:
 
 ```bash
@@ -92,8 +105,9 @@ Use `--dry-run` to preview changes before writing files.
 
 The installer also downloads the prebuilt Harness CLI for the current platform,
 verifies its `.sha256` checksum, and installs it at
-`scripts/bin/harness-cli`. Use `--skip-cli-download` for an offline Bash-only
-install.
+`scripts/bin/harness-cli`. The Rust CLI is the main Harness tool. Installed
+projects keep `scripts/harness` as the stable command path, and that entrypoint
+uses the Rust binary for normal Harness work.
 
 Harness CLI release assets are published from tags by the
 `Harness CLI Release` GitHub Actions workflow. The installer expects each

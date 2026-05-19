@@ -3,8 +3,8 @@
 ## Current Behavior
 
 Harness operational records live in a local SQLite database managed by
-`scripts/harness`. The CLI is implemented as a Bash script and is copied into
-target projects by `scripts/install-harness.sh`.
+`scripts/harness`. The Rust CLI is the main tool for operational records in
+installed projects.
 
 The current command path is:
 
@@ -22,8 +22,8 @@ stable:
 scripts/harness <command>
 ```
 
-The Rust CLI preserves the existing database schema and command semantics before
-the Bash implementation is retired.
+The Rust CLI preserves the existing database schema and command semantics while
+making the implementation typed and releaseable.
 
 ## Affected Users
 
@@ -47,5 +47,4 @@ the Bash implementation is retired.
 - Do not scaffold application code.
 - Do not change the SQLite durable-layer schema unless a separate migration
   story requires it.
-- Do not remove the current Bash CLI until Rust command parity is proven.
 - Do not require target projects to install Rust.

@@ -35,7 +35,11 @@ scripts, CI, tests, or product implementation.
 - For repositories that already have Harness, `--merge` keeps existing
   `AGENTS.md`, `docs/`, and `scripts/` paths in place and creates only missing
   Harness files.
-- A piped `curl | bash` install can still ask interactive questions through the
+- For older Harness installs, `--merge --refresh-agent-shim` backs up
+  `AGENTS.md`, replaces the old generated Harness operating guide with the
+  small stable shim when detected, and otherwise appends or updates only the
+  marked Harness block.
+- A piped remote install can still ask interactive questions through the
   controlling terminal when `--yes` is not provided.
 - Existing non-protected files are not overwritten by default.
 - Forced overwrites create a timestamped backup before replacing non-protected
@@ -48,7 +52,7 @@ scripts, CI, tests, or product implementation.
 
 ## Design Notes
 
-- Commands: `scripts/install-harness.sh [--directory path] [--yes] [--force] [--dry-run]`
+- Commands: `scripts/install-harness.sh [--directory path] [--yes] [--force] [--merge] [--refresh-agent-shim] [--dry-run]`
 - Remote install: `curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --yes`
 - Queries: none.
 - API: none.
@@ -62,8 +66,8 @@ scripts, CI, tests, or product implementation.
 | Layer | Expected proof |
 | --- | --- |
 | Unit | Shell syntax check for `scripts/install-harness.sh`. |
-| Integration | Dry-run into a temporary target reports expected file creation. |
-| E2E | Install into a temporary target creates the harness file structure. |
+| Integration | Dry-run into a temporary target reports expected file creation and AGENTS shim refresh behavior. |
+| E2E | Install into a temporary target creates the harness file structure and can refresh an existing old generated `AGENTS.md` into the shim. |
 | Platform | POSIX shell execution on the local macOS environment. |
 | Release | Not applicable until packaging exists. |
 
@@ -83,6 +87,8 @@ implementation surfaces are not scaffolded.
 - `scripts/install-harness.sh --directory "$DOCS_CONFLICT" --yes`
 - `scripts/install-harness.sh --directory "$SCRIPTS_CONFLICT" --yes --force`
 - `scripts/install-harness.sh --directory "$NONINTERACTIVE_MERGE" --merge --yes`
+- `scripts/install-harness.sh --directory "$OLD_AGENTS_TARGET" --merge --refresh-agent-shim --yes`
+- `scripts/install-harness.sh --directory "$CUSTOM_AGENTS_TARGET" --merge --refresh-agent-shim --yes`
 - `scripts/install-harness.sh --directory "$NONINTERACTIVE_OVERRIDE" --override --yes`
 - interactive conflict prompt with `1` choice to merge missing files
 - interactive conflict prompt with `2` choice to back up and override protected
@@ -97,8 +103,10 @@ Validated behaviors: dry-run writes no files, real install creates the harness
 structure, existing `README.md` is left untouched by default, non-interactive
 targets containing `AGENTS.md`, `docs/`, or `scripts/` stop with a warning
 before writing files unless `--merge` or `--override` is provided, merge keeps
-existing protected paths in place while adding missing Harness files,
+existing protected paths in place while adding missing Harness files, agent
+shim refresh backs up `AGENTS.md` and either replaces old generated Harness
+guides or appends the marked Harness block to custom files,
 interactive users can stop, merge missing files, or back up and override
-protected paths even when the script is piped into Bash, remote-source mode
-works when the script is piped into Bash, and target projects do not receive
+protected paths even when the script is piped into a shell, remote-source mode
+works when the script is piped into a shell, and target projects do not receive
 `scripts/install-harness.sh` or this installer story.
