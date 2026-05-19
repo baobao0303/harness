@@ -1,18 +1,19 @@
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use std::str::FromStr;
 
 use rusqlite::{params, types::ValueRef, Connection, OptionalExtension};
 use thiserror::Error;
 
 use crate::application::{
-    BacklogAddInput, BacklogCloseInput, DecisionAddInput, DecisionVerifyResult, HarnessContext,
-    InitResult, IntakeInput, MigrateResult, QueryTable, StoryAddInput, StoryUpdateInput,
-    TraceInput,
+    BacklogAddInput, BacklogCloseInput, BrownfieldImportResult, DecisionAddInput,
+    DecisionVerifyResult, HarnessContext, InitResult, IntakeInput, MigrateResult, QueryTable,
+    StoryAddInput, StoryUpdateInput, TraceInput,
 };
 use crate::domain::{
-    yes_no, BacklogRecord, DecisionRecord, FrictionRecord, HarnessStats, IntakeRecord,
-    StoryMatrixRecord, TraceRecord,
+    normalize_token, yes_no, BacklogRecord, DecisionRecord, FrictionRecord, HarnessStats,
+    IntakeRecord, RiskLane, StoryMatrixRecord, TraceRecord,
 };
 
 pub type Result<T> = std::result::Result<T, HarnessInfraError>;
@@ -23,6 +24,8 @@ pub enum HarnessInfraError {
     MissingDatabase(String),
     #[error("schema file missing: {0}")]
     MissingSchema(String),
+    #[error("brownfield import: missing {0}")]
+    MissingBrownfieldPath(String),
     #[error("decision {0} has no verify_command")]
     MissingDecisionVerifyCommand(String),
     #[error("story update: story '{0}' not found")]
@@ -40,6 +43,7 @@ pub enum HarnessInfraError {
 pub trait HarnessRepository {
     fn init(&self) -> Result<InitResult>;
     fn migrate(&self) -> Result<MigrateResult>;
+    fn import_brownfield(&self) -> Result<BrownfieldImportResult>;
     fn record_intake(&self, input: IntakeInput) -> Result<i64>;
     fn add_story(&self, input: StoryAddInput) -> Result<()>;
     fn update_story(&self, input: StoryUpdateInput) -> Result<()>;
@@ -60,13 +64,15 @@ pub trait HarnessRepository {
 
 #[derive(Debug)]
 pub struct SqliteHarnessRepository {
+    repo_root: PathBuf,
     db_path: PathBuf,
     schema_dir: PathBuf,
 }
 
 impl SqliteHarnessRepository {
-    pub fn new(db_path: PathBuf, schema_dir: PathBuf) -> Self {
+    pub fn new(repo_root: PathBuf, db_path: PathBuf, schema_dir: PathBuf) -> Self {
         Self {
+            repo_root,
             db_path,
             schema_dir,
         }
@@ -137,6 +143,211 @@ impl SqliteHarnessRepository {
         files.sort_by_key(|(version, _)| *version);
         Ok(files)
     }
+
+    fn import_matrix(&self, connection: &Connection) -> Result<usize> {
+        let matrix_path = self.repo_root.join("docs/TEST_MATRIX.md");
+        if !matrix_path.exists() {
+            return Err(HarnessInfraError::MissingBrownfieldPath(
+                matrix_path.display().to_string(),
+            ));
+        }
+
+        let content = fs::read_to_string(matrix_path)?;
+        let mut story_count = 0;
+        let mut columns: Option<MatrixColumns> = None;
+
+        for line in content.lines() {
+            if !line.trim_start().starts_with('|') {
+                continue;
+            }
+
+            let fields = markdown_table_fields(line);
+            if fields.len() < 2 {
+                continue;
+            }
+
+            if columns.is_none() {
+                let candidate = MatrixColumns::from_header(&fields);
+                if candidate.story.is_some() && candidate.status.is_some() {
+                    columns = Some(candidate);
+                }
+                continue;
+            }
+
+            let columns = columns.as_ref().expect("matrix columns discovered");
+            let id = field_at(&fields, columns.story).unwrap_or_default();
+            let token = normalize_token(&id);
+            if matches!(
+                token.as_str(),
+                "" | "story" | "tbd" | "todo" | "example" | "examples"
+            ) || id.chars().all(|character| character == '-')
+            {
+                continue;
+            }
+
+            let mut title = field_at(&fields, columns.contract).unwrap_or_else(|| id.clone());
+            if title.is_empty() {
+                title = id.clone();
+            }
+
+            let status =
+                normalize_story_status(&field_at(&fields, columns.status).unwrap_or_default());
+            let unit = proof_from_cell(&field_at(&fields, columns.unit).unwrap_or_default());
+            let integration =
+                proof_from_cell(&field_at(&fields, columns.integration).unwrap_or_default());
+            let e2e = proof_from_cell(&field_at(&fields, columns.e2e).unwrap_or_default());
+            let platform =
+                proof_from_cell(&field_at(&fields, columns.platform).unwrap_or_default());
+            let evidence = columns
+                .evidence
+                .and_then(|index| evidence_from_fields(&fields, index));
+
+            connection.execute(
+                "INSERT INTO story (
+                    id, title, risk_lane, contract_doc, status,
+                    unit_proof, integration_proof, e2e_proof, platform_proof,
+                    evidence, notes
+                 ) VALUES (?1, ?2, 'high_risk', ?3, ?4, ?5, ?6, ?7, ?8, ?9,
+                    'Imported from docs/TEST_MATRIX.md by harness import brownfield.'
+                 )
+                 ON CONFLICT(id) DO UPDATE SET
+                    title=excluded.title,
+                    contract_doc=excluded.contract_doc,
+                    status=excluded.status,
+                    unit_proof=excluded.unit_proof,
+                    integration_proof=excluded.integration_proof,
+                    e2e_proof=excluded.e2e_proof,
+                    platform_proof=excluded.platform_proof,
+                    evidence=excluded.evidence,
+                    notes=excluded.notes;",
+                params![
+                    id,
+                    title,
+                    field_at(&fields, columns.contract),
+                    status,
+                    unit,
+                    integration,
+                    e2e,
+                    platform,
+                    evidence,
+                ],
+            )?;
+            story_count += 1;
+        }
+
+        Ok(story_count)
+    }
+
+    fn import_decisions(&self, connection: &Connection) -> Result<usize> {
+        let decisions_dir = self.repo_root.join("docs/decisions");
+        if !decisions_dir.is_dir() {
+            return Err(HarnessInfraError::MissingBrownfieldPath(
+                decisions_dir.display().to_string(),
+            ));
+        }
+
+        let mut files = Vec::new();
+        for entry in fs::read_dir(&decisions_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.extension().and_then(|value| value.to_str()) != Some("md") {
+                continue;
+            }
+            let Some(file_name) = path.file_name().and_then(|value| value.to_str()) else {
+                continue;
+            };
+            if is_decision_file_name(file_name) {
+                files.push(path);
+            }
+        }
+        files.sort();
+
+        let mut decision_count = 0;
+        for path in files {
+            let content = fs::read_to_string(&path)?;
+            let stem = path
+                .file_stem()
+                .and_then(|value| value.to_str())
+                .unwrap_or_default()
+                .to_owned();
+            let title = content
+                .lines()
+                .next()
+                .and_then(|line| line.strip_prefix("# "))
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .unwrap_or(&stem)
+                .to_owned();
+            let status =
+                normalize_decision_status(&markdown_section_first_value(&content, "Status"));
+            let doc_path = format!(
+                "docs/decisions/{}",
+                path.file_name()
+                    .and_then(|value| value.to_str())
+                    .unwrap_or_default()
+            );
+
+            connection.execute(
+                "INSERT INTO decision (id, title, status, doc_path, notes)
+                 VALUES (?1, ?2, ?3, ?4,
+                    'Imported from docs/decisions by harness import brownfield.'
+                 )
+                 ON CONFLICT(id) DO UPDATE SET
+                    title=excluded.title,
+                    status=excluded.status,
+                    doc_path=excluded.doc_path,
+                    notes=excluded.notes;",
+                params![stem, title, status, doc_path],
+            )?;
+            decision_count += 1;
+        }
+
+        Ok(decision_count)
+    }
+
+    fn import_backlog(&self, connection: &Connection) -> Result<usize> {
+        let backlog_path = self.repo_root.join("docs/HARNESS_BACKLOG.md");
+        if !backlog_path.exists() {
+            return Ok(0);
+        }
+
+        let content = fs::read_to_string(backlog_path)?;
+        let items = backlog_items(&content);
+        let mut imported = 0;
+        for item in items {
+            if item.title.is_empty() || item.title == "Short name." {
+                continue;
+            }
+
+            let risk = if item.risk.is_empty() {
+                None
+            } else {
+                RiskLane::from_str(&item.risk)
+                    .ok()
+                    .map(|value| value.as_db_value().to_owned())
+            };
+            let status = normalize_backlog_status(&item.status);
+            let discovered = empty_to_none(item.discovered_while);
+            let pain = empty_to_none(item.current_pain);
+            let suggestion = empty_to_none(item.suggested_improvement);
+
+            connection.execute(
+                "INSERT INTO backlog (
+                    title, discovered_while, current_pain, suggested_improvement,
+                    risk, status, notes
+                 )
+                 SELECT ?1, ?2, ?3, ?4, ?5, ?6,
+                    'Imported from docs/HARNESS_BACKLOG.md by harness import brownfield.'
+                 WHERE NOT EXISTS (
+                    SELECT 1 FROM backlog WHERE title=?1
+                 );",
+                params![item.title, discovered, pain, suggestion, risk, status],
+            )?;
+            imported += 1;
+        }
+
+        Ok(imported)
+    }
 }
 
 impl HarnessRepository for SqliteHarnessRepository {
@@ -180,6 +391,19 @@ impl HarnessRepository for SqliteHarnessRepository {
         Ok(MigrateResult {
             current_version,
             applied,
+        })
+    }
+
+    fn import_brownfield(&self) -> Result<BrownfieldImportResult> {
+        let connection = self.open_existing()?;
+        let stories = self.import_matrix(&connection)?;
+        let decisions = self.import_decisions(&connection)?;
+        let backlog_items = self.import_backlog(&connection)?;
+
+        Ok(BrownfieldImportResult {
+            stories,
+            decisions,
+            backlog_items,
         })
     }
 
@@ -540,7 +764,60 @@ impl HarnessRepository for SqliteHarnessRepository {
 
 impl From<HarnessContext> for SqliteHarnessRepository {
     fn from(context: HarnessContext) -> Self {
-        Self::new(context.db_path, context.schema_dir)
+        Self::new(context.repo_root, context.db_path, context.schema_dir)
+    }
+}
+
+#[derive(Debug)]
+struct MatrixColumns {
+    story: Option<usize>,
+    contract: Option<usize>,
+    unit: Option<usize>,
+    integration: Option<usize>,
+    e2e: Option<usize>,
+    platform: Option<usize>,
+    status: Option<usize>,
+    evidence: Option<usize>,
+}
+
+#[derive(Debug, Default)]
+struct BacklogMarkdownItem {
+    title: String,
+    discovered_while: String,
+    current_pain: String,
+    suggested_improvement: String,
+    risk: String,
+    status: String,
+}
+
+impl MatrixColumns {
+    fn from_header(fields: &[String]) -> Self {
+        let mut columns = Self {
+            story: None,
+            contract: None,
+            unit: None,
+            integration: None,
+            e2e: None,
+            platform: None,
+            status: None,
+            evidence: None,
+        };
+
+        for (index, field) in fields.iter().enumerate() {
+            match normalize_token(field).as_str() {
+                "story" => columns.story = Some(index),
+                "contract" => columns.contract = Some(index),
+                "unit" => columns.unit = Some(index),
+                "integration" => columns.integration = Some(index),
+                "e2e" => columns.e2e = Some(index),
+                "platform" => columns.platform = Some(index),
+                "status" => columns.status = Some(index),
+                "evidence" => columns.evidence = Some(index),
+                _ => {}
+            }
+        }
+
+        columns
     }
 }
 
@@ -549,6 +826,175 @@ fn collect_rows<T>(
 ) -> Result<Vec<T>> {
     rows.collect::<std::result::Result<Vec<_>, _>>()
         .map_err(HarnessInfraError::from)
+}
+
+fn markdown_table_fields(line: &str) -> Vec<String> {
+    let trimmed = line.trim();
+    let trimmed = trimmed.strip_prefix('|').unwrap_or(trimmed);
+    let trimmed = trimmed.strip_suffix('|').unwrap_or(trimmed);
+    trimmed
+        .split('|')
+        .map(|field| field.trim().to_owned())
+        .collect()
+}
+
+fn field_at(fields: &[String], index: Option<usize>) -> Option<String> {
+    index
+        .and_then(|value| fields.get(value))
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+}
+
+fn evidence_from_fields(fields: &[String], start_index: usize) -> Option<String> {
+    fields
+        .get(start_index..)
+        .map(|values| values.join(" | "))
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+}
+
+fn proof_from_cell(value: &str) -> i64 {
+    match normalize_token(value).as_str() {
+        ""
+        | "no"
+        | "none"
+        | "n_a"
+        | "na"
+        | "planned"
+        | "pending"
+        | "blocked"
+        | "not_attempted"
+        | "not_operator_reviewed" => 0,
+        token
+            if token.starts_with("no_")
+                || token.starts_with("pending")
+                || token.starts_with("blocked")
+                || token.contains("pending")
+                || token.contains("blocked")
+                || token.contains("not_attempted")
+                || token.contains("not_operator_reviewed") =>
+        {
+            0
+        }
+        _ => 1,
+    }
+}
+
+fn normalize_story_status(value: &str) -> String {
+    match normalize_token(value).as_str() {
+        "planned" => "planned",
+        "in_progress" => "in_progress",
+        "implemented" => "implemented",
+        "changed" => "changed",
+        "retired" => "retired",
+        _ => "planned",
+    }
+    .to_owned()
+}
+
+fn normalize_decision_status(value: &str) -> String {
+    let token = normalize_token(value);
+    match token.as_str() {
+        "proposed" => "proposed",
+        "accepted" => "accepted",
+        "superseded" => "superseded",
+        "rejected" => "rejected",
+        token if token.starts_with("superseded_") => "superseded",
+        _ => "accepted",
+    }
+    .to_owned()
+}
+
+fn normalize_backlog_status(value: &str) -> String {
+    match normalize_token(value).as_str() {
+        "proposed" => "proposed",
+        "accepted" => "accepted",
+        "implemented" => "implemented",
+        "rejected" => "rejected",
+        _ => "proposed",
+    }
+    .to_owned()
+}
+
+fn markdown_section_first_value(content: &str, heading: &str) -> String {
+    let target = format!("## {heading}");
+    let mut found = false;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if found && !trimmed.is_empty() {
+            return trimmed.to_owned();
+        }
+        if trimmed == target {
+            found = true;
+        }
+    }
+    String::new()
+}
+
+fn backlog_items(content: &str) -> Vec<BacklogMarkdownItem> {
+    let mut in_items = false;
+    let mut current_heading = String::new();
+    let mut current = BacklogMarkdownItem::default();
+    let mut items = Vec::new();
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed == "## Items" {
+            in_items = true;
+            current_heading.clear();
+            continue;
+        }
+        if !in_items {
+            continue;
+        }
+
+        if let Some(heading) = trimmed.strip_prefix("### ") {
+            let normalized = normalize_token(heading);
+            if normalized == "title" && !current.title.is_empty() {
+                items.push(current);
+                current = BacklogMarkdownItem::default();
+            }
+            current_heading = normalized;
+            continue;
+        }
+
+        if trimmed.is_empty() || current_heading.is_empty() {
+            continue;
+        }
+
+        let target = match current_heading.as_str() {
+            "title" => &mut current.title,
+            "discovered_while" => &mut current.discovered_while,
+            "current_pain" => &mut current.current_pain,
+            "suggested_improvement" => &mut current.suggested_improvement,
+            "risk" => &mut current.risk,
+            "status" => &mut current.status,
+            _ => continue,
+        };
+        if target.is_empty() {
+            *target = trimmed.to_owned();
+        }
+    }
+
+    if !current.title.is_empty() {
+        items.push(current);
+    }
+    items
+}
+
+fn empty_to_none(value: String) -> Option<String> {
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
+    }
+}
+
+fn is_decision_file_name(file_name: &str) -> bool {
+    let Some((prefix, _)) = file_name.split_once('-') else {
+        return false;
+    };
+    prefix.len() == 4 && prefix.chars().all(|character| character.is_ascii_digit())
 }
 
 fn sql_value_to_string(value: ValueRef<'_>) -> String {
@@ -580,6 +1026,7 @@ mod tests {
             .unwrap()
             .to_path_buf();
         let repository = SqliteHarnessRepository::new(
+            repo_root.clone(),
             temp_dir.path().join("harness.db"),
             repo_root.join("scripts/schema"),
         );
@@ -699,5 +1146,138 @@ mod tests {
             repository.query_friction().unwrap()[0].harness_friction,
             "none"
         );
+    }
+
+    #[test]
+    fn import_brownfield_seeds_markdown_state_idempotently() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let repo_root = temp_dir.path().join("repo");
+        fs::create_dir_all(repo_root.join("docs/decisions")).unwrap();
+        fs::write(
+            repo_root.join("docs/TEST_MATRIX.md"),
+            r#"# Test Matrix
+
+| Story | Contract | Unit | Integration | E2E | Platform | Status | Evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| US-010 | docs/product/tasks.md | yes | pending | no | mac smoke | implemented | cargo test |
+"#,
+        )
+        .unwrap();
+        fs::write(
+            repo_root.join("docs/decisions/0007-test-decision.md"),
+            r#"# Test Decision
+
+## Status
+
+Accepted
+"#,
+        )
+        .unwrap();
+        fs::write(
+            repo_root.join("docs/HARNESS_BACKLOG.md"),
+            r#"# Harness Backlog
+
+## Items
+
+### Title
+
+Import existing docs
+
+### Discovered While
+
+Testing brownfield import
+
+### Current Pain
+
+Existing Harness v0 repos have markdown truth.
+
+### Suggested Improvement
+
+Seed the durable database.
+
+### Risk
+
+normal
+
+### Status
+
+accepted
+
+### Title
+
+Keep installer checksum
+
+### Discovered While
+
+Testing release install
+
+### Current Pain
+
+Downloads need verification.
+
+### Suggested Improvement
+
+Verify sha256 files.
+
+### Risk
+
+high-risk
+
+### Status
+
+implemented
+"#,
+        )
+        .unwrap();
+
+        let source_repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .ancestors()
+            .nth(2)
+            .unwrap()
+            .to_path_buf();
+        let repository = SqliteHarnessRepository::new(
+            repo_root.clone(),
+            temp_dir.path().join("harness.db"),
+            source_repo_root.join("scripts/schema"),
+        );
+        repository.init().unwrap();
+
+        let first = repository.import_brownfield().unwrap();
+        let second = repository.import_brownfield().unwrap();
+
+        assert_eq!(
+            first,
+            BrownfieldImportResult {
+                stories: 1,
+                decisions: 1,
+                backlog_items: 2,
+            }
+        );
+        assert_eq!(second.backlog_items, 2);
+
+        let matrix = repository.query_matrix().unwrap();
+        assert_eq!(matrix[0].id, "US-010");
+        assert_eq!(matrix[0].title, "docs/product/tasks.md");
+        assert_eq!(matrix[0].status, "implemented");
+        assert_eq!(matrix[0].unit, "yes");
+        assert_eq!(matrix[0].integration, "no");
+        assert_eq!(matrix[0].platform, "yes");
+
+        let decisions = repository.query_decisions().unwrap();
+        assert_eq!(decisions[0].id, "0007-test-decision");
+        assert_eq!(decisions[0].status, "accepted");
+
+        let backlog = repository.query_backlog().unwrap();
+        assert_eq!(backlog.len(), 2);
+        assert!(backlog
+            .iter()
+            .any(|item| item.title == "Import existing docs"
+                && item.status == "accepted"
+                && item.risk.as_deref() == Some("normal")));
+        assert!(backlog
+            .iter()
+            .any(|item| item.title == "Keep installer checksum"
+                && item.status == "implemented"
+                && item.risk.as_deref() == Some("high_risk")));
     }
 }

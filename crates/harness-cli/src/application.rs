@@ -8,6 +8,7 @@ use crate::infrastructure::{HarnessRepository, SqliteHarnessRepository};
 
 #[derive(Debug)]
 pub struct HarnessContext {
+    pub repo_root: PathBuf,
     pub db_path: PathBuf,
     pub schema_dir: PathBuf,
 }
@@ -97,7 +98,11 @@ pub struct HarnessService {
 impl HarnessService {
     pub fn new(context: HarnessContext) -> Self {
         Self {
-            repository: SqliteHarnessRepository::new(context.db_path, context.schema_dir),
+            repository: SqliteHarnessRepository::new(
+                context.repo_root,
+                context.db_path,
+                context.schema_dir,
+            ),
         }
     }
 
@@ -107,6 +112,10 @@ impl HarnessService {
 
     pub fn migrate(&self) -> crate::infrastructure::Result<MigrateResult> {
         self.repository.migrate()
+    }
+
+    pub fn import_brownfield(&self) -> crate::infrastructure::Result<BrownfieldImportResult> {
+        self.repository.import_brownfield()
     }
 
     pub fn record_intake(&self, input: IntakeInput) -> crate::infrastructure::Result<i64> {
@@ -185,6 +194,13 @@ pub enum InitResult {
 pub struct MigrateResult {
     pub current_version: i64,
     pub applied: Vec<i64>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct BrownfieldImportResult {
+    pub stories: usize,
+    pub decisions: usize,
+    pub backlog_items: usize,
 }
 
 #[derive(Debug, PartialEq, Eq)]

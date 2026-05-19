@@ -20,6 +20,9 @@ Use cases should mirror the existing command groups:
 
 - `init`: create or inspect the durable database.
 - `migrate`: apply pending schema migrations.
+- `import brownfield`: seed or refresh the durable database from existing
+  Harness v0 markdown, including the test matrix, decision records, and harness
+  backlog items.
 - `intake`: record classified work.
 - `story`: add or update story proof state.
 - `decision`: add decisions and run verification commands.

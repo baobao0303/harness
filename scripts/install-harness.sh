@@ -540,6 +540,12 @@ scripts/schema/001-init.sql
 .gitignore
 EOF
 
+if [ "$DRY_RUN" -eq 0 ]; then
+  chmod 755 "$TARGET_DIR/scripts/harness"
+else
+  log "chmod    scripts/harness"
+fi
+
 install_harness_cli_binary
 
 log ""

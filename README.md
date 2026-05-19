@@ -95,6 +95,12 @@ verifies its `.sha256` checksum, and installs it at
 `scripts/bin/harness-cli`. Use `--skip-cli-download` for an offline Bash-only
 install.
 
+Harness CLI release assets are published from tags by the
+`Harness CLI Release` GitHub Actions workflow. The installer expects each
+release to include `harness-cli-<platform>` and
+`harness-cli-<platform>.sha256` assets for macOS arm64, macOS x64, Linux x64,
+and Linux arm64.
+
 ## Try The Flow
 
 The fastest way to understand the harness is to inspect the tiny demo:

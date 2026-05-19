@@ -21,7 +21,7 @@ fi
 
 rust_cli_supports() {
   case "${1:-}:${2:-}" in
-    init:*|migrate:*|intake:*|story:add|story:update|decision:add|decision:verify|backlog:add|backlog:close|trace:*|query:matrix|query:backlog|query:decisions|query:intakes|query:traces|query:friction|query:stats|query:sql)
+    init:*|migrate:*|import:brownfield|intake:*|story:add|story:update|decision:add|decision:verify|backlog:add|backlog:close|trace:*|query:matrix|query:backlog|query:decisions|query:intakes|query:traces|query:friction|query:stats|query:sql)
       return 0
       ;;
     *)

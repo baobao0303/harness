@@ -6,9 +6,9 @@ use clap::{Args, Parser, Subcommand};
 use thiserror::Error;
 
 use crate::application::{
-    BacklogAddInput, BacklogCloseInput, DecisionAddInput, HarnessContext, HarnessService,
-    InitResult, IntakeInput, MigrateResult, QueryTable, StoryAddInput, StoryUpdateInput,
-    TraceInput,
+    BacklogAddInput, BacklogCloseInput, BrownfieldImportResult, DecisionAddInput, HarnessContext,
+    HarnessService, InitResult, IntakeInput, MigrateResult, QueryTable, StoryAddInput,
+    StoryUpdateInput, TraceInput,
 };
 use crate::domain::{
     parse_optional_integer, BacklogRecord, BoolFlag, CsvList, DecisionRecord, FrictionRecord,
@@ -29,6 +29,8 @@ enum Command {
     Init,
     /// Apply schema migrations.
     Migrate,
+    /// Seed or refresh the database from existing markdown state.
+    Import(ImportArgs),
     /// Record a feature intake classification.
     Intake(IntakeArgs),
     /// Add or update a story.
@@ -59,6 +61,18 @@ struct IntakeArgs {
     story: Option<String>,
     #[arg(long)]
     notes: Option<String>,
+}
+
+#[derive(Args, Debug)]
+struct ImportArgs {
+    #[command(subcommand)]
+    source: ImportSource,
+}
+
+#[derive(Subcommand, Debug)]
+enum ImportSource {
+    /// Import TEST_MATRIX, decisions, and backlog markdown.
+    Brownfield,
 }
 
 #[derive(Args, Debug)]
@@ -251,6 +265,11 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
     match cli.command {
         Command::Init => print_init_result(service.init()?),
         Command::Migrate => print_migrate_result(service.migrate()?),
+        Command::Import(args) => match args.source {
+            ImportSource::Brownfield => {
+                print_brownfield_import_result(service.import_brownfield()?)
+            }
+        },
         Command::Intake(args) => {
             let id = service.record_intake(IntakeInput {
                 input_type: InputType::from_str(&args.input_type)?,
@@ -376,6 +395,13 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
     Ok(())
 }
 
+fn print_brownfield_import_result(result: BrownfieldImportResult) {
+    println!("Brownfield import complete.");
+    println!("Stories imported or updated: {}", result.stories);
+    println!("Decisions imported or updated: {}", result.decisions);
+    println!("Backlog items discovered: {}", result.backlog_items);
+}
+
 fn parse_optional_bool(
     label: &str,
     value: Option<String>,
@@ -425,9 +451,12 @@ fn resolve_context() -> Result<HarnessContext, InterfaceError> {
         .map(PathBuf::from)
         .unwrap_or_else(|| repo_root.join("harness.db"));
 
+    let schema_dir = repo_root.join("scripts/schema");
+
     Ok(HarnessContext {
+        repo_root,
         db_path,
-        schema_dir: repo_root.join("scripts/schema"),
+        schema_dir,
     })
 }
 
