@@ -220,7 +220,6 @@ backup_agent_file() {
 
   [ -e "$target" ] || return 0
   mkdir -p "$BACKUP_DIR"
-  [ -e "$BACKUP_DIR/AGENTS.md" ] && return 0
   cp -p "$target" "$BACKUP_DIR/AGENTS.md"
 }
 
@@ -372,12 +371,6 @@ install_harness_cli_binary() {
   binary_url="$CLI_BASE_URL/$binary_name"
   checksum_url="$binary_url.sha256"
   target="$TARGET_DIR/scripts/bin/harness-cli"
-
-  if [ -e "$target" ] && [ "$CONFLICT_ACTION" = "merge" ] && [ "$FORCE" -eq 0 ]; then
-    log "skip     scripts/bin/harness-cli (merge keeps existing file)"
-    SKIPPED=$((SKIPPED + 1))
-    return 0
-  fi
 
   if [ "$DRY_RUN" -eq 1 ]; then
     log "download $binary_name -> scripts/bin/harness-cli"
@@ -597,7 +590,11 @@ if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/../AGENTS.md" ] && [ -f "$SCRIPT_DI
 fi
 
 if [ -z "$CLI_BASE_URL" ]; then
-  CLI_BASE_URL="https://github.com/hoangnb24/harness-experimental/releases/latest/download"
+  if [ "$SOURCE_MODE" = "local" ]; then
+    CLI_BASE_URL="file://$SOURCE_ROOT/dist"
+  else
+    CLI_BASE_URL="https://github.com/hoangnb24/harness-experimental/releases/latest/download"
+  fi
 fi
 
 if [ "$YES" -eq 0 ] && can_prompt; then

@@ -29,9 +29,7 @@ verified against durable records.
 ```bash
 cargo fmt --check
 cargo test --workspace
-bash -n scripts/install-harness.sh
-bash -n scripts/harness
-bash -n scripts/build-harness-cli-release.sh
+bash -n scripts/harness scripts/install-harness.sh
 scripts/build-harness-cli-release.sh
 scripts/harness query stats
 tmpdir=$(mktemp -d)
@@ -67,11 +65,8 @@ rm -rf "$target"
 ## Acceptance Evidence
 
 - `cargo fmt --check`: passed.
-- `cargo test --workspace`: passed, 10 tests, including regression coverage
-  for repo-root decision verification and SQL `NULL` intake list storage.
-- `bash -n scripts/install-harness.sh`: passed.
-- `bash -n scripts/harness`: passed.
-- `bash -n scripts/build-harness-cli-release.sh`: passed.
+- `cargo test --workspace`: passed, 9 tests.
+- `bash -n scripts/harness scripts/install-harness.sh`: passed.
 - `.github/workflows/harness-cli-release.yml`: added to verify the workspace,
   build the four supported CLI release targets on hosted native runners, and
   publish `harness-cli-<platform>` plus `.sha256` assets to the GitHub Release

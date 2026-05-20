@@ -109,8 +109,7 @@ payload.
 By default the installer also downloads the prebuilt Rust Harness CLI for the
 current platform into `scripts/bin/harness-cli` and verifies its `.sha256`
 checksum before making it executable. Set `HARNESS_CLI_BASE_URL` to point at an
-alternate release artifact directory, such as a local `file:///.../dist`
-directory created by `scripts/build-harness-cli-release.sh`.
+alternate release artifact directory.
 
 ## Schema Migrations
 
