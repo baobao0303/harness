@@ -35,9 +35,9 @@ Examples:
   scripts/install-harness.sh
   scripts/install-harness.sh --directory /path/to/project --yes
   scripts/install-harness.sh ./my-project --force
-  curl -fsSL https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh | bash -s -- --yes
-  curl -fsSL https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh | bash -s -- --merge --yes
-  curl -fsSL https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh | bash -s -- --merge --refresh-agent-shim --yes
+  curl -fsSL https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh | bash -s -- --yes
+  curl -fsSL https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh | bash -s -- --merge --yes
+  curl -fsSL https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh | bash -s -- --merge --refresh-agent-shim --yes
 EOF
 }
 
@@ -147,12 +147,12 @@ merge_gitignore() {
   local rules="harness.db
 harness.db-wal
 harness.db-shm
-scripts/bin/harness-cli"
+scripts/bin/harness"
 
   if grep -Fxq "harness.db" "$target" &&
      grep -Fxq "harness.db-wal" "$target" &&
      grep -Fxq "harness.db-shm" "$target" &&
-     grep -Fxq "scripts/bin/harness-cli" "$target"; then
+     grep -Fxq "scripts/bin/harness" "$target"; then
     log "skip     .gitignore (harness rules already present)"
     SKIPPED=$((SKIPPED + 1))
     return
@@ -200,7 +200,7 @@ This repo uses Harness. Before work, read:
 
 Use the Rust Harness CLI as the main operational tool. Run it through the
 stable repo-local entrypoint `scripts/harness`, which uses the prebuilt Rust
-binary at `scripts/bin/harness-cli` in installed projects.
+binary at `scripts/bin/harness` in installed projects.
 <!-- HARNESS:END -->
 EOF
 }
@@ -220,6 +220,7 @@ backup_agent_file() {
 
   [ -e "$target" ] || return 0
   mkdir -p "$BACKUP_DIR"
+  [ -e "$BACKUP_DIR/AGENTS.md" ] && return 0
   cp -p "$target" "$BACKUP_DIR/AGENTS.md"
 }
 
@@ -367,13 +368,19 @@ install_harness_cli_binary() {
 
   local platform binary_name binary_url checksum_url target tmp_dir binary_tmp checksum_tmp expected actual
   platform="${HARNESS_CLI_PLATFORM:-$(detect_cli_platform)}"
-  binary_name="harness-cli-$platform"
+  binary_name="harness-$platform"
   binary_url="$CLI_BASE_URL/$binary_name"
   checksum_url="$binary_url.sha256"
-  target="$TARGET_DIR/scripts/bin/harness-cli"
+  target="$TARGET_DIR/scripts/bin/harness"
+
+  if [ -e "$target" ] && [ "$CONFLICT_ACTION" = "merge" ] && [ "$FORCE" -eq 0 ]; then
+    log "skip     scripts/bin/harness (merge keeps existing file)"
+    SKIPPED=$((SKIPPED + 1))
+    return 0
+  fi
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    log "download $binary_name -> scripts/bin/harness-cli"
+    log "download $binary_name -> scripts/bin/harness"
     log "verify   $binary_name.sha256"
     CREATED=$((CREATED + 1))
     return 0
@@ -400,19 +407,19 @@ install_harness_cli_binary() {
   if [ -e "$target" ]; then
     if [ "$FORCE" -eq 1 ]; then
       mkdir -p "$BACKUP_DIR/scripts/bin"
-      cp -p "$target" "$BACKUP_DIR/scripts/bin/harness-cli"
+      cp -p "$target" "$BACKUP_DIR/scripts/bin/harness"
     fi
     UPDATED=$((UPDATED + 1))
-    log "updated  scripts/bin/harness-cli"
+    log "updated  scripts/bin/harness"
   else
     CREATED=$((CREATED + 1))
-    log "created  scripts/bin/harness-cli"
+    log "created  scripts/bin/harness"
   fi
 
   cp "$binary_tmp" "$target"
   chmod 755 "$target"
   rm -rf "$tmp_dir"
-  log "verified scripts/bin/harness-cli ($platform)"
+  log "verified scripts/bin/harness ($platform)"
 }
 
 check_protected_target_paths() {
@@ -579,7 +586,7 @@ SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" 2>/dev/null && pwd -P || printf '')"
 SOURCE_ROOT=""
 SOURCE_MODE="remote"
-SOURCE_BASE_URL="${HARNESS_SOURCE_BASE_URL:-https://raw.githubusercontent.com/hoangnb24/harness-experimental/main}"
+SOURCE_BASE_URL="${HARNESS_SOURCE_BASE_URL:-https://raw.githubusercontent.com/baobao0303/harness/main}"
 SOURCE_BASE_URL="${SOURCE_BASE_URL%/}"
 CLI_BASE_URL="${HARNESS_CLI_BASE_URL:-}"
 CLI_BASE_URL="${CLI_BASE_URL%/}"
@@ -590,11 +597,7 @@ if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/../AGENTS.md" ] && [ -f "$SCRIPT_DI
 fi
 
 if [ -z "$CLI_BASE_URL" ]; then
-  if [ "$SOURCE_MODE" = "local" ]; then
-    CLI_BASE_URL="file://$SOURCE_ROOT/dist"
-  else
-    CLI_BASE_URL="https://github.com/hoangnb24/harness-experimental/releases/latest/download"
-  fi
+  CLI_BASE_URL="https://github.com/baobao0303/harness/releases/latest/download"
 fi
 
 if [ "$YES" -eq 0 ] && can_prompt; then

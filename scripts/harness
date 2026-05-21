@@ -7,13 +7,14 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DB_PATH="${HARNESS_DB:-$REPO_ROOT/harness.db}"
 SCHEMA_DIR="$REPO_ROOT/scripts/schema"
-INSTALLED_RUST_CLI="$REPO_ROOT/scripts/bin/harness-cli"
-DEV_RUST_CLI="$REPO_ROOT/target/debug/harness-cli"
+DEV_RUST_CLI="$REPO_ROOT/target/debug/harness"
 RUST_CLI="${HARNESS_RUST_CLI:-}"
 
 if [ -z "$RUST_CLI" ]; then
-  if [ -x "$INSTALLED_RUST_CLI" ]; then
-    RUST_CLI="$INSTALLED_RUST_CLI"
+  if [ -x "$REPO_ROOT/scripts/bin/harness" ]; then
+    RUST_CLI="$REPO_ROOT/scripts/bin/harness"
+  elif [ -x "$REPO_ROOT/scripts/bin/harness-cli" ]; then
+    RUST_CLI="$REPO_ROOT/scripts/bin/harness-cli"
   else
     RUST_CLI="$DEV_RUST_CLI"
   fi

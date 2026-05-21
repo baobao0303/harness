@@ -6,7 +6,7 @@ This directory contains harness automation tools.
 
 The Rust Harness CLI is the primary interface for the durable layer. Installed
 projects keep `scripts/harness` as the stable entrypoint; it uses the prebuilt
-Rust binary at `scripts/bin/harness-cli` for normal Harness work.
+Rust binary at `scripts/bin/harness` for normal Harness work.
 
 ```bash
 scripts/harness init          # Create the database
@@ -24,7 +24,7 @@ Run `scripts/harness help` or `scripts/harness query help` for full usage.
 The schema lives in `scripts/schema/` and is version-controlled. The database
 file (`harness.db`) is `.gitignore`d.
 
-Requires: the prebuilt Rust CLI at `scripts/bin/harness-cli`.
+Requires: the prebuilt Rust CLI at `scripts/bin/harness`.
 
 Direct database inspection may still use SQLite tools, but normal Harness use
 should go through the Rust CLI.
@@ -32,8 +32,8 @@ should go through the Rust CLI.
 ### Rust CLI
 
 `scripts/harness` uses the Rust CLI when a prebuilt binary exists at
-`scripts/bin/harness-cli`, a development binary exists at
-`target/debug/harness-cli`, or a path is provided by `HARNESS_RUST_CLI`.
+`scripts/bin/harness`, a development binary exists at
+`target/debug/harness`, or a path is provided by `HARNESS_RUST_CLI`.
 
 Current migrated commands:
 
@@ -84,15 +84,15 @@ shim. Use `--override` only when replacing the protected Harness surface is
 intentional.
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --yes
+curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --yes
 ```
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --yes
+curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --yes
 ```
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --refresh-agent-shim --yes
+curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --refresh-agent-shim --yes
 ```
 
 `--refresh-agent-shim` backs up `AGENTS.md` before changing it. If the existing
@@ -107,9 +107,10 @@ validation commands. The installer script is not part of the installed project
 payload.
 
 By default the installer also downloads the prebuilt Rust Harness CLI for the
-current platform into `scripts/bin/harness-cli` and verifies its `.sha256`
+current platform into `scripts/bin/harness` and verifies its `.sha256`
 checksum before making it executable. Set `HARNESS_CLI_BASE_URL` to point at an
-alternate release artifact directory.
+alternate release artifact directory, such as a local `file:///.../dist`
+directory created by `scripts/build-harness-cli-release.sh`.
 
 ## Schema Migrations
 
@@ -146,8 +147,8 @@ Build the current-platform Rust CLI release artifact from the source repo:
 scripts/build-harness-cli-release.sh
 ```
 
-The script writes `dist/harness-cli-<platform>` and
-`dist/harness-cli-<platform>.sha256`. Supported labels are:
+The script writes `dist/harness-<platform>` and
+`dist/harness-<platform>.sha256`. Supported labels are:
 
 - `macos-arm64`
 - `macos-x64`
@@ -162,14 +163,14 @@ scripts/build-harness-cli-release.sh --target x86_64-unknown-linux-gnu
 
 GitHub releases are produced by
 `.github/workflows/harness-cli-release.yml`. Push a tag matching `v*` or
-`harness-cli-v*` to run the verification job, build all supported targets on
+`harness-v*` to run the verification job, build all supported targets on
 native hosted runners, and upload these release assets:
 
-- `harness-cli-macos-arm64`
-- `harness-cli-macos-arm64.sha256`
-- `harness-cli-macos-x64`
-- `harness-cli-macos-x64.sha256`
-- `harness-cli-linux-x64`
-- `harness-cli-linux-x64.sha256`
-- `harness-cli-linux-arm64`
-- `harness-cli-linux-arm64.sha256`
+- `harness-macos-arm64`
+- `harness-macos-arm64.sha256`
+- `harness-macos-x64`
+- `harness-macos-x64.sha256`
+- `harness-linux-x64`
+- `harness-linux-x64.sha256`
+- `harness-linux-arm64`
+- `harness-linux-arm64.sha256`

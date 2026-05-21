@@ -1,9 +1,9 @@
-# harness-experimental
+# harness
 
 Turn any software repo into an agent-ready workspace.
 
-`harness-experimental` is a repository-level operating harness for Claude Code,
-Codex, Cursor, and other coding agents. It gives agents the missing project
+`harness` is a repository-level operating harness for Claude Code,
+Cursor, Windsurf, GitHub Copilot, Antigravity, and other coding agents. It gives agents the missing project
 context they need before they change code: where to start, what the product
 contract says, how risky the work is, what proof is required, and which
 decisions future agents should inherit.
@@ -60,22 +60,40 @@ agents execute:
 
 https://openai.com/index/harness-engineering/
 
+## Global CLI Installation
+
+To run `harness` globally across all your projects without using repository-local scripts, you can install the verified, platform-specific prebuilt Rust CLI globally on your system PATH:
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-global.sh" | bash
+```
+
+This installer automatically detects your operating system and CPU architecture, downloads the matching prebuilt release binary, verifies its SHA256 integrity, and makes the global `harness` executable available. If the destination directory is not in your system `$PATH`, it prints customized export configuration statements for Zsh, Bash, or Fish shell.
+
+After installation, you can initialize or query a harness workspace anywhere:
+
+```bash
+harness init                  # Seed database in active directory
+harness query stats           # Retrieve active repository summary counts
+harness query matrix          # Review behavioral validation matrix
+```
+
 ## Install Harness Into A Project
 
 From a target project directory, run:
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --yes
+curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --yes
 ```
 
 If the target already has `AGENTS.md`, `docs/`, or `scripts/`, choose one:
 
 ```bash
 # Update an existing Harness repo without moving existing files
-curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --yes
+curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --yes
 
 # Back up and replace AGENTS.md, docs/, and scripts/
-curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --override --yes
+curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --override --yes
 ```
 
 Use `--merge` when a project already has Harness and you want to append newly
@@ -87,7 +105,7 @@ For older Harness installs whose `AGENTS.md` still contains the full generated
 operating guide, refresh it into the small stable shim:
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --refresh-agent-shim --yes
+curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --refresh-agent-shim --yes
 ```
 
 The refresh backs up the existing file. If it detects the old
@@ -98,21 +116,21 @@ project's local instructions.
 Or install into a specific path:
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/hoangnb24/harness-experimental/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --directory /path/to/project --yes
+curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --directory /path/to/project --yes
 ```
 
 Use `--dry-run` to preview changes before writing files.
 
 The installer also downloads the prebuilt Harness CLI for the current platform,
 verifies its `.sha256` checksum, and installs it at
-`scripts/bin/harness-cli`. The Rust CLI is the main Harness tool. Installed
+`scripts/bin/harness`. The Rust CLI is the main Harness tool. Installed
 projects keep `scripts/harness` as the stable command path, and that entrypoint
 uses the Rust binary for normal Harness work.
 
 Harness CLI release assets are published from tags by the
-`Harness CLI Release` GitHub Actions workflow. The installer expects each
-release to include `harness-cli-<platform>` and
-`harness-cli-<platform>.sha256` assets for macOS arm64, macOS x64, Linux x64,
+`Harness Release` GitHub Actions workflow. The installer expects each
+release to include `harness-<platform>` and
+`harness-<platform>.sha256` assets for macOS arm64, macOS x64, Linux x64,
 and Linux arm64.
 
 ## Try The Flow

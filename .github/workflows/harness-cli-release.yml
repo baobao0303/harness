@@ -1,10 +1,10 @@
-name: Harness CLI Release
+name: Harness Release
 
 on:
   push:
     tags:
       - "v*"
-      - "harness-cli-v*"
+      - "harness-v*"
   workflow_dispatch:
     inputs:
       release_tag:
@@ -30,13 +30,17 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Check formatting
-        run: cargo fmt --check
+        run: cargo fmt --check --manifest-path harness.toml
 
       - name: Run tests
-        run: cargo test --workspace
+        run: cargo test --manifest-path harness.toml
 
       - name: Check shell scripts
-        run: bash -n scripts/install-harness.sh scripts/harness scripts/build-harness-cli-release.sh
+        run: |
+          bash -n scripts/install-harness.sh
+          bash -n scripts/install-global.sh
+          bash -n scripts/harness
+          bash -n scripts/build-harness-cli-release.sh
 
   build:
     name: Build ${{ matrix.platform }}
@@ -73,10 +77,10 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: harness-cli-${{ matrix.platform }}
+          name: harness-${{ matrix.platform }}
           path: |
-            dist/harness-cli-${{ matrix.platform }}
-            dist/harness-cli-${{ matrix.platform }}.sha256
+            dist/harness-${{ matrix.platform }}
+            dist/harness-${{ matrix.platform }}.sha256
           if-no-files-found: error
 
   publish:
@@ -91,7 +95,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: harness-cli-*
+          pattern: harness-*
           merge-multiple: true
           path: dist
 
@@ -101,7 +105,7 @@ jobs:
             gh release create "$RELEASE_TAG" \
               --repo "$GITHUB_REPOSITORY" \
               --title "$RELEASE_TAG" \
-              --notes "Harness CLI release $RELEASE_TAG"
+              --notes "Harness release $RELEASE_TAG"
 
       - name: Upload release assets
-        run: gh release upload "$RELEASE_TAG" dist/harness-cli-* --repo "$GITHUB_REPOSITORY" --clobber
+        run: gh release upload "$RELEASE_TAG" dist/harness-* --repo "$GITHUB_REPOSITORY" --clobber

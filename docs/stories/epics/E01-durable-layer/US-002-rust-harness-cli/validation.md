@@ -28,8 +28,10 @@ verified against durable records.
 
 ```bash
 cargo fmt --check
-cargo test --workspace
-bash -n scripts/harness scripts/install-harness.sh
+cargo test --manifest-path harness.toml
+bash -n scripts/install-harness.sh
+bash -n scripts/harness
+bash -n scripts/build-harness-cli-release.sh
 scripts/build-harness-cli-release.sh
 scripts/harness query stats
 tmpdir=$(mktemp -d)
@@ -58,21 +60,24 @@ scripts/install-harness.sh --directory "$target" --yes
 "$target/scripts/harness" init
 "$target/scripts/harness" intake --type "Harness improvement" --summary "installed binary smoke" --lane tiny
 "$target/scripts/harness" query stats
-test -x "$target/scripts/bin/harness-cli"
+test -x "$target/scripts/bin/harness"
 rm -rf "$target"
 ```
 
 ## Acceptance Evidence
 
 - `cargo fmt --check`: passed.
-- `cargo test --workspace`: passed, 9 tests.
-- `bash -n scripts/harness scripts/install-harness.sh`: passed.
+- `cargo test --manifest-path harness.toml`: passed, 10 tests, including regression coverage
+  for repo-root decision verification and SQL `NULL` intake list storage.
+- `bash -n scripts/install-harness.sh`: passed.
+- `bash -n scripts/harness`: passed.
+- `bash -n scripts/build-harness-cli-release.sh`: passed.
 - `.github/workflows/harness-cli-release.yml`: added to verify the workspace,
   build the four supported CLI release targets on hosted native runners, and
-  publish `harness-cli-<platform>` plus `.sha256` assets to the GitHub Release
-  for `v*` or `harness-cli-v*` tags.
+  publish `harness-<platform>` plus `.sha256` assets to the GitHub Release
+  for `v*` or `harness-v*` tags.
 - `scripts/build-harness-cli-release.sh`: passed and wrote
-  `dist/harness-cli-macos-arm64` plus checksum.
+  `dist/harness-macos-arm64` plus checksum.
 - Temporary database smoke passed through the Rust delegated command paths:
   `init`, `migrate`, `import brownfield`, `intake`, `story add`, `story
   update`, `decision add`, `decision verify`, `backlog add`, `backlog close`,
@@ -83,24 +88,24 @@ rm -rf "$target"
   multiple backlog items from `docs/HARNESS_BACKLOG.md`; rerunning the importer
   did not duplicate backlog rows.
 - Installer E2E passed using the local `dist` release source. It downloaded
-  `scripts/bin/harness-cli`, verified the checksum, ran `scripts/harness init`,
+  `scripts/bin/harness`, verified the checksum, ran `scripts/harness init`,
   recorded an intake, and queried stats without relying on a local Cargo build
   inside the target project.
 - Checksum failure test passed: a corrupt `.sha256` file caused the installer
   to stop before accepting the binary.
 - Existing `.gitignore` merge test passed: custom rules were preserved while
-  `harness.db` and `scripts/bin/harness-cli` ignore rules were appended.
-- Real tag release passed: `harness-cli-v0.1.2` completed the `Harness CLI
+  `harness.db` and `scripts/bin/harness` ignore rules were appended.
+- Real tag release passed: `harness-v0.2.0` completed the `Harness CLI
   Release` workflow, including verify, `macos-arm64`, `macos-x64`,
   `linux-x64`, `linux-arm64`, and publish jobs.
-- GitHub Release verification passed: `harness-cli-v0.1.2` is the latest
+- GitHub Release verification passed: `harness-v0.2.0` is the latest
   release and contains exactly eight expected assets:
-  `harness-cli-macos-arm64`, `harness-cli-macos-arm64.sha256`,
-  `harness-cli-macos-x64`, `harness-cli-macos-x64.sha256`,
-  `harness-cli-linux-x64`, `harness-cli-linux-x64.sha256`,
-  `harness-cli-linux-arm64`, and `harness-cli-linux-arm64.sha256`.
+  `harness-macos-arm64`, `harness-macos-arm64.sha256`,
+  `harness-macos-x64`, `harness-macos-x64.sha256`,
+  `harness-linux-x64`, `harness-linux-x64.sha256`,
+  `harness-linux-arm64`, and `harness-linux-arm64.sha256`.
 - Remote installer smoke passed from raw GitHub `main` plus
   `releases/latest/download`: the installer downloaded and verified the
   `macos-arm64` binary, preserved executable bits for `scripts/harness` and
-  `scripts/bin/harness-cli`, and the installed command ran `init`, `intake`,
+  `scripts/bin/harness`, and the installed command ran `init`, `intake`,
   `query stats`, and `import brownfield`.

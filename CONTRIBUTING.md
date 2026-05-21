@@ -1,4 +1,4 @@
-# Contributing to harness-experimental
+# Contributing to harness
 
 Thanks for helping improve the harness.
 

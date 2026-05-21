@@ -65,12 +65,12 @@ while [ "$#" -gt 0 ]; do
 done
 
 if [ -n "$target" ]; then
-  cargo_args=(build --package harness-cli --profile "$profile" --target "$target")
-  binary="$repo_root/target/$target/$profile/harness-cli"
+  cargo_args=(build --manifest-path "$repo_root/harness.toml" --profile "$profile" --target "$target")
+  binary="$repo_root/target/$target/$profile/harness"
   triple="$target"
 else
-  cargo_args=(build --package harness-cli --profile "$profile")
-  binary="$repo_root/target/$profile/harness-cli"
+  cargo_args=(build --manifest-path "$repo_root/harness.toml" --profile "$profile")
+  binary="$repo_root/target/$profile/harness"
   triple="$(rustc -vV | awk '/^host:/ { print $2 }')"
 fi
 
@@ -90,7 +90,7 @@ esac
 [ -x "$binary" ] || fail "Expected compiled binary missing: $binary"
 
 mkdir -p "$out_dir"
-artifact="$out_dir/harness-cli-$platform"
+artifact="$out_dir/harness-$platform"
 cp "$binary" "$artifact"
 chmod 755 "$artifact"
 
