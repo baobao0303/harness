@@ -1,229 +1,148 @@
-# harness
+# Harness 🚀
 
-Turn any software repo into an agent-ready workspace.
+> **Biến mọi repository mã nguồn thành một workspace sẵn sàng cho các AI Coding Agent.**
 
-`harness` is a repository-level operating harness for Claude Code,
-Cursor, Windsurf, GitHub Copilot, Antigravity, and other coding agents. It gives agents the missing project
-context they need before they change code: where to start, what the product
-contract says, how risky the work is, what proof is required, and which
-decisions future agents should inherit.
+`harness` là một khung vận hành cấp repository (repository-level operating framework) dành cho **Claude Code, Codex, Cursor, Windsurf, GitHub Copilot, Antigravity** và các AI Coding Agent khác. 
 
-The app is what users touch. The harness is what agents touch.
+Công cụ này cung cấp cho các AI Agent các ngữ cảnh còn thiếu của dự án trước khi chúng thay đổi mã nguồn: nên bắt đầu từ đâu, hợp đồng sản phẩm (product contract) yêu cầu gì, mức độ rủi ro ra sao, bằng chứng kiểm chứng (validation proof) cần những gì, và những quyết định kiến trúc nào cần kế thừa.
 
-## Why Star This Repo
+*Ứng dụng (App) là thứ người dùng chạm vào. Khung vận hành (Harness) là thứ AI Agent chạm vào.*
 
-Star this repo if you want practical, reusable patterns for making AI-assisted
-software development more reliable, inspectable, and easier for humans to steer.
+---
 
-This project is exploring a simple idea:
+## 🌟 Tại sao bạn cần Harness?
 
-> Coding agents do not only need better prompts. They need better repositories.
+Hầu hết các repository hiện nay được xây dựng cho con người đọc và hiểu. Khi các AI Coding Agent bước vào, chúng thường chỉ có lịch sử chat ngắn hạn và ảnh chụp nhanh (snapshot) nông cạn về các tệp tin. Điều này dẫn đến các lỗi phổ biến:
 
-## The Problem
+*   ❌ Agent sửa đổi mã nguồn trước khi hiểu rõ ý đồ sản phẩm.
+*   ❌ Các ràng buộc nghiệp vụ quan trọng chỉ nằm trong lịch sử chat hoặc trong đầu lập trình viên.
+*   ❌ Kỳ vọng kiểm chứng mơ hồ hoặc chỉ được phát hiện quá muộn.
+*   ❌ Các quyết định kiến trúc bị lặp đi lặp lại thay vì được kế thừa.
+*   ❌ Các yêu cầu lớn không được chia nhỏ thành các gói công việc (story) có thể review được.
 
-Most repos are built for humans reading code in a familiar codebase. Coding
-agents usually enter with only a chat prompt and a shallow snapshot of files.
-That leads to common failure modes:
+### Giải pháp từ Harness
 
-- The agent edits code before understanding product intent.
-- Important constraints live only in chat history or in someone's head.
-- Validation expectations are vague or discovered too late.
-- Architecture tradeoffs are repeated instead of inherited.
-- Large requests do not get broken into reviewable story-sized work.
+Harness giúp AI Agent trả lời các câu hỏi kỹ thuật thực tế mà không cần phụ thuộc vào lịch sử chat:
 
-## The Harness Approach
+1.  **`AGENTS.md`** — Điểm bắt đầu (shim) ổn định cho Agent với các ghi chú cục bộ của dự án và liên kết tài liệu Harness.
+2.  **`docs/HARNESS.md`** — Mô hình hợp tác giữa người và AI Agent.
+3.  **`docs/FEATURE_INTAKE.md`** — Phân loại rủi ro công việc (tiny, normal, high-risk).
+4.  **`docs/ARCHITECTURE.md`** — Các quy tắc ranh giới và khám phá kiến trúc.
+5.  **`docs/TEST_MATRIX.md`** — Bảng đối chiếu giữa hành vi và bằng chứng kiểm chứng.
+6.  **`docs/stories/`** — Các gói công việc kích thước story và backlog.
+7.  **`docs/decisions/`** — Nhật ký lưu trữ các quyết định kiến trúc dài hạn (ADR).
+8.  **`docs/templates/`** — Các bản mẫu đặc tả, story, quyết định và validation tiện dụng.
 
-A repository starts to have a harness when it helps an agent answer practical
-engineering questions without relying only on chat history:
+---
 
-- What should I read first?
-- What type of work is this?
-- Which product contract does it affect?
-- How risky is the change?
-- What proof will show the work is done?
-- What decision or lesson should future agents inherit?
+## 🔄 Quy trình hoạt động (Harness Loop)
 
-In this repo, those answers live in:
+Mọi yêu cầu công việc đi qua Harness sẽ tuân theo quy trình chuẩn hóa:
 
-- `AGENTS.md` — the stable agent shim with local project notes and Harness
-  doc links.
-- `docs/HARNESS.md` — the human-agent collaboration model.
-- `docs/FEATURE_INTAKE.md` — tiny, normal, and high-risk work classification.
-- `docs/ARCHITECTURE.md` — architecture discovery and boundary rules.
-- `docs/TEST_MATRIX.md` — behavior-to-proof validation expectations.
-- `docs/stories/` — story packets and backlog items.
-- `docs/decisions/` — durable decisions and tradeoffs.
-- `docs/templates/` — reusable spec, story, decision, and validation templates.
+```text
+Ý định của con người hoặc Spec dự án
+  └──> Phân loại Feature Intake (Xác định rủi ro & làn đường)
+        └──> Cập nhật tài liệu đặc tả sản phẩm (Product Contract)
+              └──> Tạo gói công việc Story Packet (Nếu cần)
+                    └──> Định nghĩa bằng chứng kiểm chứng (Validation Proof)
+                          └──> AI Agent thực hiện viết code & kiểm thử
+                                └──> Ghi nhận Quyết định kiến trúc & Khó khăn (Friction)
+```
 
-OpenAI describes this shift as an agent-first world where humans steer and
-agents execute:
+---
 
-https://openai.com/index/harness-engineering/
+## 📥 Hướng dẫn cài đặt bằng Terminal
 
-## Global CLI Installation
+Bạn có thể cài đặt Harness theo hai cách: **Cài đặt toàn cục (Global)** để chạy lệnh `harness` ở bất kỳ đâu, hoặc **Cài đặt cục bộ (Local)** vào một dự án cụ thể.
 
-To run `harness` globally across all your projects without using repository-local scripts, you can install the verified, platform-specific prebuilt Rust CLI globally on your system PATH:
+### 🌎 Cách 1: Cài đặt toàn cục (Global CLI) - Khuyên dùng
+
+Để có thể chạy lệnh `harness` trực tiếp từ terminal tại bất kỳ thư mục dự án nào, hãy chạy lệnh sau:
 
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-global.sh" | bash
 ```
 
-This installer automatically detects your operating system and CPU architecture, downloads the matching prebuilt release binary, verifies its SHA256 integrity, and makes the global `harness` executable available. If the destination directory is not in your system `$PATH`, it prints customized export configuration statements for Zsh, Bash, or Fish shell.
+> [!NOTE]
+> *   Bộ cài đặt sẽ tự động nhận diện hệ điều hành (macOS/Linux) và kiến trúc CPU (arm64/x64).
+> *   Tự động tải về binary phát hành prebuilt tương ứng từ GitHub, xác thực mã băm SHA256 để đảm bảo an toàn.
+> *   Di chuyển binary vào `/usr/local/bin` (hoặc `~/.local/bin` nếu không có quyền root).
+> *   Nếu thư mục cài đặt chưa có trong biến `$PATH` của hệ thống, bộ cài sẽ in ra chính xác câu lệnh cấu hình tương ứng cho shell của bạn (**Zsh**, **Bash**, hoặc **Fish**).
 
-After installation, you can initialize or query a harness workspace anywhere:
-
+Sau khi cài đặt, bạn có thể kiểm tra trạng thái bằng cách gõ:
 ```bash
-harness init                  # Seed database in active directory
-harness query stats           # Retrieve active repository summary counts
-harness query matrix          # Review behavioral validation matrix
+harness query stats
 ```
 
-## Install Harness Into A Project
+---
 
-From a target project directory, run:
+### 📂 Cách 2: Cài đặt trực tiếp vào một dự án (Project Installation)
+
+Nếu bạn muốn tích hợp toàn bộ cấu trúc thư mục Harness (`docs/`, `scripts/`, `AGENTS.md`) trực tiếp vào dự án hiện tại của mình, hãy chuyển đến thư mục dự án đó và chạy:
 
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --yes
 ```
 
-If the target already has `AGENTS.md`, `docs/`, or `scripts/`, choose one:
+#### Các tùy chọn nâng cao khi cập nhật:
 
-```bash
-# Update an existing Harness repo without moving existing files
-curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --yes
+*   **Cập nhật bảo toàn (Merge)**: Đối với các dự án đã tích hợp sẵn Harness từ trước và bạn chỉ muốn tải thêm các file mới bổ sung mà không ghi đè lên các tài liệu hiện có:
+    ```bash
+    curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --yes
+    ```
+*   **Ghi đè hoàn toàn (Override)**: Sao lưu toàn bộ thư mục Harness cũ và cài đặt mới hoàn toàn:
+    ```bash
+    curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --override --yes
+    ```
+*   **Làm sạch Agent Shim**: Chuyển đổi tệp `AGENTS.md` cồng kềnh cũ sang dạng shim gọn nhẹ ổn định:
+    ```bash
+    curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --refresh-agent-shim --yes
+    ```
 
-# Back up and replace AGENTS.md, docs/, and scripts/
-curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --override --yes
-```
+---
 
-Use `--merge` when a project already has Harness and you want to append newly
-added Harness files without moving the existing `AGENTS.md`, `docs/`, or
-`scripts/` paths into backup. Existing files stay untouched; only missing
-Harness files are created.
+## 🛠️ Các câu lệnh cơ bản (Global Commands)
 
-For older Harness installs whose `AGENTS.md` still contains the full generated
-operating guide, refresh it into the small stable shim:
+Khi đã cài đặt global, bạn có thể thực hiện quản lý dự án nhanh chóng bằng các lệnh sau:
 
-```bash
-curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --refresh-agent-shim --yes
-```
+| Lệnh | Chức năng |
+| :--- | :--- |
+| `harness init` | Khởi tạo cơ sở dữ liệu hoạt động (`harness.db`) trong dự án hiện tại. |
+| `harness intake --type <type> --summary "<nội dung>" --lane <lane>` | Đăng ký phân loại rủi ro cho một yêu cầu tính năng mới. |
+| `harness story add --id <id> --title "<tiêu đề>" --lane <lane>` | Tạo mới một gói công việc story trong Test Matrix. |
+| `harness story update --id <id> --status <status> --evidence "<bằng chứng>"` | Cập nhật tiến độ kiểm chứng (`planned`, `in_progress`, `implemented`). |
+| `harness trace --summary "<mô tả>" --outcome <outcome> --agent <tên>` | Ghi nhận nhật ký dấu vết hoạt động của AI Agent. |
+| `harness query stats` | Hiển thị tóm tắt thống kê số lượng dữ liệu trong workspace. |
+| `harness query matrix` | Hiển thị bảng ma trận kiểm chứng chất lượng và tiến độ. |
+| `harness query decisions` | Hiển thị danh sách các quyết định kiến trúc đã được thông qua. |
 
-The refresh backs up the existing file. If it detects the old
-Harness-generated guide, it replaces it with the shim. If the file appears
-custom, it appends or updates a marked Harness block instead of overwriting the
-project's local instructions.
+---
 
-Or install into a specific path:
+## 🏗️ Cấu trúc thư mục tích hợp trong dự án
 
-```bash
-curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --directory /path/to/project --yes
-```
-
-Use `--dry-run` to preview changes before writing files.
-
-The installer also downloads the prebuilt Harness CLI for the current platform,
-verifies its `.sha256` checksum, and installs it at
-`scripts/bin/harness`. The Rust CLI is the main Harness tool. Installed
-projects keep `scripts/harness` as the stable command path, and that entrypoint
-uses the Rust binary for normal Harness work.
-
-Harness CLI release assets are published from tags by the
-`Harness Release` GitHub Actions workflow. The installer expects each
-release to include `harness-<platform>` and
-`harness-<platform>.sha256` assets for macOS arm64, macOS x64, Linux x64,
-and Linux arm64.
-
-## Try The Flow
-
-The fastest way to understand the harness is to inspect the tiny demo:
-
-- `docs/demo/README.md`: shows how a simple product idea becomes product docs,
-  stories, validation expectations, and decisions before implementation starts.
-
-A typical flow looks like this:
+Khi cài đặt vào dự án, cấu trúc thư mục của bạn sẽ trông như thế này:
 
 ```text
-human intent or product spec
-  -> product contract
-  -> feature intake
-  -> story packet
-  -> validation expectations
-  -> implementation work
-  -> decision or lesson captured for future agents
+your-project/
+  ├── AGENTS.md             # Tệp shim hướng dẫn cho AI Agent
+  ├── README.md             # Tài liệu dự án của bạn
+  ├── harness.db            # Database SQLite lưu trữ lịch sử hoạt động (đã được gitignore)
+  ├── docs/
+  │    ├── HARNESS.md       # Tài liệu hướng dẫn mô hình hợp tác
+  │    ├── FEATURE_INTAKE.md# Quy tắc phân loại rủi ro công việc
+  │    ├── ARCHITECTURE.md  # Tài liệu quy tắc kiến trúc hệ thống
+  │    ├── product/         # Chứa tài liệu đặc tả sản phẩm thực tế
+  │    ├── stories/         # Chứa các tệp mô tả gói công việc chi tiết
+  │    ├── decisions/       # Nhật ký Quyết định Kiến trúc (ADR)
+  │    └── templates/       # Các bản mẫu cấu trúc tiện dụng
+  └── scripts/
+       └── harness          # Trình khởi chạy CLI dự án dự phòng
 ```
 
-Implementation prompts do not go straight to code. They first pass through
-feature intake, become story-sized work when needed, and then carry both product
-validation and harness maintenance expectations.
+---
 
-## Current State
+## 🤝 Đóng góp
 
-This repository is in Harness v0.
+Dự án này đang trong giai đoạn phát triển và sẽ được tối ưu hóa liên tục dựa trên các case study thực tế từ quá trình vận hành của AI Agent. Nếu bạn gặp bất kỳ lỗi hoạt động hoặc có đề xuất cải tiến nào, hãy tạo Issue hoặc gửi Pull Request!
 
-There is no application implementation and no baked-in product specification
-yet. The current work is the reusable project harness: the file structure,
-agent operating model, feature intake process, story templates, and validation
-expectations that help humans and agents turn a future user-provided spec into
-implementation work.
-
-## Product Sources
-
-No product contract is currently defined.
-
-When a user provides a project specification, add or reference it as the input
-spec for the first buildout, then derive smaller living artifacts from it:
-
-- `docs/product/`: current product contract files, created from the spec.
-- `docs/stories/`: story packets and backlog created from selected work.
-- `docs/TEST_MATRIX.md`: behavior-to-proof control panel.
-- `docs/decisions/`: durable decisions and tradeoffs.
-
-Do not keep a project-specific spec or product breakdown in this harness until
-a real project supplies one.
-
-## Repository Structure
-
-```text
-project/
-  AGENTS.md
-  README.md
-  docs/
-    HARNESS.md
-    FEATURE_INTAKE.md
-    ARCHITECTURE.md
-    TEST_MATRIX.md
-    HARNESS_BACKLOG.md
-    product/
-    stories/
-    decisions/
-    demo/
-    templates/
-  scripts/
-    README.md
-```
-
-## Contributing
-
-This project is early and benefits most from real-world agent failure cases,
-example harness installs, docs improvements, and reusable workflow patterns.
-See `CONTRIBUTING.md` for contribution ideas.
-
-Useful contributions include:
-
-- Show how the harness works in a real project.
-- Add missing templates or improve existing ones.
-- Propose validation patterns for different stacks.
-- Share failures where an agent made the wrong change because the repo lacked
-  context.
-- Compare harness behavior across Claude Code, Codex, Cursor, and other tools.
-
-## Share
-
-If this idea resonates, please star the repo and share it with someone building
-with coding agents.
-
-Short description:
-
-> An agent-ready repo harness for Claude Code, Codex, Cursor, and other coding
-> agents: AGENTS.md, product contracts, story packets, validation matrix, and
-> decision records.
+Hãy ⭐ star repository này nếu bạn thấy ý tưởng giúp AI Coding Agent hoạt động an toàn và hiệu quả hơn là hữu ích!
