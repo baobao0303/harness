@@ -64,12 +64,22 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
+# Setup temporary Cargo files to bypass Cargo 1.95+ filename restrictions
+cp "$repo_root/harness.toml" "$repo_root/Cargo.toml"
+cp "$repo_root/harness.lock" "$repo_root/Cargo.lock"
+
+# Ensure cleanup on exit
+cleanup() {
+  rm -f "$repo_root/Cargo.toml" "$repo_root/Cargo.lock"
+}
+trap cleanup EXIT
+
 if [ -n "$target" ]; then
-  cargo_args=(build --manifest-path "$repo_root/harness.toml" --profile "$profile" --target "$target")
+  cargo_args=(build --profile "$profile" --target "$target")
   binary="$repo_root/target/$target/$profile/harness"
   triple="$target"
 else
-  cargo_args=(build --manifest-path "$repo_root/harness.toml" --profile "$profile")
+  cargo_args=(build --profile "$profile")
   binary="$repo_root/target/$profile/harness"
   triple="$(rustc -vV | awk '/^host:/ { print $2 }')"
 fi
