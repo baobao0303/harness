@@ -1,0 +1,61 @@
+name: Harness pattern request
+description: Request a reusable harness pattern, template, or validation flow
+title: "Pattern request: [Short Description]"
+labels: ["pattern-request", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Requesting a new harness pattern or template? Help us structure the request to build a highly reusable workflow!
+
+  - type: textarea
+    id: pattern_need
+    attributes:
+      label: What pattern do you need?
+      description: Describe the core reusable behavior, script, or checklist you are proposing.
+      placeholder: e.g., "A standardized database migration validation template and pre-migration check script"
+    validations:
+      required: true
+
+  - type: textarea
+    id: project_stack
+    attributes:
+      label: What kind of project or stack is this for?
+      description: Mention the target programming languages, databases, or frameworks this pattern targets.
+      placeholder: e.g., "Rust, SQLite, cargo-sqlx, GitHub Actions"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: target_agent
+    attributes:
+      label: Which agent/tool should this help?
+      description: Select the coding assistant(s) that will benefit most from this pattern.
+      options:
+        - label: Claude Code
+        - label: Codex
+        - label: Cursor
+        - label: Windsurf
+        - label: GitHub Copilot
+        - label: Antigravity
+        - label: All of the above
+    validations:
+      required: false
+
+  - type: textarea
+    id: agent_guidelines
+    attributes:
+      label: What should the agent know before changing code?
+      description: What instructions or guardrails must be documented in the pattern for the agent to follow?
+      placeholder: e.g., "The agent must create an intake, verify safety constraints, and run dry-run migrations first"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proof_requirements
+    attributes:
+      label: What proof should show the work is done?
+      description: How should the agent prove the work meets expectations (matrix, commands, expected outputs)?
+      placeholder: e.g., "Pass structural schema drift tests and integration query suite"
+    validations:
+      required: true

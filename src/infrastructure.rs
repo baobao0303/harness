@@ -1082,8 +1082,7 @@ mod tests {
         let temp_dir = tempfile::tempdir().unwrap();
         let repo_root = temp_dir.path().join("repo");
         fs::create_dir_all(&repo_root).unwrap();
-        let schema_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("scripts/schema");
+        let schema_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("scripts/schema");
         let repository = SqliteHarnessRepository::new(
             repo_root.clone(),
             temp_dir.path().join("harness.db"),

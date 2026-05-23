@@ -14,9 +14,19 @@ Before work, read:
 - `docs/HARNESS.md`
 - `docs/FEATURE_INTAKE.md`
 - `docs/ARCHITECTURE.md`
-- `.agents/rules/harness.md`
+- All files in `.agents/rules/`
 
 Use the Rust Harness CLI as the main operational tool. Run it through the stable repo-local entrypoint `scripts/harness`, which uses the prebuilt Rust binary at `scripts/bin/harness-cli`.
+
+### Agent Workspace Structure (`.agents/`)
+
+This directory is an enterprise-grade cognitive core containing:
+
+- `.agents/rules/`: Authoritative operational guidelines (Harness, Scrum, Edge Case Hunter, Adversarial Review).
+- `.agents/workflow/`: High-discipline execution workflows (`quick-dev.md`, `dev-story.md`, `code-review.md`).
+- `.agents/skills/`: Comprehensive library of 44 BMad modular task skills.
+- `.agents/agents/`: Repository of specialized personas categorized by discipline (Engineering, Product, etc.).
+- `.agents/commands/`: Team coordination command configurations.
 
 <!-- AGENT-SHIMS:BEGIN -->
 
@@ -24,7 +34,7 @@ Use the Rust Harness CLI as the main operational tool. Run it through the stable
 
 Before working in this repository:
 
-1. Read `.agents/rules/harness.md` for operating rules
+1. Read all files in `.agents/rules/` for operating and validation rules
 2. Run `scripts/harness query matrix` to see current validation status
 3. Run `scripts/harness query stats` for project overview
 4. Follow the mandatory task loop for every request
@@ -33,7 +43,7 @@ Before working in this repository:
 
 Before working in this repository:
 
-1. Read `.agents/rules/harness.md` for operating rules
+1. Read all files in `.agents/rules/` for operating and validation rules
 2. Reference `docs/FEATURE_INTAKE.md` for work classification
 3. Use `scripts/harness query` commands for status checks
 4. Follow the mandatory task loop for every request
@@ -42,7 +52,7 @@ Before working in this repository:
 
 Before working in this repository:
 
-1. Read `.agents/rules/harness.md` for operating rules
+1. Read all files in `.agents/rules/` for operating and validation rules
 2. Reference `docs/FEATURE_INTAKE.md` for work classification
 3. Use `scripts/harness query` commands for status checks
 4. Follow the mandatory task loop for every request
@@ -51,7 +61,7 @@ Before working in this repository:
 
 Before suggesting code changes:
 
-1. Read `.agents/rules/harness.md` for operating rules
+1. Read all files in `.agents/rules/` for operating and validation rules
 2. Reference story packets in `docs/stories/` for implementation guidance
 3. Use `scripts/harness query` commands for context
 4. Always record traces upon task completion
@@ -60,7 +70,7 @@ Before suggesting code changes:
 
 Before working in this repository:
 
-1. Read `.agents/rules/harness.md` for operating rules
+1. Read all files in `.agents/rules/` for operating and validation rules
 2. Run `scripts/harness query matrix` for validation status
 3. Follow the mandatory task loop for every request
 
@@ -68,7 +78,7 @@ Before working in this repository:
 
 Before working in this repository:
 
-1. Read `.agents/rules/harness.md` for operating rules
+1. Read all files in `.agents/rules/` for operating and validation rules
 2. Reference `docs/FEATURE_INTAKE.md` for work classification
 3. Use `scripts/harness query` commands for context
 4. Follow the mandatory task loop for every request
@@ -77,7 +87,7 @@ Before working in this repository:
 
 This repository uses Harness. Before working:
 
-1. Read `.agents/rules/harness.md` — this is the authoritative operating guide
+1. Read all files in `.agents/rules/` — these are the authoritative operating guides
 2. Read `docs/HARNESS.md` for the human-agent collaboration model
 3. Read `docs/FEATURE_INTAKE.md` for work classification
 4. Use `scripts/harness` CLI for all task tracking

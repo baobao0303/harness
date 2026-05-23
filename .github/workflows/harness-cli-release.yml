@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"
       - "harness-v*"
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       release_tag:
@@ -18,24 +21,54 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
-    name: Verify
-    runs-on: ubuntu-24.04
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+      fail-fast: false
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Check formatting
-        run: cargo fmt --check --manifest-path harness.toml
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('harness.toml', 'harness.lock') }}
+          restore-keys: |
+            ${{ matrix.os }}-cargo-
 
-      - name: Run tests
-        run: cargo test --manifest-path harness.toml
+      - name: Setup temporary Cargo files
+        run: |
+          cp harness.toml Cargo.toml
+          cp harness.lock Cargo.lock
 
-      - name: Check shell scripts
+      - name: Check code formatting
+        run: cargo fmt --check
+
+      - name: Run unit tests
+        run: cargo test
+
+      - name: Clean up temporary Cargo files
+        if: always()
+        run: rm -f Cargo.toml Cargo.lock
+
+      - name: Check shell scripts syntax (Ubuntu only)
+        if: matrix.os == 'ubuntu-24.04'
         run: |
           bash -n scripts/install-harness.sh
           bash -n scripts/install-global.sh
@@ -63,13 +96,25 @@ jobs:
             target: aarch64-unknown-linux-gnu
             runner: ubuntu-24.04-arm
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ matrix.runner }}-${{ matrix.target }}-cargo-${{ hashFiles('harness.toml', 'harness.lock') }}
+          restore-keys: |
+            ${{ matrix.runner }}-${{ matrix.target }}-cargo-
 
       - name: Build release artifact
         run: scripts/build-harness-cli-release.sh --target "${{ matrix.target }}"
@@ -87,7 +132,7 @@ jobs:
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-24.04
-    if: ${{ github.event_name == 'push' || github.event.inputs.release_tag != '' }}
+    if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || github.event.inputs.release_tag != '' }}
     env:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
