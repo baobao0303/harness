@@ -49,6 +49,8 @@ Mọi yêu cầu công việc đi qua Harness sẽ tuân theo quy trình chuẩn
                                 └──> Ghi nhận Quyết định kiến trúc & Khó khăn (Friction)
 ```
 
+![Harness Integrated Developer IDE Performance Dashboard](docs/assets/ide-comparison-dashboard.png)
+
 ---
 
 ## 📥 Hướng dẫn cài đặt bằng Terminal
