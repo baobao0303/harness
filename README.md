@@ -55,24 +55,37 @@ Mọi yêu cầu công việc đi qua Harness sẽ tuân theo quy trình chuẩn
 
 Bạn có thể cài đặt Harness theo hai cách: **Cài đặt toàn cục (Global)** để chạy lệnh `harness` ở bất kỳ đâu, hoặc **Cài đặt cục bộ (Local)** vào một dự án cụ thể.
 
-### 🌎 Cách 1: Cài đặt toàn cục (Global CLI) - Khuyên dùng
+---
 
-Để có thể chạy lệnh `harness` trực tiếp từ terminal tại bất kỳ thư mục dự án nào, hãy chạy lệnh sau:
+### 🌎 Cách 1: Cài đặt toàn cục (Global CLI)
+
+#### Option A: Cài đặt ngoại tuyến (Offline & Local Build) - Khuyên dùng & Cực kỳ an toàn
+Nếu bạn vừa tải mã nguồn về hoặc kho lưu trữ GitHub chưa cấu hình phát hành (Release) công khai, bạn có thể biên dịch trực tiếp và cài đặt toàn cục chỉ với **2 lệnh**:
+
+```bash
+# 1. Biên dịch và sao chép tệp nhị phân vào thư mục bin của hệ thống
+bash scripts/build-harness-cli-release.sh && mkdir -p ~/.local/bin && cp dist/harness-macos-arm64 ~/.local/bin/harness && chmod +x ~/.local/bin/harness
+
+# 2. Cấu hình biến môi trường PATH để gọi lệnh 'harness' ở bất kỳ đâu
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+```
+*(Nếu bạn dùng Bash hoặc Fish shell thay vì Zsh, hãy đổi `~/.zshrc` tương ứng thành `~/.bashrc` hoặc `~/.config/fish/config.fish`)*.
+
+#### Option B: Cài đặt trực tuyến (Online Curl)
+Khi dự án đã có các phiên bản phát hành chính thức trên GitHub, bạn chỉ cần một câu lệnh để tự động tải và cấu hình:
 
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-global.sh" | bash
 ```
 
 > [!NOTE]
-> *   Bộ cài đặt sẽ tự động nhận diện hệ điều hành (macOS/Linux) và kiến trúc CPU (arm64/x64).
-> *   Tự động tải về binary phát hành prebuilt tương ứng từ GitHub, xác thực mã băm SHA256 để đảm bảo an toàn.
-> *   Di chuyển binary vào `/usr/local/bin` (hoặc `~/.local/bin` nếu không có quyền root).
-> *   Nếu thư mục cài đặt chưa có trong biến `$PATH` của hệ thống, bộ cài sẽ in ra chính xác câu lệnh cấu hình tương ứng cho shell của bạn (**Zsh**, **Bash**, hoặc **Fish**).
-
-Sau khi cài đặt, bạn có thể kiểm tra trạng thái bằng cách gõ:
-```bash
-harness query stats
-```
+> *   Bộ cài đặt trực tuyến sẽ tự động nhận diện hệ điều hành (macOS/Linux) và kiến trúc CPU (arm64/x64).
+> *   Tự động tải về binary phát hành tương ứng từ GitHub, xác thực mã băm SHA256 để đảm bảo an toàn.
+> 
+> Sau khi cài đặt bằng 1 trong 2 tùy chọn trên, bạn có thể kiểm tra trạng thái bằng cách gõ:
+> ```bash
+> harness query stats
+> ```
 
 ---
 
