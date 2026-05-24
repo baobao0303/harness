@@ -45,6 +45,10 @@ enum Command {
     Trace(TraceArgs),
     /// Query harness data.
     Query(QueryArgs),
+    /// Manage the local database backup and restore.
+    Db(DbArgs),
+    /// Manage and execute Harness skills.
+    Skill(SkillArgs),
 }
 
 #[derive(Args, Debug)]
@@ -87,6 +91,11 @@ struct StoryArgs {
 enum StoryAction {
     Add(StoryAddArgs),
     Update(StoryUpdateArgs),
+    Verify {
+        id: String,
+        #[arg(long)]
+        skill: Option<String>,
+    },
 }
 
 #[derive(Args, Debug)]
@@ -99,6 +108,8 @@ struct StoryAddArgs {
     lane: String,
     #[arg(long)]
     contract: Option<String>,
+    #[arg(long = "test-skill")]
+    test_skill: Option<String>,
     #[arg(long)]
     notes: Option<String>,
 }
@@ -225,6 +236,9 @@ struct TraceArgs {
 
 #[derive(Args, Debug)]
 struct QueryArgs {
+    #[arg(long, help = "Output in JSON format")]
+    json: bool,
+
     #[command(subcommand)]
     view: QueryView,
 }
@@ -249,6 +263,51 @@ enum QueryView {
     Sql { query: Vec<String> },
 }
 
+#[derive(Args, Debug)]
+struct DbArgs {
+    #[command(subcommand)]
+    action: DbAction,
+}
+
+#[derive(Subcommand, Debug)]
+enum DbAction {
+    /// Export database content as a portable SQL dump script.
+    Export {
+        /// Absolute path to output SQL file.
+        #[arg(long)]
+        out: String,
+    },
+    /// Import database content from a portable SQL dump script.
+    Import {
+        /// Absolute path to input SQL file.
+        #[arg(long)]
+        file: String,
+    },
+}
+
+#[derive(Args, Debug)]
+struct SkillArgs {
+    #[command(subcommand)]
+    action: SkillAction,
+}
+
+#[derive(Subcommand, Debug)]
+enum SkillAction {
+    /// List all available BMad skills
+    List,
+    /// Run a specific skill
+    Run {
+        /// Name of the skill
+        name: String,
+        /// Optional Story ID to verify
+        #[arg(long = "story-id")]
+        story_id: Option<String>,
+        /// Output in JSON format
+        #[arg(long)]
+        json: bool,
+    },
+}
+
 #[derive(Debug, Error)]
 pub enum InterfaceError {
     #[error("{0}")]
@@ -259,6 +318,8 @@ pub enum InterfaceError {
     CurrentDir(std::io::Error),
     #[error("query sql requires a SQL statement")]
     EmptySql,
+    #[error("json serialization error: {0}")]
+    JsonSerialization(#[from] serde_json::Error),
 }
 
 pub fn run(cli: Cli) -> Result<(), InterfaceError> {
@@ -292,6 +353,7 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
                     title: args.title,
                     risk_lane: RiskLane::from_str(&args.lane)?,
                     contract_doc: args.contract,
+                    test_skill: args.test_skill,
                     notes: args.notes,
                 })?;
                 println!("Story {} added.", args.id);
@@ -310,6 +372,37 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
                     platform: parse_optional_bool("story update: --platform", args.platform)?,
                 })?;
                 println!("Story {} updated.", args.id);
+            }
+            StoryAction::Verify { id, skill } => {
+                if let Some(skill_name) = skill {
+                    let result = service.invoke_skill(&skill_name, Some(&id))?;
+                    // Update story in DB
+                    service.update_story(StoryUpdateInput {
+                        id: id.clone(),
+                        status: Some("implemented".to_owned()),
+                        evidence: Some(format!("Verified successfully via skill {}", skill_name)),
+                        unit: Some(BoolFlag(if result.unit_passed { 1 } else { 0 })),
+                        integration: Some(BoolFlag(if result.integration_passed { 1 } else { 0 })),
+                        e2e: Some(BoolFlag(if result.e2e_passed { 1 } else { 0 })),
+                        platform: Some(BoolFlag(if result.platform_passed { 1 } else { 0 })),
+                    })?;
+
+                    println!("Invoked skill: {}", skill_name);
+                    println!("Story {id} verification proofs (via skill):");
+                    println!("  - Unit: {}", if result.unit_passed { "PASS" } else { "FAIL" });
+                    println!("  - Integration: {}", if result.integration_passed { "PASS" } else { "FAIL" });
+                    println!("  - E2E: {}", if result.e2e_passed { "PASS" } else { "FAIL" });
+                    println!("  - Platform: {}", if result.platform_passed { "PASS" } else { "FAIL" });
+                } else {
+                    let result = service.story_verify(&id)?;
+                    println!("Running test skill: {}", result.skill_name);
+                    println!("Story {id} verification proofs:");
+                    println!("  - Unit: {}", if result.unit { "PASS" } else { "FAIL" });
+                    println!("  - Integration: {}", if result.integration { "PASS" } else { "FAIL" });
+                    println!("  - E2E: {}", if result.e2e { "PASS" } else { "FAIL" });
+                    println!("  - Platform: {}", if result.platform { "PASS" } else { "FAIL" });
+                    println!("Evidence: {}", result.evidence);
+                }
             }
         },
         Command::Decision(args) => match args.action {
@@ -378,19 +471,79 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
             })?;
             println!("Trace #{id} recorded.");
         }
-        Command::Query(args) => match args.view {
-            QueryView::Matrix => print_matrix(&service.query_matrix()?),
-            QueryView::Backlog => print_backlog(&service.query_backlog()?),
-            QueryView::Decisions => print_decisions(&service.query_decisions()?),
-            QueryView::Intakes => print_intakes(&service.query_intakes()?),
-            QueryView::Traces => print_traces(&service.query_traces()?),
-            QueryView::Friction => print_friction(&service.query_friction()?),
-            QueryView::Stats => print_stats(&service.query_stats()?),
-            QueryView::Sql { query } => {
-                if query.is_empty() {
-                    return Err(InterfaceError::EmptySql);
+        Command::Query(args) => {
+            if args.json {
+                let json_str = match args.view {
+                    QueryView::Matrix => serde_json::to_string_pretty(&service.query_matrix()?),
+                    QueryView::Backlog => serde_json::to_string_pretty(&service.query_backlog()?),
+                    QueryView::Decisions => {
+                        serde_json::to_string_pretty(&service.query_decisions()?)
+                    }
+                    QueryView::Intakes => serde_json::to_string_pretty(&service.query_intakes()?),
+                    QueryView::Traces => serde_json::to_string_pretty(&service.query_traces()?),
+                    QueryView::Friction => serde_json::to_string_pretty(&service.query_friction()?),
+                    QueryView::Stats => serde_json::to_string_pretty(&service.query_stats()?),
+                    QueryView::Sql { query } => {
+                        if query.is_empty() {
+                            return Err(InterfaceError::EmptySql);
+                        }
+                        serde_json::to_string_pretty(&service.query_sql(&query.join(" "))?)
+                    }
+                }?;
+                println!("{}", json_str);
+            } else {
+                match args.view {
+                    QueryView::Matrix => print_matrix(&service.query_matrix()?),
+                    QueryView::Backlog => print_backlog(&service.query_backlog()?),
+                    QueryView::Decisions => print_decisions(&service.query_decisions()?),
+                    QueryView::Intakes => print_intakes(&service.query_intakes()?),
+                    QueryView::Traces => print_traces(&service.query_traces()?),
+                    QueryView::Friction => print_friction(&service.query_friction()?),
+                    QueryView::Stats => print_stats(&service.query_stats()?),
+                    QueryView::Sql { query } => {
+                        if query.is_empty() {
+                            return Err(InterfaceError::EmptySql);
+                        }
+                        print_query_table(&service.query_sql(&query.join(" "))?);
+                    }
                 }
-                print_query_table(&service.query_sql(&query.join(" "))?);
+            }
+        }
+        Command::Db(args) => match args.action {
+            DbAction::Export { out } => {
+                service.db_export(&out)?;
+                println!("Database exported successfully to {out}");
+            }
+            DbAction::Import { file } => {
+                service.db_import(&file)?;
+                println!("Database imported successfully from {file}");
+            }
+        },
+        Command::Skill(args) => match args.action {
+            SkillAction::List => {
+                let skills = service.list_skills()?;
+                println!("Available skills in .agents/skills/:");
+                let mut rows = Vec::new();
+                for skill in skills {
+                    rows.push(vec![
+                        skill.name,
+                        if skill.has_wrapper { "ready" } else { "no wrapper" }.to_owned(),
+                        skill.description,
+                    ]);
+                }
+                print_table(&["name", "wrapper", "description"], &rows);
+            }
+            SkillAction::Run { name, story_id, json } => {
+                let result = service.invoke_skill(&name, story_id.as_deref())?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&result).unwrap());
+                } else {
+                    println!("Skill {} execution result:", name);
+                    println!("  - Unit Passed: {}", result.unit_passed);
+                    println!("  - Integration Passed: {}", result.integration_passed);
+                    println!("  - E2E Passed: {}", result.e2e_passed);
+                    println!("  - Platform Passed: {}", result.platform_passed);
+                }
             }
         },
     }
@@ -476,12 +629,13 @@ fn print_matrix(records: &[StoryMatrixRecord]) {
                 record.e2e.clone(),
                 record.platform.clone(),
                 record.evidence.clone().unwrap_or_default(),
+                record.test_skill.clone().unwrap_or_default(),
             ]
         })
         .collect::<Vec<_>>();
     print_table(
         &[
-            "id", "title", "status", "unit", "integ", "e2e", "plat", "evidence",
+            "id", "title", "status", "unit", "integ", "e2e", "plat", "evidence", "test_skill",
         ],
         &rows,
     );

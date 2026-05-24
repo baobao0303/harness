@@ -237,6 +237,10 @@ fn get_tools_definition() -> Value {
                         "type": "string",
                         "description": "Đường dẫn tới tệp tin đặc tả tài liệu sản phẩm liên kết"
                     },
+                    "test_skill": {
+                        "type": "string",
+                        "description": "Tên BMad/Harness Skill chịu trách nhiệm kiểm chứng tự động cho Story này"
+                    },
                     "notes": {
                         "type": "string",
                         "description": "Ghi chú thiết kế hoặc kế hoạch kiểm chứng"
@@ -278,6 +282,20 @@ fn get_tools_definition() -> Value {
                     "platform": {
                         "type": "boolean",
                         "description": "1/true nếu đã vượt qua Platform verification proof"
+                    }
+                },
+                "required": ["id"]
+            }
+        },
+        {
+            "name": "harness_story_verify",
+            "description": "Chạy kiểm chứng tự động cho Story thông qua Skill được gán.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Story ID cần kiểm chứng (ví dụ: US-001)"
                     }
                 },
                 "required": ["id"]
@@ -510,6 +528,32 @@ fn get_tools_definition() -> Value {
             }
         },
         {
+            "name": "harness_skill_list",
+            "description": "Liệt kê danh sách tất cả các kỹ năng (skills) của Harness hiện có trong workspace.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {}
+            }
+        },
+        {
+            "name": "harness_skill_run",
+            "description": "Kích hoạt chạy thực thi một BMad/Harness Skill cụ thể.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Tên BMad Skill (ví dụ: harness-qa-generate-e2e-tests)"
+                    },
+                    "story_id": {
+                        "type": "string",
+                        "description": "Story ID liên kết chạy kiểm chứng tùy chọn"
+                    }
+                },
+                "required": ["name"]
+            }
+        },
+        {
             "name": "harness_query_sql",
             "description": "Chạy truy vấn SQL trực tiếp để lọc dữ liệu tùy biến từ database.",
             "inputSchema": {
@@ -630,6 +674,10 @@ fn call_tool(
                 .get("contract")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
+            let test_skill = arguments
+                .get("test_skill")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             let notes = arguments
                 .get("notes")
                 .and_then(|v| v.as_str())
@@ -640,6 +688,7 @@ fn call_tool(
                 title: title.to_string(),
                 risk_lane: RiskLane::from_str(lane).unwrap_or(RiskLane::Tiny),
                 contract_doc: contract,
+                test_skill,
                 notes,
             })?;
 
@@ -686,6 +735,23 @@ fn call_tool(
 
             Ok(json!({
                 "content": [{"type": "text", "text": format!("Story {} updated.", id)}]
+            }))
+        }
+        "harness_story_verify" => {
+            let id = arguments.get("id").and_then(|v| v.as_str()).unwrap_or("");
+            let result = service.story_verify(id)?;
+            
+            Ok(json!({
+                "content": [{"type": "text", "text": format!(
+                    "Story {} verified via test skill '{}'.\nProofs:\n  - Unit: {}\n  - Integration: {}\n  - E2E: {}\n  - Platform: {}\nEvidence: {}", 
+                    id, 
+                    result.skill_name, 
+                    if result.unit { "PASS" } else { "FAIL" }, 
+                    if result.integration { "PASS" } else { "FAIL" }, 
+                    if result.e2e { "PASS" } else { "FAIL" }, 
+                    if result.platform { "PASS" } else { "FAIL" }, 
+                    result.evidence
+                )}]
             }))
         }
         "harness_decision_add" => {
@@ -964,6 +1030,30 @@ fn call_tool(
             }
             Ok(json!({
                 "content": [{"type": "text", "text": msg}]
+            }))
+        }
+        "harness_skill_list" => {
+            let skills = service.list_skills()?;
+            let mut msg = String::from("name\twrapper\tdescription\tpath\n");
+            for s in skills {
+                msg.push_str(&format!(
+                    "{}\t{}\t{}\t{}\n",
+                    s.name,
+                    if s.has_wrapper { "ready" } else { "no wrapper" },
+                    s.description,
+                    s.path
+                ));
+            }
+            Ok(json!({
+                "content": [{"type": "text", "text": msg}]
+            }))
+        }
+        "harness_skill_run" => {
+            let name = arguments.get("name").and_then(|v| v.as_str()).unwrap_or("");
+            let story_id = arguments.get("story_id").and_then(|v| v.as_str());
+            let result = service.invoke_skill(name, story_id)?;
+            Ok(json!({
+                "content": [{"type": "text", "text": serde_json::to_string_pretty(&result).unwrap()}]
             }))
         }
         "harness_query_sql" => {
