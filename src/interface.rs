@@ -27,6 +27,8 @@ pub struct Cli {
 enum Command {
     /// Create the harness database if it does not already exist.
     Init,
+    /// Launch the Harness MCP Server over stdio.
+    Mcp,
     /// Apply schema migrations.
     Migrate,
     /// Seed or refresh the database from existing markdown state.
@@ -264,6 +266,7 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
 
     match cli.command {
         Command::Init => print_init_result(service.init()?),
+        Command::Mcp => crate::mcp::run_mcp_server(service)?,
         Command::Migrate => print_migrate_result(service.migrate()?),
         Command::Import(args) => match args.source {
             ImportSource::Brownfield => {
