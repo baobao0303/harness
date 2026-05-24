@@ -2,71 +2,82 @@
 
 This directory contains harness automation tools.
 
-## Harness CLI
+## Harness MCP Server (Recommended)
 
-The Rust Harness CLI is the primary interface for the durable layer. Installed
-projects keep `scripts/harness` as the stable entrypoint; it uses the prebuilt
-Rust binary at `scripts/bin/harness` for normal Harness work.
+Harness provides a native Model Context Protocol (MCP) server that runs over standard I/O (stdio). This is the **primary, recommended, and modern way** to integrate Harness with AI Coding Agents (such as Claude Code, Cursor, Windsurf, or Copilot), enabling them to run Harness actions autonomously without requiring manual terminal commands.
 
-```bash
-scripts/harness init          # Create the database
-scripts/harness intake ...    # Record a feature intake classification
-scripts/harness story ...     # Add or update a story (test matrix row)
-scripts/harness decision ...  # Add a decision or run its verification
-scripts/harness backlog ...   # Add or close a backlog item
-scripts/harness trace ...     # Record an agent execution trace
-scripts/harness query ...     # Query harness data
-scripts/harness migrate       # Apply pending schema migrations
+### IDE Integration Setup
+
+Configure the Harness MCP server in your IDE's `mcp_config.json` (e.g. Cursor or Windsurf settings):
+
+```json
+"harness": {
+  "command": "sh",
+  "args": [
+    "-c",
+    "harness mcp"
+  ]
+}
 ```
 
-Run `scripts/harness help` or `scripts/harness query help` for full usage.
+Or target the local/global binary path directly:
 
-The schema lives in `scripts/schema/` and is version-controlled. The database
-file (`harness.db`) is `.gitignore`d.
+```json
+"harness": {
+  "command": "sh",
+  "args": [
+    "-c",
+    "/Users/bao312/.local/bin/harness mcp"
+  ]
+}
+```
 
-Requires: the prebuilt Rust CLI at `scripts/bin/harness`.
+### Available MCP Tools (18 Tools)
 
-Direct database inspection may still use SQLite tools, but normal Harness use
-should go through the Rust CLI.
+The MCP server exposes 18 powerful tools to AI Agents:
 
-### Rust CLI
+| Tool Name | Description |
+| :--- | :--- |
+| `harness_init` | Initialize the SQLite database (`harness.db`) in the workspace. |
+| `harness_migrate` | Apply pending database schema migrations. |
+| `harness_import_brownfield` | Seed DB from legacy markdown (`docs/TEST_MATRIX.md`, etc.). |
+| `harness_intake` | Register feature risk classification (tiny, normal, high_risk). |
+| `harness_story_add` | Add a Story to the Test Matrix. |
+| `harness_story_update` | Update story status, evidence, and verification proofs. |
+| `harness_decision_add` | Add an Architecture Decision Record (ADR). |
+| `harness_decision_verify` | Run automated validation bash command for an ADR. |
+| `harness_backlog_add` | Capture process pain / friction to the backlog. |
+| `harness_backlog_close` | Resolve/close a backlog item. |
+| `harness_trace` | Record a detailed execution trace of an agent's work. |
+| `harness_query_stats` | View aggregated statistics of the workspace. |
+| `harness_query_matrix` | View progress & validation matrix of all stories. |
+| `harness_query_decisions` | Query registered architecture decisions. |
+| `harness_query_intakes` | View 20 recent feature classification records. |
+| `harness_query_traces` | View 20 recent agent execution trace records. |
+| `harness_query_friction` | Search and filter recorded friction in traces. |
+| `harness_query_sql` | Run direct SQL queries for advanced reporting. |
 
-`scripts/harness` uses the Rust CLI when a prebuilt binary exists at
-`scripts/bin/harness`, a development binary exists at
-`target/debug/harness`, or a path is provided by `HARNESS_RUST_CLI`.
+---
 
-Current migrated commands:
+## Harness CLI (Terminal Interface)
+
+For manual human use, you can also run local or global commands directly in the terminal:
 
 ```bash
-scripts/harness init
-scripts/harness migrate
-scripts/harness import brownfield
-scripts/harness intake ...
-scripts/harness story add ...
-scripts/harness story update ...
-scripts/harness decision add ...
-scripts/harness decision verify ...
-scripts/harness backlog add ...
-scripts/harness backlog close ...
-scripts/harness trace ...
-scripts/harness query matrix
-scripts/harness query backlog
-scripts/harness query decisions
-scripts/harness query intakes
-scripts/harness query traces
-scripts/harness query friction
+# Global CLI
+harness query stats
+
+# Local fallback script
 scripts/harness query stats
-scripts/harness query sql ...
 ```
 
-`scripts/harness import brownfield` seeds or refreshes the durable database
-from existing Harness v0 markdown in `docs/TEST_MATRIX.md`,
-`docs/decisions/`, and `docs/HARNESS_BACKLOG.md`. This keeps already-installed
-Harness repos on the Rust CLI path without losing their populated operating
-docs.
+The CLI supports the exact same commands as the MCP tools. Run `harness help` or `harness query --help` for complete details.
 
-`HARNESS_RUST_CLI` can point `scripts/harness` at an alternate Rust CLI binary
-for local development or release verification.
+The schema lives in `scripts/schema/` and is version-controlled. The database file (`harness.db`) is `.gitignore`d.
+
+`scripts/harness import brownfield` seeds or refreshes the durable database from existing Harness v0 markdown in `docs/TEST_MATRIX.md`, `docs/decisions/`, and `docs/HARNESS_BACKLOG.md`. This keeps already-installed Harness repos on the Rust CLI path without losing their populated operating docs.
+
+`HARNESS_RUST_CLI` can point `scripts/harness` at an alternate Rust CLI binary for local development or release verification.
 
 ## Installer
 
