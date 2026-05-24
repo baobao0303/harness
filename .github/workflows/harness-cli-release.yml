@@ -48,24 +48,15 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ matrix.os }}-cargo-${{ hashFiles('harness.toml', 'harness.lock') }}
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('Cargo.toml', 'Cargo.lock') }}
           restore-keys: |
             ${{ matrix.os }}-cargo-
-
-      - name: Setup temporary Cargo files
-        run: |
-          cp harness.toml Cargo.toml
-          cp harness.lock Cargo.lock
 
       - name: Check code formatting
         run: cargo fmt --check
 
       - name: Run unit tests
         run: cargo test
-
-      - name: Clean up temporary Cargo files
-        if: always()
-        run: rm -f Cargo.toml Cargo.lock
 
       - name: Check shell scripts syntax (Ubuntu only)
         if: matrix.os == 'ubuntu-24.04'
@@ -112,7 +103,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ matrix.runner }}-${{ matrix.target }}-cargo-${{ hashFiles('harness.toml', 'harness.lock') }}
+          key: ${{ matrix.runner }}-${{ matrix.target }}-cargo-${{ hashFiles('Cargo.toml', 'Cargo.lock') }}
           restore-keys: |
             ${{ matrix.runner }}-${{ matrix.target }}-cargo-
 
