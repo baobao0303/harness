@@ -61,8 +61,9 @@ Here is the current timeline of accepted architectural decisions in our reposito
 | **0004** | 2026-05-22 | [SQLite Durable Layer](0004-sqlite-durable-layer.md) | `accepted` | Introduced `harness.db` and the CLI to move away from fragile manually edited markdown tables. |
 | **0005** | 2026-05-23 | [Prebuilt Rust Harness CLI](0005-prebuilt-rust-harness-cli.md) | `accepted` | Rewrote the shell-based CLI in Rust for compiled speed and unit testability. |
 | **0006** | 2026-05-23 | [Flat Crate Repository Layout](0006-flat-crate-repository-layout.md) | `accepted` | Flat refactoring: removed nested workspace folders to reduce cognitive load and simplify local cargo testing. |
-| **0007** | 2026-05-23 | [Harness Manifest and Package Renaming](0007-harness-manifest-and-package-renaming.md) | `accepted` | Branded the manifest and package from generic Cargo names to `harness.toml` / `harness.lock`. |
+| **0007** | 2026-05-23 | [Harness Manifest and Package Renaming](0007-harness-manifest-and-package-renaming.md) | `superseded` | Branded the manifest and package from generic Cargo names to `harness.toml` / `harness.lock`. |
 | **0008** | 2026-05-23 | [BMAD Method Agent Collaboration](0008-bmad-method-agent-collaboration.md) | `accepted` | Integrated the BMAD Method framework to introduce structured role-based agile gates. |
+| **0009** | 2026-05-24 | [Reverting to Standard Cargo Manifests](0009-reverting-to-standard-cargo-manifests.md) | `accepted` | Reverted to standard `Cargo.toml`/`Cargo.lock` filenames to fix Cargo 1.95+ issues and restore IDE Analyzer functionality. |
 
 ---
 

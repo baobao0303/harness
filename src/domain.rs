@@ -86,7 +86,7 @@ impl FromStr for RiskLane {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
 pub struct IntakeRecord {
     pub id: i64,
     pub created_at: String,
@@ -95,7 +95,7 @@ pub struct IntakeRecord {
     pub summary: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
 pub struct StoryMatrixRecord {
     pub id: String,
     pub title: String,
@@ -105,9 +105,26 @@ pub struct StoryMatrixRecord {
     pub e2e: String,
     pub platform: String,
     pub evidence: Option<String>,
+    pub test_skill: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SkillInfo {
+    pub name: String,
+    pub description: String,
+    pub path: String,
+    pub has_wrapper: bool,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SkillResult {
+    pub unit_passed: bool,
+    pub integration_passed: bool,
+    pub e2e_passed: bool,
+    pub platform_passed: bool,
+}
+
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
 pub struct BacklogRecord {
     pub id: i64,
     pub title: String,
@@ -117,7 +134,7 @@ pub struct BacklogRecord {
     pub actual_outcome: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
 pub struct DecisionRecord {
     pub id: String,
     pub title: String,
@@ -126,7 +143,7 @@ pub struct DecisionRecord {
     pub last_verified_result: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
 pub struct TraceRecord {
     pub id: i64,
     pub created_at: String,
@@ -135,7 +152,7 @@ pub struct TraceRecord {
     pub harness_friction: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
 pub struct FrictionRecord {
     pub id: i64,
     pub created_at: String,
@@ -143,7 +160,7 @@ pub struct FrictionRecord {
     pub harness_friction: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
 pub struct HarnessStats {
     pub intakes: i64,
     pub stories: i64,

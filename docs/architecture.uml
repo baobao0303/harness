@@ -1,0 +1,99 @@
+@startuml Harness Architecture
+
+!define RECT class
+
+title Harness CLI - Component Architecture
+
+package "interface::CLI" {
+  RECT Cli <<struct>>
+  RECT Command <<enum>>
+  RECT QueryArgs
+  RECT QueryView <<enum>>
+  RECT DbArgs
+  RECT DbAction <<enum>>
+}
+
+package "application::Service" {
+  RECT HarnessService
+  RECT HarnessContext
+  RECT InitResult
+  RECT MigrateResult
+  RECT BrownfieldImportResult
+  RECT DecisionVerifyResult
+  RECT QueryTable
+}
+
+package "domain::Entities" {
+  RECT StoryMatrixRecord
+  RECT BacklogRecord
+  RECT DecisionRecord
+  RECT IntakeRecord
+  RECT TraceRecord
+  RECT FrictionRecord
+  RECT HarnessStats
+  RECT InputType
+  RECT RiskLane
+  RECT BoolFlag
+  RECT CsvList
+}
+
+package "infrastructure::Repository" {
+  RECT HarnessRepository <<trait>>
+  RECT SqliteHarnessRepository
+  RECT HarnessInfraError
+}
+
+package "mcp" {
+  RECT run_mcp_server
+}
+
+' Interface → Application
+Cli --> HarnessService : uses
+Command --> HarnessContext : resolves
+
+' Application → Infrastructure
+HarnessService o-- SqliteHarnessRepository
+HarnessService ..> HarnessRepository : <<uses>>
+
+' Infrastructure implements trait
+SqliteHarnessRepository ..|> HarnessRepository
+
+' Input/Output structs
+HarnessService --> InitResult
+HarnessService --> MigrateResult
+HarnessService --> BrownfieldImportResult
+HarnessService --> QueryTable
+
+' Domain entities used across layers
+StoryMatrixRecord <-- HarnessService
+BacklogRecord <-- HarnessService
+DecisionRecord <-- HarnessService
+IntakeRecord <-- HarnessService
+TraceRecord <-- HarnessService
+FrictionRecord <-- HarnessService
+HarnessStats <-- HarnessService
+
+' MCP references service
+run_mcp_server ..> HarnessService : <<uses>>
+
+note top of Cli
+  Entry point: clap Parser
+  Parses CLI args, dispatches to HarnessService
+end note
+
+note top of HarnessService
+  Business logic orchestration
+  Coordinates repository operations
+end note
+
+note top of SqliteHarnessRepository
+  SQLite implementation
+  db_export / db_import logic
+end note
+
+note top of HarnessRepository
+  Repository interface
+  15 methods for all CRUD + queries
+end note
+
+@enduml

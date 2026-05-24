@@ -9,11 +9,11 @@ use thiserror::Error;
 use crate::application::{
     BacklogAddInput, BacklogCloseInput, BrownfieldImportResult, DecisionAddInput,
     DecisionVerifyResult, HarnessContext, InitResult, IntakeInput, MigrateResult, QueryTable,
-    StoryAddInput, StoryUpdateInput, TraceInput,
+    StoryAddInput, StoryUpdateInput, StoryVerifyResult, TraceInput,
 };
 use crate::domain::{
     normalize_token, yes_no, BacklogRecord, DecisionRecord, FrictionRecord, HarnessStats,
-    IntakeRecord, RiskLane, StoryMatrixRecord, TraceRecord,
+    IntakeRecord, RiskLane, SkillInfo, SkillResult, StoryMatrixRecord, TraceRecord,
 };
 
 pub type Result<T> = std::result::Result<T, HarnessInfraError>;
@@ -32,6 +32,18 @@ pub enum HarnessInfraError {
     BacklogNotFound(i64),
     #[error("story update: nothing to update")]
     EmptyStoryUpdate,
+    #[error("story {0} has no test_skill defined")]
+    MissingStoryTestSkill(String),
+    #[error("verification script not found for skill {0} under {1}")]
+    MissingSkillVerifyScript(String, String),
+    #[error("failed to parse verification JSON output from skill {0}: {1}")]
+    ParseVerificationOutput(String, String),
+    #[error("Skill {0} not found under {1}")]
+    SkillNotFound(String, String),
+    #[error("Skill {0} has no run.sh wrapper at {1}")]
+    MissingSkillWrapper(String, String),
+    #[error("failed to parse JSON result from skill {0}: {1}")]
+    ParseSkillOutput(String, String),
     #[error("sqlite error: {0}")]
     Sqlite(#[from] rusqlite::Error),
     #[error("io error: {0}")]
@@ -45,6 +57,7 @@ pub trait HarnessRepository {
     fn record_intake(&self, input: IntakeInput) -> Result<i64>;
     fn add_story(&self, input: StoryAddInput) -> Result<()>;
     fn update_story(&self, input: StoryUpdateInput) -> Result<()>;
+    fn story_verify(&self, id: &str) -> Result<StoryVerifyResult>;
     fn add_decision(&self, input: DecisionAddInput) -> Result<()>;
     fn verify_decision(&self, id: &str) -> Result<DecisionVerifyResult>;
     fn add_backlog(&self, input: BacklogAddInput) -> Result<i64>;
@@ -58,6 +71,10 @@ pub trait HarnessRepository {
     fn query_friction(&self) -> Result<Vec<FrictionRecord>>;
     fn query_stats(&self) -> Result<HarnessStats>;
     fn query_sql(&self, sql: &str) -> Result<QueryTable>;
+    fn db_export(&self, out_path: &str) -> Result<()>;
+    fn db_import(&self, file_path: &str) -> Result<()>;
+    fn list_skills(&self) -> Result<Vec<SkillInfo>>;
+    fn invoke_skill(&self, name: &str, story_id: Option<&str>) -> Result<SkillResult>;
 }
 
 const EMBEDDED_SCHEMA_V1: &str = include_str!("../scripts/schema/001-init.sql");
@@ -432,13 +449,14 @@ impl HarnessRepository for SqliteHarnessRepository {
     fn add_story(&self, input: StoryAddInput) -> Result<()> {
         let connection = self.open_existing()?;
         connection.execute(
-            "INSERT INTO story (id, title, risk_lane, contract_doc, notes)
-             VALUES (?1, ?2, ?3, ?4, ?5);",
+            "INSERT INTO story (id, title, risk_lane, contract_doc, test_skill, notes)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6);",
             params![
                 input.id,
                 input.title,
                 input.risk_lane.as_db_value(),
                 input.contract_doc,
+                input.test_skill,
                 input.notes,
             ],
         )?;
@@ -533,6 +551,90 @@ impl HarnessRepository for SqliteHarnessRepository {
         })
     }
 
+    fn story_verify(&self, id: &str) -> Result<StoryVerifyResult> {
+        let connection = self.open_existing()?;
+        
+        let test_skill = connection
+            .query_row(
+                "SELECT test_skill FROM story WHERE id=?1;",
+                params![id],
+                |row| row.get::<_, Option<String>>(0),
+            )
+            .optional()?
+            .flatten()
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| HarnessInfraError::MissingStoryTestSkill(id.to_owned()))?;
+
+        let skill_dir = self.repo_root.join(".agents/skills").join(&test_skill);
+        let verify_py = skill_dir.join("verify.py");
+        let verify_sh = skill_dir.join("verify.sh");
+
+        let mut command = if verify_py.exists() {
+            let mut cmd = Command::new("python3");
+            cmd.arg("verify.py");
+            cmd
+        } else if verify_sh.exists() {
+            let mut cmd = Command::new("sh");
+            cmd.arg("verify.sh");
+            cmd
+        } else {
+            return Err(HarnessInfraError::MissingSkillVerifyScript(
+                test_skill,
+                skill_dir.display().to_string(),
+            ));
+        };
+
+        let output = command
+            .current_dir(&skill_dir)
+            .output()?;
+
+        let stdout_str = String::from_utf8_lossy(&output.stdout).into_owned();
+        let stderr_str = String::from_utf8_lossy(&output.stderr).into_owned();
+
+        #[derive(serde::Deserialize)]
+        struct SkillVerifyOutput {
+            unit: bool,
+            integration: bool,
+            e2e: bool,
+            platform: bool,
+            evidence: String,
+        }
+
+        let parsed: SkillVerifyOutput = serde_json::from_str(&stdout_str)
+            .map_err(|err| HarnessInfraError::ParseVerificationOutput(test_skill.clone(), format!("{}, stdout: {}, stderr: {}", err, stdout_str, stderr_str)))?;
+
+        // Update the story's proof flags and evidence in the database
+        // Also update status to 'implemented' since it is now successfully verified!
+        connection.execute(
+            "UPDATE story SET
+                unit_proof = ?1,
+                integration_proof = ?2,
+                e2e_proof = ?3,
+                platform_proof = ?4,
+                evidence = ?5,
+                status = 'implemented'
+             WHERE id = ?6;",
+            params![
+                if parsed.unit { 1 } else { 0 },
+                if parsed.integration { 1 } else { 0 },
+                if parsed.e2e { 1 } else { 0 },
+                if parsed.platform { 1 } else { 0 },
+                parsed.evidence,
+                id,
+            ],
+        )?;
+
+        Ok(StoryVerifyResult {
+            skill_name: test_skill,
+            stdout: stdout_str,
+            unit: parsed.unit,
+            integration: parsed.integration,
+            e2e: parsed.e2e,
+            platform: parsed.platform,
+            evidence: parsed.evidence,
+        })
+    }
+
     fn add_backlog(&self, input: BacklogAddInput) -> Result<i64> {
         let connection = self.open_existing()?;
         connection.execute(
@@ -599,7 +701,7 @@ impl HarnessRepository for SqliteHarnessRepository {
     fn query_matrix(&self) -> Result<Vec<StoryMatrixRecord>> {
         let connection = self.open_existing()?;
         let mut statement = connection.prepare(
-            "SELECT id, title, status, unit_proof, integration_proof, e2e_proof, platform_proof, evidence
+            "SELECT id, title, status, unit_proof, integration_proof, e2e_proof, platform_proof, evidence, test_skill
              FROM story ORDER BY id;",
         )?;
 
@@ -613,6 +715,7 @@ impl HarnessRepository for SqliteHarnessRepository {
                 e2e: yes_no(row.get::<_, i64>(5)?),
                 platform: yes_no(row.get::<_, i64>(6)?),
                 evidence: row.get(7)?,
+                test_skill: row.get(8)?,
             })
         })?;
 
@@ -765,6 +868,274 @@ impl HarnessRepository for SqliteHarnessRepository {
             headers,
             rows: collect_rows(rows)?,
         })
+    }
+
+    fn db_export(&self, out_path: &str) -> Result<()> {
+        let connection = self.open_existing()?;
+        let mut script = String::new();
+
+        script.push_str("PRAGMA foreign_keys = OFF;\n\n");
+        script.push_str("DELETE FROM trace;\n");
+        script.push_str("DELETE FROM backlog;\n");
+        script.push_str("DELETE FROM decision;\n");
+        script.push_str("DELETE FROM story;\n");
+        script.push_str("DELETE FROM intake;\n");
+        script.push_str("DELETE FROM schema_version;\n\n");
+
+        let tables = vec![
+            ("schema_version", vec!["version", "applied_at"]),
+            (
+                "intake",
+                vec![
+                    "id",
+                    "created_at",
+                    "input_type",
+                    "summary",
+                    "risk_lane",
+                    "risk_flags",
+                    "affected_docs",
+                    "story_id",
+                    "notes",
+                ],
+            ),
+            (
+                "story",
+                vec![
+                    "id",
+                    "title",
+                    "created_at",
+                    "risk_lane",
+                    "contract_doc",
+                    "status",
+                    "unit_proof",
+                    "integration_proof",
+                    "e2e_proof",
+                    "platform_proof",
+                    "evidence",
+                    "test_skill",
+                    "notes",
+                ],
+            ),
+            (
+                "decision",
+                vec![
+                    "id",
+                    "title",
+                    "created_at",
+                    "status",
+                    "doc_path",
+                    "verify_command",
+                    "last_verified_at",
+                    "last_verified_result",
+                    "predicted_impact",
+                    "actual_outcome",
+                    "notes",
+                ],
+            ),
+            (
+                "backlog",
+                vec![
+                    "id",
+                    "created_at",
+                    "title",
+                    "discovered_while",
+                    "current_pain",
+                    "suggested_improvement",
+                    "risk",
+                    "status",
+                    "predicted_impact",
+                    "actual_outcome",
+                    "implemented_at",
+                    "notes",
+                ],
+            ),
+            (
+                "trace",
+                vec![
+                    "id",
+                    "created_at",
+                    "task_summary",
+                    "intake_id",
+                    "story_id",
+                    "agent",
+                    "actions_taken",
+                    "files_read",
+                    "files_changed",
+                    "decisions_made",
+                    "errors",
+                    "outcome",
+                    "duration_seconds",
+                    "token_estimate",
+                    "harness_friction",
+                    "notes",
+                ],
+            ),
+        ];
+
+        for (table_name, columns) in tables {
+            let cols_joined = columns.join(", ");
+            let sql = format!("SELECT {} FROM {};", cols_joined, table_name);
+            let mut statement = connection.prepare(&sql)?;
+            let col_count = columns.len();
+            let mut rows = statement.query([])?;
+
+            while let Some(row) = rows.next()? {
+                let mut values = Vec::new();
+                for i in 0..col_count {
+                    let val_ref = row.get_ref(i)?;
+                    let literal = match val_ref {
+                        rusqlite::types::ValueRef::Null => "NULL".to_owned(),
+                        rusqlite::types::ValueRef::Integer(n) => n.to_string(),
+                        rusqlite::types::ValueRef::Real(f) => f.to_string(),
+                        rusqlite::types::ValueRef::Text(t) => {
+                            let text = String::from_utf8_lossy(t).into_owned();
+                            format!("'{}'", text.replace('\'', "''"))
+                        }
+                        rusqlite::types::ValueRef::Blob(b) => {
+                            let text = String::from_utf8_lossy(b).into_owned();
+                            format!("'{}'", text.replace('\'', "''"))
+                        }
+                    };
+                    values.push(literal);
+                }
+                script.push_str(&format!(
+                    "INSERT INTO {} ({}) VALUES ({});\n",
+                    table_name,
+                    cols_joined,
+                    values.join(", ")
+                ));
+            }
+            script.push_str("\n");
+        }
+
+        script.push_str("PRAGMA foreign_keys = ON;\n");
+
+        fs::write(out_path, script)?;
+        Ok(())
+    }
+
+    fn db_import(&self, file_path: &str) -> Result<()> {
+        let connection = self.open_existing()?;
+        let path = std::path::Path::new(file_path);
+        if !path.exists() {
+            return Err(HarnessInfraError::MissingBrownfieldPath(
+                file_path.to_owned(),
+            ));
+        }
+        let sql = fs::read_to_string(path)?;
+        connection.execute_batch(&sql)?;
+        Ok(())
+    }
+
+    fn list_skills(&self) -> Result<Vec<SkillInfo>> {
+        let skills_dir = self.repo_root.join(".agents/skills");
+        if !skills_dir.exists() || !skills_dir.is_dir() {
+            return Ok(Vec::new());
+        }
+
+        let mut skills = Vec::new();
+        for entry in fs::read_dir(&skills_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+
+            let run_sh_path = path.join("run.sh");
+            let has_wrapper = run_sh_path.exists() && run_sh_path.is_file();
+
+            let mut description = String::new();
+            let skill_md_path = path.join("SKILL.md");
+            if skill_md_path.exists() && skill_md_path.is_file() {
+                if let Ok(content) = fs::read_to_string(&skill_md_path) {
+                    let mut inside_frontmatter = false;
+                    for line in content.lines() {
+                        if line.trim() == "---" {
+                            if inside_frontmatter {
+                                break;
+                            } else {
+                                inside_frontmatter = true;
+                                continue;
+                            }
+                        }
+                        if inside_frontmatter {
+                            if let Some(desc) = line.strip_prefix("description:") {
+                                let trimmed = desc.trim();
+                                let stripped = trimmed
+                                    .strip_prefix('"').and_then(|s| s.strip_suffix('"'))
+                                    .or_else(|| trimmed.strip_prefix('\'').and_then(|s| s.strip_suffix('\'')))
+                                    .unwrap_or(trimmed);
+                                description = stripped.to_owned();
+                            }
+                        }
+                    }
+                }
+            }
+
+            if description.is_empty() {
+                description = format!("Workflow checklist and guidelines for {}.", name);
+            }
+
+            skills.push(SkillInfo {
+                name: name.to_owned(),
+                description,
+                path: path.display().to_string(),
+                has_wrapper,
+            });
+        }
+
+        skills.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(skills)
+    }
+
+    fn invoke_skill(&self, name: &str, story_id: Option<&str>) -> Result<SkillResult> {
+        let skill_dir = self.repo_root.join(".agents/skills").join(name);
+        if !skill_dir.exists() || !skill_dir.is_dir() {
+            return Err(HarnessInfraError::SkillNotFound(
+                name.to_owned(),
+                skill_dir.display().to_string(),
+            ));
+        }
+
+        let run_sh_path = skill_dir.join("run.sh");
+        if !run_sh_path.exists() || !run_sh_path.is_file() {
+            return Err(HarnessInfraError::MissingSkillWrapper(
+                name.to_owned(),
+                run_sh_path.display().to_string(),
+            ));
+        }
+
+        let mut cmd = Command::new("sh");
+        cmd.arg("run.sh");
+        if let Some(sid) = story_id {
+            cmd.arg(sid);
+        }
+
+        let output = cmd.current_dir(&skill_dir).output()?;
+        let stdout_str = String::from_utf8_lossy(&output.stdout).into_owned();
+        let stderr_str = String::from_utf8_lossy(&output.stderr).into_owned();
+
+        if !output.status.success() {
+            return Err(HarnessInfraError::ParseSkillOutput(
+                name.to_owned(),
+                format!(
+                    "Command exited with status {}.\nStdout: {}\nStderr: {}",
+                    output.status, stdout_str, stderr_str
+                ),
+            ));
+        }
+
+        let parsed: SkillResult = serde_json::from_str(&stdout_str).map_err(|err| {
+            HarnessInfraError::ParseSkillOutput(
+                name.to_owned(),
+                format!("{}, stdout: {}, stderr: {}", err, stdout_str, stderr_str),
+            )
+        })?;
+
+        Ok(parsed)
     }
 }
 
@@ -1118,6 +1489,7 @@ mod tests {
     fn story_backlog_trace_and_queries_work() {
         let (_temp_dir, repository) = test_repository();
         repository.init().unwrap();
+        repository.migrate().unwrap();
 
         repository
             .add_story(StoryAddInput {
@@ -1125,6 +1497,7 @@ mod tests {
                 title: "Test story".to_owned(),
                 risk_lane: RiskLane::Normal,
                 contract_doc: None,
+                test_skill: None,
                 notes: None,
             })
             .unwrap();
@@ -1284,6 +1657,7 @@ implemented
             source_repo_root.join("scripts/schema"),
         );
         repository.init().unwrap();
+        repository.migrate().unwrap();
 
         let first = repository.import_brownfield().unwrap();
         let second = repository.import_brownfield().unwrap();
@@ -1580,5 +1954,193 @@ implemented
 </svg>"##;
 
         fs::write(svg_path, svg_content).unwrap();
+    }
+
+    #[test]
+    fn db_export_and_import_restores_data() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let db_path_src = temp_dir.path().join("harness_src.db");
+        let db_path_dst = temp_dir.path().join("harness_dst.db");
+        let schema_root = repo_root.join("scripts/schema");
+
+        let repo_src = SqliteHarnessRepository::new(
+            repo_root.clone(),
+            db_path_src.clone(),
+            schema_root.clone(),
+        );
+        repo_src.init().unwrap();
+        repo_src.migrate().unwrap();
+
+        // 1. Add some data
+        repo_src
+            .record_intake(IntakeInput {
+                input_type: InputType::NewSpec,
+                summary: "Testing DB export".to_owned(),
+                risk_lane: RiskLane::Normal,
+                risk_flags: CsvList::from_optional(None),
+                affected_docs: CsvList::from_optional(None),
+                story_id: None,
+                notes: None,
+            })
+            .unwrap();
+
+        repo_src
+            .add_story(StoryAddInput {
+                id: "US-EXPORT".to_owned(),
+                title: "Export Story".to_owned(),
+                risk_lane: RiskLane::Normal,
+                contract_doc: None,
+                test_skill: None,
+                notes: None,
+            })
+            .unwrap();
+
+        // 2. Export to file
+        let export_path = temp_dir.path().join("backup.sql");
+        repo_src
+            .db_export(&export_path.display().to_string())
+            .unwrap();
+
+        // 3. Create destination database and import
+        let repo_dst = SqliteHarnessRepository::new(repo_root, db_path_dst, schema_root);
+        repo_dst.init().unwrap();
+        repo_dst.migrate().unwrap();
+        repo_dst
+            .db_import(&export_path.display().to_string())
+            .unwrap();
+
+        // 4. Verify data in destination database
+        let intakes = repo_dst.query_intakes().unwrap();
+        assert_eq!(intakes.len(), 1);
+        assert_eq!(intakes[0].summary, "Testing DB export");
+
+        let stories = repo_dst.query_matrix().unwrap();
+        assert_eq!(stories.len(), 1);
+        assert_eq!(stories[0].id, "US-EXPORT");
+    }
+
+    #[test]
+    fn test_story_verify_invokes_skill_subprocess() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let repo_root = temp_dir.path().to_path_buf();
+        let db_path = temp_dir.path().join("harness.db");
+        let schema_root = repo_root.join("scripts/schema");
+        fs::create_dir_all(&schema_root).unwrap();
+
+        // Write v1 and v2 migrations
+        fs::write(
+            schema_root.join("001-init.sql"),
+            include_str!("../scripts/schema/001-init.sql"),
+        )
+        .unwrap();
+        fs::write(
+            schema_root.join("002-add-story-test-skill.sql"),
+            include_str!("../scripts/schema/002-add-story-test-skill.sql"),
+        )
+        .unwrap();
+
+        let repository = SqliteHarnessRepository::new(repo_root.clone(), db_path, schema_root);
+        repository.init().unwrap();
+        repository.migrate().unwrap();
+
+        // Create skill folder and mock verify.py
+        let skill_dir = repo_root.join(".agents/skills/harness-qa-generate-e2e-tests");
+        fs::create_dir_all(&skill_dir).unwrap();
+        
+        let verify_script = r#"
+import json
+print(json.dumps({
+    "unit": True,
+    "integration": True,
+    "e2e": True,
+    "platform": False,
+    "evidence": "Verification succeeded on e2e test suite."
+}))
+"#;
+        fs::write(skill_dir.join("verify.py"), verify_script).unwrap();
+
+        // Add story with test_skill
+        repository
+            .add_story(StoryAddInput {
+                id: "US-SKILL-TEST".to_owned(),
+                title: "Skill Test Story".to_owned(),
+                risk_lane: RiskLane::Normal,
+                contract_doc: None,
+                test_skill: Some("harness-qa-generate-e2e-tests".to_owned()),
+                notes: None,
+            })
+            .unwrap();
+
+        // Perform verification
+        let result = repository.story_verify("US-SKILL-TEST").unwrap();
+        assert_eq!(result.skill_name, "harness-qa-generate-e2e-tests");
+        assert!(result.unit);
+        assert!(result.integration);
+        assert!(result.e2e);
+        assert!(!result.platform);
+        assert_eq!(result.evidence, "Verification succeeded on e2e test suite.");
+
+        // Query matrix and assert database has updated proof flags and status 'implemented'
+        let matrix = repository.query_matrix().unwrap();
+        assert_eq!(matrix.len(), 1);
+        assert_eq!(matrix[0].id, "US-SKILL-TEST");
+        assert_eq!(matrix[0].unit, "yes");
+        assert_eq!(matrix[0].integration, "yes");
+        assert_eq!(matrix[0].e2e, "yes");
+        assert_eq!(matrix[0].platform, "no");
+        assert_eq!(matrix[0].evidence, Some("Verification succeeded on e2e test suite.".to_owned()));
+        assert_eq!(matrix[0].status, "implemented");
+        assert_eq!(matrix[0].test_skill, Some("harness-qa-generate-e2e-tests".to_owned()));
+    }
+
+    #[test]
+    fn test_list_skills_and_invoke_skill_subprocess() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let repo_root = temp_dir.path().to_path_buf();
+        let db_path = temp_dir.path().join("harness.db");
+        let schema_root = repo_root.join("scripts/schema");
+        fs::create_dir_all(&schema_root).unwrap();
+
+        // Write v1 migration
+        fs::write(
+            schema_root.join("001-init.sql"),
+            include_str!("../scripts/schema/001-init.sql"),
+        )
+        .unwrap();
+
+        let repository = SqliteHarnessRepository::new(repo_root.clone(), db_path, schema_root);
+        repository.init().unwrap();
+
+        // Create skill folder, SKILL.md, and run.sh
+        let skill_dir = repo_root.join(".agents/skills/harness-test-skill");
+        fs::create_dir_all(&skill_dir).unwrap();
+
+        let skill_md = r#"---
+name: harness-test-skill
+description: 'This is a test skill'
+---
+# Test Skill Workflow
+"#;
+        fs::write(skill_dir.join("SKILL.md"), skill_md).unwrap();
+
+        let run_sh = r#"#!/bin/sh
+echo '{"unit_passed":true,"integration_passed":true,"e2e_passed":false,"platform_passed":false}'
+"#;
+        fs::write(skill_dir.join("run.sh"), run_sh).unwrap();
+
+        // List skills
+        let skills = repository.list_skills().unwrap();
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "harness-test-skill");
+        assert_eq!(skills[0].description, "This is a test skill");
+        assert!(skills[0].has_wrapper);
+
+        // Invoke skill
+        let result = repository.invoke_skill("harness-test-skill", Some("US-001")).unwrap();
+        assert!(result.unit_passed);
+        assert!(result.integration_passed);
+        assert!(!result.e2e_passed);
+        assert!(!result.platform_passed);
     }
 }

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::domain::{
     BacklogRecord, BoolFlag, CsvList, DecisionRecord, FrictionRecord, HarnessStats, InputType,
-    IntakeRecord, RiskLane, StoryMatrixRecord, TraceRecord,
+    IntakeRecord, RiskLane, SkillInfo, SkillResult, StoryMatrixRecord, TraceRecord,
 };
 use crate::infrastructure::{HarnessRepository, SqliteHarnessRepository};
 
@@ -30,7 +30,19 @@ pub struct StoryAddInput {
     pub title: String,
     pub risk_lane: RiskLane,
     pub contract_doc: Option<String>,
+    pub test_skill: Option<String>,
     pub notes: Option<String>,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct StoryVerifyResult {
+    pub skill_name: String,
+    pub stdout: String,
+    pub unit: bool,
+    pub integration: bool,
+    pub e2e: bool,
+    pub platform: bool,
+    pub evidence: String,
 }
 
 #[derive(Debug)]
@@ -130,6 +142,10 @@ impl HarnessService {
         self.repository.update_story(input)
     }
 
+    pub fn story_verify(&self, id: &str) -> crate::infrastructure::Result<StoryVerifyResult> {
+        self.repository.story_verify(id)
+    }
+
     pub fn add_decision(&self, input: DecisionAddInput) -> crate::infrastructure::Result<()> {
         self.repository.add_decision(input)
     }
@@ -181,6 +197,22 @@ impl HarnessService {
     pub fn query_sql(&self, sql: &str) -> crate::infrastructure::Result<QueryTable> {
         self.repository.query_sql(sql)
     }
+
+    pub fn db_export(&self, out_path: &str) -> crate::infrastructure::Result<()> {
+        self.repository.db_export(out_path)
+    }
+
+    pub fn db_import(&self, file_path: &str) -> crate::infrastructure::Result<()> {
+        self.repository.db_import(file_path)
+    }
+
+    pub fn list_skills(&self) -> crate::infrastructure::Result<Vec<SkillInfo>> {
+        self.repository.list_skills()
+    }
+
+    pub fn invoke_skill(&self, name: &str, story_id: Option<&str>) -> crate::infrastructure::Result<SkillResult> {
+        self.repository.invoke_skill(name, story_id)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -209,7 +241,7 @@ pub struct DecisionVerifyResult {
     pub result: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
 pub struct QueryTable {
     pub headers: Vec<String>,
     pub rows: Vec<Vec<String>>,

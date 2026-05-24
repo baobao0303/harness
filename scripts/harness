@@ -21,8 +21,8 @@ if [ -z "$RUST_CLI" ]; then
 fi
 
 rust_cli_supports() {
-  case "${1:-}:${2:-}" in
-    init:*|migrate:*|import:brownfield|intake:*|story:add|story:update|decision:add|decision:verify|backlog:add|backlog:close|trace:*|query:matrix|query:backlog|query:decisions|query:intakes|query:traces|query:friction|query:stats|query:sql)
+  case "${1:-}" in
+    init|mcp|migrate|import|intake|story|decision|backlog|trace|query|db|skill)
       return 0
       ;;
     *)
