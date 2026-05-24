@@ -49,7 +49,10 @@ Mọi yêu cầu công việc đi qua Harness sẽ tuân theo quy trình chuẩn
                                 └──> Ghi nhận Quyết định kiến trúc & Khó khăn (Friction)
 ```
 
-![Harness Integrated Developer IDE Performance Dashboard](docs/assets/ide-comparison-dashboard.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/ide-comparison-dashboard-dark.png">
+  <img src="docs/assets/ide-comparison-dashboard-light.png" alt="Harness Integrated Developer IDE Performance Dashboard" width="100%">
+</picture>
 
 ---
 
