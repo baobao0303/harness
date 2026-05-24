@@ -1,11 +1,11 @@
-use std::io::{self, BufRead};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::io::{self, BufRead};
 use std::str::FromStr;
 
 use crate::application::{
-    BacklogAddInput, BacklogCloseInput, DecisionAddInput, HarnessService, InitResult,
-    IntakeInput, StoryAddInput, StoryUpdateInput, TraceInput,
+    BacklogAddInput, BacklogCloseInput, DecisionAddInput, HarnessService, InitResult, IntakeInput,
+    StoryAddInput, StoryUpdateInput, TraceInput,
 };
 use crate::domain::{BoolFlag, CsvList, InputType, RiskLane};
 
@@ -70,12 +70,30 @@ pub fn run_mcp_server(service: HarnessService) -> crate::infrastructure::Result<
         }
 
         let id = request.id.clone();
+        if id.is_none() {
+            // It is a notification. Do NOT respond.
+            let _ = handle_request(&service, request);
+            continue;
+        }
+
         match handle_request(&service, request) {
-            Ok(result) => {
+            Ok(Ok(result)) => {
                 let response = JsonRpcResponse {
                     jsonrpc: "2.0",
                     result: Some(result),
                     error: None,
+                    id,
+                };
+                println!("{}", serde_json::to_string(&response).unwrap());
+            }
+            Ok(Err((code, message))) => {
+                let response = JsonRpcResponse {
+                    jsonrpc: "2.0",
+                    result: None,
+                    error: Some(json!({
+                        "code": code,
+                        "message": message
+                    })),
                     id,
                 };
                 println!("{}", serde_json::to_string(&response).unwrap());
@@ -98,9 +116,12 @@ pub fn run_mcp_server(service: HarnessService) -> crate::infrastructure::Result<
     Ok(())
 }
 
-fn handle_request(service: &HarnessService, request: JsonRpcRequest) -> crate::infrastructure::Result<Value> {
+fn handle_request(
+    service: &HarnessService,
+    request: JsonRpcRequest,
+) -> crate::infrastructure::Result<std::result::Result<Value, (i32, String)>> {
     match request.method.as_str() {
-        "initialize" => Ok(json!({
+        "initialize" => Ok(Ok(json!({
             "protocolVersion": "2024-11-05",
             "capabilities": {
                 "tools": {}
@@ -109,23 +130,24 @@ fn handle_request(service: &HarnessService, request: JsonRpcRequest) -> crate::i
                 "name": "harness-mcp-server",
                 "version": env!("CARGO_PKG_VERSION")
             }
-        })),
-        "tools/list" => Ok(json!({
+        }))),
+        "tools/list" => Ok(Ok(json!({
             "tools": get_tools_definition()
-        })),
+        }))),
         "tools/call" => {
             let params = request.params.unwrap_or(Value::Null);
             let name = params.get("name").and_then(|v| v.as_str()).unwrap_or("");
             let arguments = params.get("arguments").cloned().unwrap_or(Value::Null);
-            
-            call_tool(service, name, arguments)
-        }
-        _ => Ok(json!({
-            "error": {
-                "code": -32601,
-                "message": format!("Method not found: {}", request.method)
+
+            match call_tool(service, name, arguments) {
+                Ok(val) => Ok(Ok(val)),
+                Err(err) => Err(err),
             }
-        })),
+        }
+        _ => Ok(Err((
+            -32601,
+            format!("Method not found: {}", request.method),
+        ))),
     }
 }
 
@@ -504,16 +526,27 @@ fn get_tools_definition() -> Value {
     ])
 }
 
-fn call_tool(service: &HarnessService, name: &str, arguments: Value) -> crate::infrastructure::Result<Value> {
+fn call_tool(
+    service: &HarnessService,
+    name: &str,
+    arguments: Value,
+) -> crate::infrastructure::Result<Value> {
     match name {
         "harness_init" => {
             let result = service.init()?;
             let msg = match result {
                 InitResult::Created { db_path } => {
-                    format!("Creating harness database at {}\nSchema version 1 applied.", db_path.display())
+                    format!(
+                        "Creating harness database at {}\nSchema version 1 applied.",
+                        db_path.display()
+                    )
                 }
                 InitResult::Existing { db_path, version } => {
-                    format!("Database already exists at {}\nCurrent schema version: {}", db_path.display(), version)
+                    format!(
+                        "Database already exists at {}\nCurrent schema version: {}",
+                        db_path.display(),
+                        version
+                    )
                 }
                 InitResult::MigratedExisting { db_path } => {
                     format!("Database already exists at {}\nNo schema version found. Applying schema version 1.\nSchema version 1 applied.", db_path.display())
@@ -550,12 +583,27 @@ fn call_tool(service: &HarnessService, name: &str, arguments: Value) -> crate::i
         }
         "harness_intake" => {
             let input_type = arguments.get("type").and_then(|v| v.as_str()).unwrap_or("");
-            let summary = arguments.get("summary").and_then(|v| v.as_str()).unwrap_or("");
+            let summary = arguments
+                .get("summary")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             let lane = arguments.get("lane").and_then(|v| v.as_str()).unwrap_or("");
-            let flags = arguments.get("flags").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let docs = arguments.get("docs").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let story_id = arguments.get("story_id").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let notes = arguments.get("notes").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let flags = arguments
+                .get("flags")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let docs = arguments
+                .get("docs")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let story_id = arguments
+                .get("story_id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let notes = arguments
+                .get("notes")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
 
             let id = service.record_intake(IntakeInput {
                 input_type: InputType::from_str(input_type).unwrap_or(InputType::ChangeRequest),
@@ -573,10 +621,19 @@ fn call_tool(service: &HarnessService, name: &str, arguments: Value) -> crate::i
         }
         "harness_story_add" => {
             let id = arguments.get("id").and_then(|v| v.as_str()).unwrap_or("");
-            let title = arguments.get("title").and_then(|v| v.as_str()).unwrap_or("");
+            let title = arguments
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             let lane = arguments.get("lane").and_then(|v| v.as_str()).unwrap_or("");
-            let contract = arguments.get("contract").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let notes = arguments.get("notes").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let contract = arguments
+                .get("contract")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let notes = arguments
+                .get("notes")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
 
             service.add_story(StoryAddInput {
                 id: id.to_string(),
@@ -592,12 +649,30 @@ fn call_tool(service: &HarnessService, name: &str, arguments: Value) -> crate::i
         }
         "harness_story_update" => {
             let id = arguments.get("id").and_then(|v| v.as_str()).unwrap_or("");
-            let status = arguments.get("status").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let evidence = arguments.get("evidence").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let unit = arguments.get("unit").and_then(|v| v.as_bool()).map(|b| BoolFlag(if b { 1 } else { 0 }));
-            let integration = arguments.get("integration").and_then(|v| v.as_bool()).map(|b| BoolFlag(if b { 1 } else { 0 }));
-            let e2e = arguments.get("e2e").and_then(|v| v.as_bool()).map(|b| BoolFlag(if b { 1 } else { 0 }));
-            let platform = arguments.get("platform").and_then(|v| v.as_bool()).map(|b| BoolFlag(if b { 1 } else { 0 }));
+            let status = arguments
+                .get("status")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let evidence = arguments
+                .get("evidence")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let unit = arguments
+                .get("unit")
+                .and_then(|v| v.as_bool())
+                .map(|b| BoolFlag(if b { 1 } else { 0 }));
+            let integration = arguments
+                .get("integration")
+                .and_then(|v| v.as_bool())
+                .map(|b| BoolFlag(if b { 1 } else { 0 }));
+            let e2e = arguments
+                .get("e2e")
+                .and_then(|v| v.as_bool())
+                .map(|b| BoolFlag(if b { 1 } else { 0 }));
+            let platform = arguments
+                .get("platform")
+                .and_then(|v| v.as_bool())
+                .map(|b| BoolFlag(if b { 1 } else { 0 }));
 
             service.update_story(StoryUpdateInput {
                 id: id.to_string(),
@@ -615,12 +690,30 @@ fn call_tool(service: &HarnessService, name: &str, arguments: Value) -> crate::i
         }
         "harness_decision_add" => {
             let id = arguments.get("id").and_then(|v| v.as_str()).unwrap_or("");
-            let title = arguments.get("title").and_then(|v| v.as_str()).unwrap_or("");
-            let status = arguments.get("status").and_then(|v| v.as_str()).unwrap_or("accepted");
-            let doc = arguments.get("doc").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let verify = arguments.get("verify").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let predicted = arguments.get("predicted").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let notes = arguments.get("notes").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let title = arguments
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let status = arguments
+                .get("status")
+                .and_then(|v| v.as_str())
+                .unwrap_or("accepted");
+            let doc = arguments
+                .get("doc")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let verify = arguments
+                .get("verify")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let predicted = arguments
+                .get("predicted")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let notes = arguments
+                .get("notes")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
 
             service.add_decision(DecisionAddInput {
                 id: id.to_string(),
@@ -639,19 +732,43 @@ fn call_tool(service: &HarnessService, name: &str, arguments: Value) -> crate::i
         "harness_decision_verify" => {
             let id = arguments.get("id").and_then(|v| v.as_str()).unwrap_or("");
             let result = service.verify_decision(id)?;
-            let msg = format!("Running: {}\nDecision {} verification: {}", result.command, id, result.result);
+            let msg = format!(
+                "Running: {}\nDecision {} verification: {}",
+                result.command, id, result.result
+            );
             Ok(json!({
                 "content": [{"type": "text", "text": msg}]
             }))
         }
         "harness_backlog_add" => {
-            let title = arguments.get("title").and_then(|v| v.as_str()).unwrap_or("");
-            let discovered_while = arguments.get("while").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let current_pain = arguments.get("pain").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let suggestion = arguments.get("suggestion").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let risk = arguments.get("risk").and_then(|v| v.as_str()).map(|s| RiskLane::from_str(s).unwrap_or(RiskLane::Tiny));
-            let predicted_impact = arguments.get("predicted").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let notes = arguments.get("notes").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let title = arguments
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let discovered_while = arguments
+                .get("while")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let current_pain = arguments
+                .get("pain")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let suggestion = arguments
+                .get("suggestion")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let risk = arguments
+                .get("risk")
+                .and_then(|v| v.as_str())
+                .map(|s| RiskLane::from_str(s).unwrap_or(RiskLane::Tiny));
+            let predicted_impact = arguments
+                .get("predicted")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let notes = arguments
+                .get("notes")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
 
             let id = service.add_backlog(BacklogAddInput {
                 title: title.to_string(),
@@ -669,8 +786,14 @@ fn call_tool(service: &HarnessService, name: &str, arguments: Value) -> crate::i
         }
         "harness_backlog_close" => {
             let id = arguments.get("id").and_then(|v| v.as_i64()).unwrap_or(0);
-            let status = arguments.get("status").and_then(|v| v.as_str()).unwrap_or("implemented");
-            let outcome = arguments.get("outcome").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let status = arguments
+                .get("status")
+                .and_then(|v| v.as_str())
+                .unwrap_or("implemented");
+            let outcome = arguments
+                .get("outcome")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
 
             service.close_backlog(BacklogCloseInput {
                 id,
@@ -683,20 +806,53 @@ fn call_tool(service: &HarnessService, name: &str, arguments: Value) -> crate::i
             }))
         }
         "harness_trace" => {
-            let summary = arguments.get("summary").and_then(|v| v.as_str()).unwrap_or("");
+            let summary = arguments
+                .get("summary")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             let intake_id = arguments.get("intake").and_then(|v| v.as_i64());
-            let story_id = arguments.get("story").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let agent = arguments.get("agent").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let outcome = arguments.get("outcome").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let story_id = arguments
+                .get("story")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let agent = arguments
+                .get("agent")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let outcome = arguments
+                .get("outcome")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             let duration = arguments.get("duration").and_then(|v| v.as_i64());
             let tokens = arguments.get("tokens").and_then(|v| v.as_i64());
-            let friction = arguments.get("friction").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let actions = arguments.get("actions").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let read = arguments.get("read").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let changed = arguments.get("changed").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let decisions = arguments.get("decisions").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let errors = arguments.get("errors").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let notes = arguments.get("notes").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let friction = arguments
+                .get("friction")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let actions = arguments
+                .get("actions")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let read = arguments
+                .get("read")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let changed = arguments
+                .get("changed")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let decisions = arguments
+                .get("decisions")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let errors = arguments
+                .get("errors")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let notes = arguments
+                .get("notes")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
 
             let id = service.record_trace(TraceInput {
                 task_summary: summary.to_string(),
@@ -735,7 +891,14 @@ fn call_tool(service: &HarnessService, name: &str, arguments: Value) -> crate::i
             for r in records {
                 msg.push_str(&format!(
                     "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
-                    r.id, r.title, r.status, r.unit, r.integration, r.e2e, r.platform, r.evidence.unwrap_or_default()
+                    r.id,
+                    r.title,
+                    r.status,
+                    r.unit,
+                    r.integration,
+                    r.e2e,
+                    r.platform,
+                    r.evidence.unwrap_or_default()
                 ));
             }
             Ok(json!({
@@ -744,11 +907,16 @@ fn call_tool(service: &HarnessService, name: &str, arguments: Value) -> crate::i
         }
         "harness_query_decisions" => {
             let records = service.query_decisions()?;
-            let mut msg = String::from("id\ttitle\tstatus\tlast_verified_at\tlast_verified_result\n");
+            let mut msg =
+                String::from("id\ttitle\tstatus\tlast_verified_at\tlast_verified_result\n");
             for r in records {
                 msg.push_str(&format!(
                     "{}\t{}\t{}\t{}\t{}\n",
-                    r.id, r.title, r.status, r.last_verified_at.unwrap_or_default(), r.last_verified_result.unwrap_or_default()
+                    r.id,
+                    r.title,
+                    r.status,
+                    r.last_verified_at.unwrap_or_default(),
+                    r.last_verified_result.unwrap_or_default()
                 ));
             }
             Ok(json!({
@@ -774,7 +942,11 @@ fn call_tool(service: &HarnessService, name: &str, arguments: Value) -> crate::i
             for r in records {
                 msg.push_str(&format!(
                     "{}\t{}\t{}\t{}\t{}\n",
-                    r.id, r.created_at, r.outcome.unwrap_or_default(), r.task_summary, r.harness_friction.unwrap_or_default()
+                    r.id,
+                    r.created_at,
+                    r.outcome.unwrap_or_default(),
+                    r.task_summary,
+                    r.harness_friction.unwrap_or_default()
                 ));
             }
             Ok(json!({
@@ -795,9 +967,12 @@ fn call_tool(service: &HarnessService, name: &str, arguments: Value) -> crate::i
             }))
         }
         "harness_query_sql" => {
-            let query = arguments.get("query").and_then(|v| v.as_str()).unwrap_or("");
+            let query = arguments
+                .get("query")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             let table = service.query_sql(query)?;
-            
+
             let mut msg = table.headers.join("\t") + "\n";
             for row in table.rows {
                 msg.push_str(&(row.join("\t") + "\n"));
