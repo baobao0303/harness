@@ -22,8 +22,6 @@ pub type Result<T> = std::result::Result<T, HarnessInfraError>;
 pub enum HarnessInfraError {
     #[error("database not found at {0}. Run: harness init")]
     MissingDatabase(String),
-    #[error("schema file missing: {0}")]
-    MissingSchema(String),
     #[error("brownfield import: missing {0}")]
     MissingBrownfieldPath(String),
     #[error("decision {0} has no verify_command")]
@@ -61,6 +59,8 @@ pub trait HarnessRepository {
     fn query_stats(&self) -> Result<HarnessStats>;
     fn query_sql(&self, sql: &str) -> Result<QueryTable>;
 }
+
+const EMBEDDED_SCHEMA_V1: &str = include_str!("../scripts/schema/001-init.sql");
 
 #[derive(Debug)]
 pub struct SqliteHarnessRepository {
@@ -110,19 +110,21 @@ impl SqliteHarnessRepository {
 
     fn apply_schema_v1(&self, connection: &Connection) -> Result<()> {
         let schema_path = self.schema_dir.join("001-init.sql");
-        if !schema_path.exists() {
-            return Err(HarnessInfraError::MissingSchema(
-                schema_path.display().to_string(),
-            ));
-        }
+        let schema = if schema_path.exists() {
+            fs::read_to_string(schema_path)?
+        } else {
+            EMBEDDED_SCHEMA_V1.to_string()
+        };
 
-        let schema = fs::read_to_string(schema_path)?;
         connection.execute_batch(&schema)?;
         Ok(())
     }
 
     fn migration_files(&self) -> Result<Vec<(i64, PathBuf)>> {
         let mut files = Vec::new();
+        if !self.schema_dir.exists() {
+            return Ok(files);
+        }
         for entry in fs::read_dir(&self.schema_dir)? {
             let entry = entry?;
             let path = entry.path();
