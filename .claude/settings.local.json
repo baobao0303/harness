@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(chmod +x /Users/bao312/Desktop/harness/scripts/demo-workflow.sh)",
-      "Bash(cargo build *)"
+      "Bash(cargo build *)",
+      "Bash(cargo test *)"
     ]
   }
 }
