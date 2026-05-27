@@ -680,6 +680,7 @@ docs/templates/high-risk-story/overview.md
 docs/templates/high-risk-story/validation.md
 scripts/README.md
 scripts/harness
+scripts/install-ide-skills.sh
 scripts/schema/001-init.sql
 .gitignore
 EOF
@@ -692,6 +693,22 @@ fi
 
 refresh_agent_shim
 install_harness_cli_binary
+
+# ── Generate IDE skill discovery files ─────────────────────────────
+install_ide_skills() {
+  local ide_script="$TARGET_DIR/scripts/install-ide-skills.sh"
+  [ -f "$ide_script" ] || return 0
+  [ "$DRY_RUN" -eq 1 ] && { log "generate IDE skill discovery files"; return 0; }
+
+  chmod +x "$ide_script"
+  if (cd "$TARGET_DIR" && bash "$ide_script" --tool all) >/dev/null 2>&1; then
+    log "Generated IDE skill discovery files for all supported IDEs."
+  else
+    log "Warning: IDE skill generation had issues (non-fatal)."
+  fi
+}
+
+install_ide_skills
 
 log ""
 log "Done. Created: $CREATED, updated: $UPDATED, skipped: $SKIPPED."
