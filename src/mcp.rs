@@ -740,16 +740,16 @@ fn call_tool(
         "harness_story_verify" => {
             let id = arguments.get("id").and_then(|v| v.as_str()).unwrap_or("");
             let result = service.story_verify(id)?;
-            
+
             Ok(json!({
                 "content": [{"type": "text", "text": format!(
-                    "Story {} verified via test skill '{}'.\nProofs:\n  - Unit: {}\n  - Integration: {}\n  - E2E: {}\n  - Platform: {}\nEvidence: {}", 
-                    id, 
-                    result.skill_name, 
-                    if result.unit { "PASS" } else { "FAIL" }, 
-                    if result.integration { "PASS" } else { "FAIL" }, 
-                    if result.e2e { "PASS" } else { "FAIL" }, 
-                    if result.platform { "PASS" } else { "FAIL" }, 
+                    "Story {} verified via test skill '{}'.\nProofs:\n  - Unit: {}\n  - Integration: {}\n  - E2E: {}\n  - Platform: {}\nEvidence: {}",
+                    id,
+                    result.skill_name,
+                    if result.unit { "PASS" } else { "FAIL" },
+                    if result.integration { "PASS" } else { "FAIL" },
+                    if result.e2e { "PASS" } else { "FAIL" },
+                    if result.platform { "PASS" } else { "FAIL" },
                     result.evidence
                 )}]
             }))

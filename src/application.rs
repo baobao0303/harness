@@ -210,7 +210,11 @@ impl HarnessService {
         self.repository.list_skills()
     }
 
-    pub fn invoke_skill(&self, name: &str, story_id: Option<&str>) -> crate::infrastructure::Result<SkillResult> {
+    pub fn invoke_skill(
+        &self,
+        name: &str,
+        story_id: Option<&str>,
+    ) -> crate::infrastructure::Result<SkillResult> {
         self.repository.invoke_skill(name, story_id)
     }
 }
