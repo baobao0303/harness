@@ -389,18 +389,44 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
 
                     println!("Invoked skill: {}", skill_name);
                     println!("Story {id} verification proofs (via skill):");
-                    println!("  - Unit: {}", if result.unit_passed { "PASS" } else { "FAIL" });
-                    println!("  - Integration: {}", if result.integration_passed { "PASS" } else { "FAIL" });
-                    println!("  - E2E: {}", if result.e2e_passed { "PASS" } else { "FAIL" });
-                    println!("  - Platform: {}", if result.platform_passed { "PASS" } else { "FAIL" });
+                    println!(
+                        "  - Unit: {}",
+                        if result.unit_passed { "PASS" } else { "FAIL" }
+                    );
+                    println!(
+                        "  - Integration: {}",
+                        if result.integration_passed {
+                            "PASS"
+                        } else {
+                            "FAIL"
+                        }
+                    );
+                    println!(
+                        "  - E2E: {}",
+                        if result.e2e_passed { "PASS" } else { "FAIL" }
+                    );
+                    println!(
+                        "  - Platform: {}",
+                        if result.platform_passed {
+                            "PASS"
+                        } else {
+                            "FAIL"
+                        }
+                    );
                 } else {
                     let result = service.story_verify(&id)?;
                     println!("Running test skill: {}", result.skill_name);
                     println!("Story {id} verification proofs:");
                     println!("  - Unit: {}", if result.unit { "PASS" } else { "FAIL" });
-                    println!("  - Integration: {}", if result.integration { "PASS" } else { "FAIL" });
+                    println!(
+                        "  - Integration: {}",
+                        if result.integration { "PASS" } else { "FAIL" }
+                    );
                     println!("  - E2E: {}", if result.e2e { "PASS" } else { "FAIL" });
-                    println!("  - Platform: {}", if result.platform { "PASS" } else { "FAIL" });
+                    println!(
+                        "  - Platform: {}",
+                        if result.platform { "PASS" } else { "FAIL" }
+                    );
                     println!("Evidence: {}", result.evidence);
                 }
             }
@@ -527,13 +553,22 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
                 for skill in skills {
                     rows.push(vec![
                         skill.name,
-                        if skill.has_wrapper { "ready" } else { "no wrapper" }.to_owned(),
+                        if skill.has_wrapper {
+                            "ready"
+                        } else {
+                            "no wrapper"
+                        }
+                        .to_owned(),
                         skill.description,
                     ]);
                 }
                 print_table(&["name", "wrapper", "description"], &rows);
             }
-            SkillAction::Run { name, story_id, json } => {
+            SkillAction::Run {
+                name,
+                story_id,
+                json,
+            } => {
                 let result = service.invoke_skill(&name, story_id.as_deref())?;
                 if json {
                     println!("{}", serde_json::to_string_pretty(&result).unwrap());
@@ -635,7 +670,15 @@ fn print_matrix(records: &[StoryMatrixRecord]) {
         .collect::<Vec<_>>();
     print_table(
         &[
-            "id", "title", "status", "unit", "integ", "e2e", "plat", "evidence", "test_skill",
+            "id",
+            "title",
+            "status",
+            "unit",
+            "integ",
+            "e2e",
+            "plat",
+            "evidence",
+            "test_skill",
         ],
         &rows,
     );

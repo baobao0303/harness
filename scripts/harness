@@ -31,9 +31,23 @@ rust_cli_supports() {
   esac
 }
 
+generate_ide_skills() {
+  local ide_script="$REPO_ROOT/scripts/install-ide-skills.sh"
+  if [ -f "$ide_script" ] && [ -d "$REPO_ROOT/.agents/skills" ]; then
+    printf '%s\n' "Generating IDE skill discovery files..."
+    (cd "$REPO_ROOT" && bash "$ide_script" --tool all) 2>/dev/null || true
+  fi
+}
+
 if [ "${HARNESS_DISABLE_RUST_CLI:-0}" != "1" ] &&
    [ -x "$RUST_CLI" ] &&
    rust_cli_supports "${1:-}" "${2:-}"; then
+  if [ "${1:-}" = "init" ]; then
+    # Run Rust CLI init, then generate IDE skill files
+    HARNESS_REPO_ROOT="$REPO_ROOT" "$RUST_CLI" "$@"
+    generate_ide_skills
+    exit $?
+  fi
   HARNESS_REPO_ROOT="$REPO_ROOT" exec "$RUST_CLI" "$@"
 fi
 
@@ -151,6 +165,7 @@ cmd_init() {
       info "No schema version found. Applying schema version 1."
       sql_file "$SCHEMA_DIR/001-init.sql"
       info "Schema version 1 applied."
+      generate_ide_skills
       return 0
     fi
     info "Current schema version: $current"
@@ -159,6 +174,7 @@ cmd_init() {
   info "Creating harness database at $DB_PATH"
   sql_file "$SCHEMA_DIR/001-init.sql"
   info "Schema version 1 applied."
+  generate_ide_skills
 }
 
 # ── migrate ────────────────────────────────────────────────────────

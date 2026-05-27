@@ -1,0 +1,19 @@
+---
+inclusion: manual
+---
+
+# Skill: harness-brainstorming
+
+Facilitate interactive brainstorming sessions using diverse creative techniques and ideation methods. Use when the user says help me brainstorm or help me ideate.
+
+## How to Invoke
+
+Read and follow the full skill instructions at:
+`.agents/skills/harness-brainstorming/SKILL.md`
+
+## CLI Reference
+
+```bash
+./scripts/harness skill list              # See all skills
+./scripts/harness skill run harness-brainstorming         # Run if wrapper exists
+```

@@ -553,7 +553,7 @@ impl HarnessRepository for SqliteHarnessRepository {
 
     fn story_verify(&self, id: &str) -> Result<StoryVerifyResult> {
         let connection = self.open_existing()?;
-        
+
         let test_skill = connection
             .query_row(
                 "SELECT test_skill FROM story WHERE id=?1;",
@@ -584,9 +584,7 @@ impl HarnessRepository for SqliteHarnessRepository {
             ));
         };
 
-        let output = command
-            .current_dir(&skill_dir)
-            .output()?;
+        let output = command.current_dir(&skill_dir).output()?;
 
         let stdout_str = String::from_utf8_lossy(&output.stdout).into_owned();
         let stderr_str = String::from_utf8_lossy(&output.stderr).into_owned();
@@ -600,8 +598,12 @@ impl HarnessRepository for SqliteHarnessRepository {
             evidence: String,
         }
 
-        let parsed: SkillVerifyOutput = serde_json::from_str(&stdout_str)
-            .map_err(|err| HarnessInfraError::ParseVerificationOutput(test_skill.clone(), format!("{}, stdout: {}, stderr: {}", err, stdout_str, stderr_str)))?;
+        let parsed: SkillVerifyOutput = serde_json::from_str(&stdout_str).map_err(|err| {
+            HarnessInfraError::ParseVerificationOutput(
+                test_skill.clone(),
+                format!("{}, stdout: {}, stderr: {}", err, stdout_str, stderr_str),
+            )
+        })?;
 
         // Update the story's proof flags and evidence in the database
         // Also update status to 'implemented' since it is now successfully verified!
@@ -1065,8 +1067,13 @@ impl HarnessRepository for SqliteHarnessRepository {
                             if let Some(desc) = line.strip_prefix("description:") {
                                 let trimmed = desc.trim();
                                 let stripped = trimmed
-                                    .strip_prefix('"').and_then(|s| s.strip_suffix('"'))
-                                    .or_else(|| trimmed.strip_prefix('\'').and_then(|s| s.strip_suffix('\'')))
+                                    .strip_prefix('"')
+                                    .and_then(|s| s.strip_suffix('"'))
+                                    .or_else(|| {
+                                        trimmed
+                                            .strip_prefix('\'')
+                                            .and_then(|s| s.strip_suffix('\''))
+                                    })
                                     .unwrap_or(trimmed);
                                 description = stripped.to_owned();
                             }
@@ -2047,7 +2054,7 @@ implemented
         // Create skill folder and mock verify.py
         let skill_dir = repo_root.join(".agents/skills/harness-qa-generate-e2e-tests");
         fs::create_dir_all(&skill_dir).unwrap();
-        
+
         let verify_script = r#"
 import json
 print(json.dumps({
@@ -2089,9 +2096,15 @@ print(json.dumps({
         assert_eq!(matrix[0].integration, "yes");
         assert_eq!(matrix[0].e2e, "yes");
         assert_eq!(matrix[0].platform, "no");
-        assert_eq!(matrix[0].evidence, Some("Verification succeeded on e2e test suite.".to_owned()));
+        assert_eq!(
+            matrix[0].evidence,
+            Some("Verification succeeded on e2e test suite.".to_owned())
+        );
         assert_eq!(matrix[0].status, "implemented");
-        assert_eq!(matrix[0].test_skill, Some("harness-qa-generate-e2e-tests".to_owned()));
+        assert_eq!(
+            matrix[0].test_skill,
+            Some("harness-qa-generate-e2e-tests".to_owned())
+        );
     }
 
     #[test]
@@ -2137,7 +2150,9 @@ echo '{"unit_passed":true,"integration_passed":true,"e2e_passed":false,"platform
         assert!(skills[0].has_wrapper);
 
         // Invoke skill
-        let result = repository.invoke_skill("harness-test-skill", Some("US-001")).unwrap();
+        let result = repository
+            .invoke_skill("harness-test-skill", Some("US-001"))
+            .unwrap();
         assert!(result.unit_passed);
         assert!(result.integration_passed);
         assert!(!result.e2e_passed);

@@ -119,13 +119,82 @@ curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/in
 
 ---
 
+## 🧠 Thư viện Kỹ năng (Skills Library)
+
+Harness đi kèm **34 skill** có thể gọi từ bất kỳ IDE nào. Mỗi skill là một bộ hướng dẫn nghiệp vụ cụ thể giúp AI Agent thực hiện công việc theo quy trình chuẩn.
+
+### Danh sách Skill theo giai đoạn
+
+| Giai đoạn | Skill | Mô tả |
+| :--- | :--- | :--- |
+| **Khởi đầu** | `harness-help` | Phân tích trạng thái và gợi ý skill tiếp theo |
+| | `harness-document-project` | Tạo tài liệu dự án cho AI context |
+| | `harness-generate-project-context` | Tạo `project-context.md` |
+| **Yêu cầu** | `harness-prd` | Tạo, sửa, hoặc validate PRD |
+| | `harness-product-brief` | Tạo product brief |
+| | `harness-advanced-elicitation` | Phê bình sâu (socratic, red team, pre-mortem) |
+| | `harness-brainstorming` | Brainstorm ý tưởng |
+| **Kiến trúc** | `harness-create-architecture` | Thiết kế kiến trúc hệ thống |
+| | `harness-technical-research` | Nghiên cứu kỹ thuật |
+| **Lập kế hoạch** | `harness-create-epics-and-stories` | Chia nhỏ requirements thành epics/stories |
+| | `harness-create-story` | Tạo story file chi tiết |
+| **Thiết kế** | `harness-create-ux-design` | Thiết kế UX/UI |
+| **Triển khai** | `harness-check-implementation-readiness` | Kiểm tra sẵn sàng implement |
+| | `harness-correct-course` | Điều chỉnh sprint khi có thay đổi |
+| **Kiểm thử** | `harness-qa-generate-e2e-tests` | Tạo E2E tests tự động |
+| **Review** | `harness-retrospective` | Retrospective sau epic |
+| | `harness-checkpoint-preview` | Human-in-the-loop review |
+| **Tài liệu** | `harness-index-docs` | Tạo index cho thư mục docs |
+| | `harness-shard-doc` | Chia nhỏ tài liệu lớn |
+| | `harness-distillator` | Nén tài liệu cho LLM |
+| **Đặc biệt** | `harness-party-mode` | Multi-agent roundtable discussion |
+| | `harness-investigate` | Điều tra bug forensic |
+| | `harness-customize` | Tùy chỉnh skill behavior |
+
+### Cách gọi Skill từ mỗi IDE
+
+Mỗi IDE có cơ chế discover skill riêng, nhưng tất cả đều trỏ về cùng một source `.agents/skills/<name>/SKILL.md`:
+
+| IDE | Cách gọi | Format |
+| :--- | :--- | :--- |
+| **Kiro** | Gõ `#` trong chat → chọn skill | `.kiro/steering/*.md` |
+| **Cursor** | Gõ `@` hoặc xem Rules panel | `.cursor/rules/*.mdc` |
+| **Windsurf** | Agent đọc tự động | `.windsurfrules` |
+| **Claude Code** | Nói tên skill trong prompt | `AGENTS.md` skill table |
+| **GitHub Copilot** | Nói tên skill trong prompt | `AGENTS.md` skill table |
+| **CLI** | `harness skill list` / `harness skill run <name>` | Terminal |
+
+### Generate Skill Files cho IDE
+
+Sau khi cài đặt Harness, chạy lệnh sau để tạo skill discovery files cho tất cả IDE:
+
+```bash
+scripts/install-ide-skills.sh
+```
+
+Hoặc chỉ cho một IDE cụ thể:
+
+```bash
+scripts/install-ide-skills.sh --tool kiro
+scripts/install-ide-skills.sh --tool cursor
+scripts/install-ide-skills.sh --tool windsurf
+scripts/install-ide-skills.sh --tool claude-code
+```
+
+> [!TIP]
+> Khi bạn chạy `harness init`, script sẽ tự động generate skill files cho tất cả IDE được phát hiện trong dự án.
+
+---
+
 ## 🛠️ Các câu lệnh cơ bản (Global Commands)
 
 Khi đã cài đặt global, bạn có thể thực hiện quản lý dự án nhanh chóng bằng các lệnh sau:
 
 | Lệnh | Chức năng |
 | :--- | :--- |
-| `harness init` | Khởi tạo cơ sở dữ liệu hoạt động (`harness.db`) trong dự án hiện tại. |
+| `harness init` | Khởi tạo cơ sở dữ liệu hoạt động (`harness.db`) và generate skill files cho IDE. |
+| `harness skill list` | Hiển thị danh sách tất cả skill có sẵn. |
+| `harness skill run <name>` | Chạy một skill cụ thể (nếu có wrapper). |
 | `harness intake --type <type> --summary "<nội dung>" --lane <lane>` | Đăng ký phân loại rủi ro cho một yêu cầu tính năng mới. |
 | `harness story add --id <id> --title "<tiêu đề>" --lane <lane>` | Tạo mới một gói công việc story trong Test Matrix. |
 | `harness story update --id <id> --status <status> --evidence "<bằng chứng>"` | Cập nhật tiến độ kiểm chứng (`planned`, `in_progress`, `implemented`). |
