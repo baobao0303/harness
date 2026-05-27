@@ -691,6 +691,56 @@ else
   log "chmod    scripts/harness"
 fi
 
+# ── Copy .agents/skills/ directory ─────────────────────────────────
+install_skills_dir() {
+  local skills_source=""
+  if [ "$SOURCE_MODE" = "local" ] && [ -d "$SOURCE_ROOT/.agents/skills" ]; then
+    skills_source="$SOURCE_ROOT/.agents/skills"
+  fi
+
+  [ -n "$skills_source" ] || return 0
+
+  local target_skills="$TARGET_DIR/.agents/skills"
+
+  if [ -d "$target_skills" ] && [ "$CONFLICT_ACTION" = "merge" ]; then
+    log "skip     .agents/skills/ (merge keeps existing)"
+    return 0
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "copy     .agents/skills/ (34 skills)"
+    return 0
+  fi
+
+  mkdir -p "$target_skills"
+  # Copy SKILL.md and run.sh from each skill (not customize.toml which is user-specific)
+  for skill_dir in "$skills_source"/*/; do
+    [ -d "$skill_dir" ] || continue
+    local skill_name
+    skill_name="$(basename "$skill_dir")"
+    local target_skill_dir="$target_skills/$skill_name"
+
+    if [ -d "$target_skill_dir" ] && [ "$CONFLICT_ACTION" = "merge" ]; then
+      continue
+    fi
+
+    mkdir -p "$target_skill_dir"
+    # Copy SKILL.md (required)
+    [ -f "$skill_dir/SKILL.md" ] && cp -p "$skill_dir/SKILL.md" "$target_skill_dir/SKILL.md"
+    # Copy run.sh wrapper if exists
+    [ -f "$skill_dir/run.sh" ] && cp -p "$skill_dir/run.sh" "$target_skill_dir/run.sh" && chmod +x "$target_skill_dir/run.sh"
+    # Copy customize.toml defaults if exists
+    [ -f "$skill_dir/customize.toml" ] && cp -p "$skill_dir/customize.toml" "$target_skill_dir/customize.toml"
+  done
+
+  # Copy SKILL_WRAPPER_SPEC.md
+  [ -f "$skills_source/SKILL_WRAPPER_SPEC.md" ] && cp -p "$skills_source/SKILL_WRAPPER_SPEC.md" "$target_skills/SKILL_WRAPPER_SPEC.md"
+
+  log "created  .agents/skills/ ($(ls -d "$target_skills"/*/ 2>/dev/null | wc -l | tr -d ' ') skills)"
+}
+
+install_skills_dir
+
 refresh_agent_shim
 install_harness_cli_binary
 
