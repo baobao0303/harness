@@ -698,8 +698,6 @@ install_skills_dir() {
     skills_source="$SOURCE_ROOT/.agents/skills"
   fi
 
-  [ -n "$skills_source" ] || return 0
-
   local target_skills="$TARGET_DIR/.agents/skills"
 
   if [ -d "$target_skills" ] && [ "$CONFLICT_ACTION" = "merge" ]; then
@@ -708,35 +706,47 @@ install_skills_dir() {
   fi
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    log "copy     .agents/skills/ (34 skills)"
+    log "copy     .agents/skills/ (skills library)"
     return 0
   fi
 
-  mkdir -p "$target_skills"
-  # Copy SKILL.md and run.sh from each skill (not customize.toml which is user-specific)
-  for skill_dir in "$skills_source"/*/; do
-    [ -d "$skill_dir" ] || continue
-    local skill_name
-    skill_name="$(basename "$skill_dir")"
-    local target_skill_dir="$target_skills/$skill_name"
-
-    if [ -d "$target_skill_dir" ] && [ "$CONFLICT_ACTION" = "merge" ]; then
-      continue
+  if [ -n "$skills_source" ]; then
+    # Local mode: copy from source
+    mkdir -p "$target_skills"
+    for skill_dir in "$skills_source"/*/; do
+      [ -d "$skill_dir" ] || continue
+      local skill_name
+      skill_name="$(basename "$skill_dir")"
+      local target_skill_dir="$target_skills/$skill_name"
+      if [ -d "$target_skill_dir" ] && [ "$CONFLICT_ACTION" = "merge" ]; then
+        continue
+      fi
+      mkdir -p "$target_skill_dir"
+      [ -f "$skill_dir/SKILL.md" ] && cp -p "$skill_dir/SKILL.md" "$target_skill_dir/SKILL.md"
+      [ -f "$skill_dir/run.sh" ] && cp -p "$skill_dir/run.sh" "$target_skill_dir/run.sh" && chmod +x "$target_skill_dir/run.sh"
+      [ -f "$skill_dir/customize.toml" ] && cp -p "$skill_dir/customize.toml" "$target_skill_dir/customize.toml"
+    done
+    [ -f "$skills_source/SKILL_WRAPPER_SPEC.md" ] && cp -p "$skills_source/SKILL_WRAPPER_SPEC.md" "$target_skills/SKILL_WRAPPER_SPEC.md"
+    log "created  .agents/skills/ ($(ls -d "$target_skills"/*/ 2>/dev/null | wc -l | tr -d ' ') skills)"
+  else
+    # Remote mode: download .agents/ via GitHub tarball
+    local tmp_tar
+    tmp_tar="$(mktemp)"
+    local tar_url="https://github.com/baobao0303/harness/archive/refs/heads/main.tar.gz"
+    if curl -fsSL "$tar_url" -o "$tmp_tar" 2>/dev/null; then
+      mkdir -p "$TARGET_DIR/.agents"
+      tar -xzf "$tmp_tar" --strip-components=2 -C "$TARGET_DIR" "harness-main/.agents" 2>/dev/null || true
+      rm -f "$tmp_tar"
+      local skill_count
+      skill_count="$(ls -d "$target_skills"/*/ 2>/dev/null | wc -l | tr -d ' ')"
+      if [ "$skill_count" -gt 0 ]; then
+        log "created  .agents/skills/ ($skill_count skills from remote)"
+      fi
+    else
+      rm -f "$tmp_tar"
+      log "skip     .agents/skills/ (remote download failed, non-fatal)"
     fi
-
-    mkdir -p "$target_skill_dir"
-    # Copy SKILL.md (required)
-    [ -f "$skill_dir/SKILL.md" ] && cp -p "$skill_dir/SKILL.md" "$target_skill_dir/SKILL.md"
-    # Copy run.sh wrapper if exists
-    [ -f "$skill_dir/run.sh" ] && cp -p "$skill_dir/run.sh" "$target_skill_dir/run.sh" && chmod +x "$target_skill_dir/run.sh"
-    # Copy customize.toml defaults if exists
-    [ -f "$skill_dir/customize.toml" ] && cp -p "$skill_dir/customize.toml" "$target_skill_dir/customize.toml"
-  done
-
-  # Copy SKILL_WRAPPER_SPEC.md
-  [ -f "$skills_source/SKILL_WRAPPER_SPEC.md" ] && cp -p "$skills_source/SKILL_WRAPPER_SPEC.md" "$target_skills/SKILL_WRAPPER_SPEC.md"
-
-  log "created  .agents/skills/ ($(ls -d "$target_skills"/*/ 2>/dev/null | wc -l | tr -d ' ') skills)"
+  fi
 }
 
 install_skills_dir
