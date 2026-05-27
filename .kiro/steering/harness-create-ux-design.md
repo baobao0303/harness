@@ -1,0 +1,19 @@
+---
+inclusion: manual
+---
+
+# Skill: harness-create-ux-design
+
+Plan UX patterns and design specifications. Use when the user says "lets create UX design" or "create UX specifications" or "help me plan the UX"
+
+## How to Invoke
+
+Read and follow the full skill instructions at:
+`.agents/skills/harness-create-ux-design/SKILL.md`
+
+## CLI Reference
+
+```bash
+./scripts/harness skill list              # See all skills
+./scripts/harness skill run harness-create-ux-design         # Run if wrapper exists
+```
