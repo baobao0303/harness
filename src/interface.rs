@@ -323,7 +323,14 @@ pub enum InterfaceError {
 }
 
 pub fn run(cli: Cli) -> Result<(), InterfaceError> {
-    let service = HarnessService::new(resolve_context()?);
+    let context = resolve_context()?;
+
+    // If init is called in a folder without Harness structure, bootstrap first
+    if matches!(cli.command, Command::Init) && !context.repo_root.join("AGENTS.md").exists() {
+        bootstrap_harness(&context.repo_root)?;
+    }
+
+    let service = HarnessService::new(context);
 
     match cli.command {
         Command::Init => print_init_result(service.init()?),
@@ -630,6 +637,36 @@ fn print_migrate_result(result: MigrateResult) {
             println!("Applying migration {version}...");
         }
         println!("Applied {} migration(s).", result.applied.len());
+    }
+}
+
+fn bootstrap_harness(repo_root: &std::path::Path) -> Result<(), InterfaceError> {
+    println!("Harness not found in this directory. Installing...");
+    let install_url =
+        "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh";
+
+    let status = std::process::Command::new("bash")
+        .arg("-c")
+        .arg(format!(
+            "curl -fsSL '{}' | bash -s -- --directory '{}' --yes",
+            install_url,
+            repo_root.display()
+        ))
+        .status();
+
+    match status {
+        Ok(s) if s.success() => Ok(()),
+        Ok(s) => {
+            eprintln!(
+                "install-harness.sh exited with code {}",
+                s.code().unwrap_or(-1)
+            );
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Failed to run installer: {e}");
+            Ok(())
+        }
     }
 }
 
