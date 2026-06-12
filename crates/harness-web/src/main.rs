@@ -93,6 +93,9 @@ async fn main() {
     let ui_dir = std::env::current_dir().unwrap().join("crates/harness-web/ui");
     println!("Serving UI static files from: {}", ui_dir.display());
 
+    let personas_dir = repo_root.join(".agents/personas");
+    println!("Serving Agent Personas from: {}", personas_dir.display());
+
     let app = Router::new()
         .route("/api/stats", get(get_stats))
         .route("/api/matrix", get(get_matrix))
@@ -100,6 +103,7 @@ async fn main() {
         .route("/api/intake", post(create_intake))
         .route("/api/story", post(create_story))
         .route("/api/trace", post(create_trace))
+        .nest_service("/personas", ServeDir::new(personas_dir))
         .fallback_service(ServeDir::new(ui_dir))
         .with_state(state);
 
