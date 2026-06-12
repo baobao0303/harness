@@ -4,7 +4,7 @@ Date: 2026-05-23
 
 ## Status
 
-Accepted
+Accepted, amended 2026-05-31, amended 2026-06-09
 
 ## Context
 
@@ -13,9 +13,9 @@ is now large enough to carry meaningful architecture risk: it mixes command
 parsing, SQL construction, migrations, import behavior, query rendering, and
 help text in one script.
 
-The current installer copies `scripts/harness` into target repositories. That
-keeps Harness easy to install, but it also means a Rust rewrite is not only an
-implementation change. It changes the distribution contract for every project
+The previous installer copied a shell wrapper into target repositories. That
+kept Harness easy to install, but it also meant a Rust rewrite was not only an
+implementation change. It changed the distribution contract for every project
 that receives Harness.
 
 ## Decision
@@ -23,17 +23,20 @@ that receives Harness.
 The future Rust implementation of the Harness CLI should be shipped as a
 prebuilt binary downloaded by the installer.
 
-The command path should remain stable for users and agents. Target projects
-should continue to invoke:
+The command path for users and agents is the installed Rust binary:
 
 ```bash
-scripts/harness <command>
+scripts/bin/harness-cli <command>
 ```
 
-The installed `scripts/harness` path may become a small launcher that locates,
-downloads, verifies, and executes the platform-specific Rust binary, or it may
-be the downloaded binary itself. The exact launcher shape should be decided
-during implementation, but the user-facing command contract should not change.
+On Windows, the repository-local binary is installed as:
+
+```powershell
+.\scripts\bin\harness-cli.exe <command>
+```
+
+The installer should download, verify, and install the platform-specific Rust
+binary directly at that path. There should be no shell wrapper command contract.
 
 The Rust CLI should follow the existing architecture rules:
 
@@ -43,6 +46,13 @@ The Rust CLI should follow the existing architecture rules:
 - Infrastructure: SQLite repositories and schema migrations.
 - Interface: command-line parsing, terminal output, and installer integration.
 
+Release automation now follows the same distribution contract. After a PR is
+merged to `main`, the post-merge maintenance workflow updates `CHANGELOG.md`.
+When the merged PR changed the Rust CLI source, schema, Cargo metadata, or CLI
+release packaging, it also bumps the CLI patch version, updates the installer
+release tag pin, creates a `harness-cli-v*` tag, and invokes the reusable
+Harness CLI release workflow for that tag.
+
 ## Alternatives Considered
 
 1. Keep the shell CLI permanently. Rejected because the script has crossed from
@@ -51,8 +61,7 @@ The Rust CLI should follow the existing architecture rules:
    because it makes Harness installation depend on a local Rust toolchain and
    increases setup friction for projects that only need the harness.
 3. Require users to install a global `harness` binary separately. Rejected
-   because it breaks the repository-local command contract that agents already
-   follow.
+   because Harness should remain repository-local for agents.
 4. Download a prebuilt binary through the installer. Accepted because it keeps
    target repos simple while allowing the CLI internals to become typed,
    testable, and platform-aware.
@@ -63,7 +72,8 @@ Positive:
 
 - The durable-layer CLI can move to typed command parsing and tested use cases.
 - Target projects do not need a Rust toolchain just to use Harness.
-- The `scripts/harness` command remains the stable entrypoint for agents.
+- The `scripts/bin/harness-cli` command is the stable entrypoint for agents on
+  macOS/Linux; Windows uses the same repo-local path with the `.exe` suffix.
 - Prebuilt releases can include a known SQLite linkage strategy.
 
 Tradeoffs:
@@ -76,7 +86,6 @@ Tradeoffs:
 ## Follow-Up
 
 - Implement the migration through `US-002 Rust Harness CLI`.
-- Decide whether `scripts/harness` is a launcher script or the downloaded
-  binary path.
+- Remove the old shell wrapper from installed project payloads.
 - Add checksum verification for downloaded binaries.
 - Treat the Rust CLI as the primary durable-layer implementation.

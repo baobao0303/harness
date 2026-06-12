@@ -23,7 +23,7 @@ operational data, not prose documents.
 
 ## Decision
 
-Add a SQLite database (`harness.db`) and a thin CLI (`scripts/harness`) as the
+Add a SQLite database (`harness.db`) and a thin CLI (`scripts/bin/harness-cli`) as the
 durable layer for operational harness data.
 
 The database stores:
