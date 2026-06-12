@@ -1,0 +1,55 @@
+---
+description: Co-pilot guidelines for working in a Harness-enabled repository. Enforces the Harness Loop, database logging, and role-based personas (PM, BA, FE, BE, QA).
+globs: *
+---
+# Harness Operational Rules & Agent Guidelines
+
+You are operating inside a repository managed by the **Harness** framework. All tasks, specs, stories, and execution traces must follow the structured Harness workflow.
+
+---
+
+## 🔄 1. The Harness Development Loop
+Every task or feature request must strictly follow these sequential phases:
+
+1.  **Feature Intake**: Classify risk level (`tiny`, `normal`, `high-risk`) via `harness-cli intake`.
+2.  **Product Contract (PRD)**: Elicit requirements and write a PRD to `docs/product/`.
+3.  **Story Decomposition**: Slice the feature into granular stories and register them via `harness-cli story add`.
+4.  **Implementation**: Write clean, modular code following architectural boundary rules (`docs/ARCHITECTURE.md`).
+5.  **Quality Proof (Tests)**: Write unit/integration/E2E tests and register pass flags via `harness-cli story update`.
+6.  **Verification**: Execute `harness-cli story verify <id>` or `verify-all` to run verification commands automatically.
+7.  **Execution Trace**: Log the session trace to the database via `harness-cli trace`.
+
+---
+
+## 👥 2. Specialized Agent Personas
+Before starting a sub-task, read and adopt the respective instructions under `.agents/personas/`:
+- **Product Manager**: [pm.md](file:///.agents/personas/pm.md) (Intake & Stories)
+- **Business Analyst**: [ba.md](file:///.agents/personas/ba.md) (Functional Specs & Acceptance Criteria)
+- **Frontend Engineer**: [fe.md](file:///.agents/personas/fe.md) (Interactive & Responsive UI)
+- **Backend Engineer**: [be.md](file:///.agents/personas/be.md) (API, DB Migrations, Security)
+- **QA Engineer**: [qa.md](file:///.agents/personas/qa.md) (Test Suites & Verification proofs)
+
+---
+
+## 🛠️ 3. Quick CLI Command Reference
+Use the local `harness-cli` binary at `scripts/bin/harness-cli`:
+
+| Action | Command |
+| :--- | :--- |
+| **Intake Classification** | `./scripts/bin/harness-cli intake --type "<type>" --summary "<text>" --lane <tiny\|normal\|high-risk>` |
+| **Add Story** | `./scripts/bin/harness-cli story add --id <id> --title "<title>" --lane <lane>` |
+| **Update Story Proof** | `./scripts/bin/harness-cli story update --id <id> --status implemented --evidence "<msg>" --unit 1 --integration 1` |
+| **Verify Single Story** | `./scripts/bin/harness-cli story verify <id>` |
+| **Verify All Stories** | `./scripts/bin/harness-cli story verify-all` |
+| **Log Agent Trace** | `./scripts/bin/harness-cli trace --summary "<text>" --story <id> --agent <name> --outcome completed` |
+| **Check Test Matrix** | `./scripts/bin/harness-cli query matrix` |
+| **Check Stats** | `./scripts/bin/harness-cli query stats` |
+
+---
+
+## 🎨 4. Design & Aesthetic Rules (For Frontend Tasks)
+If implementing frontend features, you must follow these styling rules:
+- **Rich Aesthetics**: Utilizesleek dark modes, modern typography (Google Fonts like Outfit, Inter), glassmorphism, and smooth gradients.
+- **Micro-animations**: Add transitions (`transition: all 0.3s ease`) on hovers, focuses, and active states.
+- **Responsiveness**: Implement mobile-first layouts using CSS Flexbox and CSS Grid.
+- **No default colors**: Avoid standard primary colors; use curated, harmonious color palettes (HSL).

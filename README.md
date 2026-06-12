@@ -48,71 +48,139 @@ Mọi yêu cầu công việc đi qua Harness sẽ tuân theo quy trình chuẩn
                           └──> AI Agent thực hiện viết code & kiểm thử
                                 └──> Ghi nhận Quyết định kiến trúc & Khó khăn (Friction)
 ```
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/ide-comparison-dashboard-dark.png">
-  <img src="docs/assets/ide-comparison-dashboard-light.png" alt="Harness Integrated Developer IDE Performance Dashboard" width="100%">
-</picture>
+![Harness Integrated Developer IDE Performance Dashboard](docs/assets/ide-comparison-dashboard-dark.png)
 
 ---
 
-## 📥 Hướng dẫn cài đặt bằng Terminal
+## 🖥️ Web UI Performance Dashboard
 
-Bạn có thể cài đặt Harness theo hai cách: **Cài đặt toàn cục (Global)** để chạy lệnh `harness` ở bất kỳ đâu, hoặc **Cài đặt cục bộ (Local)** vào một dự án cụ thể.
+Harness đi kèm một giao diện Dashboard quản lý hiệu năng hoạt động của dự án thời gian thực, lấy cảm hứng từ giao diện **Paperclip** với các hiệu ứng kính mờ (glassmorphism).
 
----
+### Các tính năng nổi bật của Web UI:
+1. **Interactive SQLite Console 💻**: Giao diện thực thi câu lệnh SQL trực tiếp, được tích hợp cổng bảo mật (chỉ cho phép các lệnh truy vấn an toàn như `SELECT` hoặc `PRAGMA`).
+2. **Omnibar Command Palette 🔍**: Nhấn `Cmd+K` (hoặc ô tìm kiếm ở sidebar) để mở thanh điều lệnh đa năng hỗ trợ các lệnh tắt (như `/goto [tab]`, `/verify [adr]`, `/approve [intervention]`, `/create [entity]`).
+3. **Real-time Agent Workloads 👥**: Theo dõi trạng thái hoạt động của các AI Agent trong tổ chức thời gian thực thông qua luồng WebSocket sự kiện telemetry.
+4. **Drag-and-Drop Kanban Priority Sandbox 🗂️**: Bảng Kanban kéo thả cho các đề xuất cải tiến Backlog, tự động cập nhật mức độ ưu tiên trực tiếp xuống SQLite qua API.
+5. **Friction & Blocker Analytics 📈**: Biểu đồ phân tích tần suất ma sát phát triển (frictions) của từng Agent và log lỗi phát sinh để kịp thời hỗ trợ.
 
-### 🌎 Cách 1: Cài đặt toàn cục (Global CLI)
-
-#### Option A: Cài đặt ngoại tuyến (Offline & Local Build) - Khuyên dùng & Cực kỳ an toàn
-Nếu bạn vừa tải mã nguồn về hoặc kho lưu trữ GitHub chưa cấu hình phát hành (Release) công khai, bạn có thể biên dịch trực tiếp và cài đặt toàn cục chỉ với **2 lệnh**:
-
+### Cách khởi chạy Web UI:
+Biên dịch và khởi chạy server Axum:
 ```bash
-# 1. Biên dịch và sao chép tệp nhị phân vào thư mục bin của hệ thống
-bash scripts/build-harness-cli-release.sh && mkdir -p ~/.local/bin && cp dist/harness-macos-arm64 ~/.local/bin/harness && chmod +x ~/.local/bin/harness
+cargo run --package harness-web
+```
+Dashboard sẽ hiển thị tại: **`http://localhost:3000`**
 
-# 2. Cấu hình biến môi trường PATH để gọi lệnh 'harness' ở bất kỳ đâu
+---
+
+
+## 📥 Hướng dẫn cài đặt và Khởi chạy Chi tiết (Installation & Setup)
+
+Harness có thể được cài đặt toàn cục dưới dạng CLI để phục vụ việc điều phối Agent, hoặc khởi chạy nhanh chóng trực tiếp từ mã nguồn để phát triển và trải nghiệm Dashboard.
+
+### 📋 1. Yêu cầu hệ thống (System Requirements)
+Trước khi bắt đầu, hãy đảm bảo hệ thống của bạn đã được cài đặt:
+*   **Rust & Cargo** (phiên bản mới nhất) để biên dịch dự án Rust.
+*   **SQLite3** để quản lý cơ sở dữ liệu cục bộ (`harness.db`).
+
+---
+
+### 🚀 2. Khởi chạy nhanh từ Mã nguồn (Quickstart from Source)
+
+Để chạy thử nghiệm toàn bộ hệ thống Harness (bao gồm CLI và Web UI Dashboard) ngay từ mã nguồn vừa tải về, hãy thực hiện theo các bước sau:
+
+#### Bước 2.1: Biên dịch và cài đặt CLI cục bộ
+Biên dịch dự án Harness CLI từ mã nguồn và tạo liên kết (hoặc chép) file nhị phân vào thư mục bin cá nhân để có thể gọi lệnh `harness` từ bất kỳ đâu:
+```bash
+# Biên dịch CLI với phiên bản release tối ưu hóa
+cargo build --release --package harness-cli
+
+# Tạo thư mục bin cá nhân nếu chưa có và sao chép binary vào đó
+mkdir -p ~/.local/bin
+cp target/release/harness-cli ~/.local/bin/harness
+chmod +x ~/.local/bin/harness
+
+# Cấu hình biến môi trường PATH để hệ thống nhận diện lệnh 'harness'
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
 ```
-*(Nếu bạn dùng Bash hoặc Fish shell thay vì Zsh, hãy đổi `~/.zshrc` tương ứng thành `~/.bashrc` hoặc `~/.config/fish/config.fish`)*.
+*(Nếu sử dụng Bash hoặc các shell khác, hãy cập nhật tệp cấu hình tương ứng như `~/.bashrc`)*.
 
-#### Option B: Cài đặt trực tuyến (Online Curl)
-Khi dự án đã có các phiên bản phát hành chính thức trên GitHub, bạn chỉ cần một câu lệnh để tự động tải và cấu hình:
+#### Bước 2.2: Khởi tạo cơ sở dữ liệu (`harness.db`)
+Chạy lệnh khởi tạo để tự động tạo file database SQLite và áp dụng các tệp schema di trú (migrations) trong thư mục `scripts/schema/`:
+```bash
+harness init
+```
+Lệnh này sẽ tạo ra file cơ sở dữ liệu `harness.db` tại gốc thư mục dự án và thiết lập cấu trúc bảng cho intakes, stories, decisions, traces,...
 
+#### Bước 2.3: Nạp dữ liệu mẫu (Seed Demo Data)
+Để Web UI Dashboard hiển thị đầy đủ các biểu đồ, dữ liệu mẫu, Kanban và lịch sử hoạt động như hình minh họa ở trên, hãy nạp file dữ liệu mẫu:
+```bash
+sqlite3 harness.db < scripts/seed_demo_data.sql
+```
+
+#### Bước 2.4: Chạy kiểm thử hệ thống (Optional)
+Đảm bảo tất cả các chức năng hoạt động chính xác bằng cách chạy bộ kiểm thử đơn vị:
+```bash
+cargo test
+```
+
+#### Bước 2.5: Khởi chạy Web UI Performance Dashboard
+Biên dịch và chạy Axum web server:
+```bash
+cargo run --package harness-web
+```
+Sau khi server chạy, hãy truy cập vào trình duyệt: **`http://localhost:3000`** để bắt đầu tương tác với các tính năng:
+*   **Kanban board**: Kéo thả để cập nhật độ ưu tiên.
+*   **SQL Console**: Truy vấn SQLite trực tiếp.
+*   **Omnibar**: Nhấn `Cmd+K` để thực thi nhanh các lệnh tắt.
+
+---
+
+### 🌎 3. Cài đặt Toàn cục qua CLI Script (Global Installation)
+
+Nếu bạn muốn cài đặt Harness toàn cục trên máy tính một cách nhanh chóng qua các kịch bản cài đặt tự động (phục vụ cho việc điều hướng Agent trong các thư mục dự án khác):
+
+#### Tùy chọn A: Biên dịch Release cục bộ & Cài đặt tự động
+```bash
+# Biên dịch gói nhị phân tương ứng với OS/CPU và cài đặt toàn cục
+bash scripts/build-harness-cli-release.sh && mkdir -p ~/.local/bin && cp dist/harness-macos-arm64 ~/.local/bin/harness && chmod +x ~/.local/bin/harness
+
+# Cập nhật PATH
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+```
+
+#### Tùy chọn B: Tải trực tiếp phiên bản phát hành từ GitHub (Online Curl)
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-global.sh" | bash
 ```
 
 > [!NOTE]
-> *   Bộ cài đặt trực tuyến sẽ tự động nhận diện hệ điều hành (macOS/Linux) và kiến trúc CPU (arm64/x64).
-> *   Tự động tải về binary phát hành tương ứng từ GitHub, xác thực mã băm SHA256 để đảm bảo an toàn.
-> 
-> Sau khi cài đặt bằng 1 trong 2 tùy chọn trên, bạn có thể kiểm tra trạng thái bằng cách gõ:
+> Bộ cài đặt trực tuyến sẽ tự động phát hiện Hệ điều hành (macOS/Linux) cùng kiến trúc CPU (arm64/x64) để tải về và kiểm tra tính toàn vẹn (SHA256) của file nhị phân.
+>
+> Kiểm tra cài đặt thành công:
 > ```bash
 > harness query stats
 > ```
 
 ---
 
-### 📂 Cách 2: Cài đặt trực tiếp vào một dự án (Project Installation)
+### 📂 4. Tích hợp trực tiếp vào dự án của bạn (Project Integration)
 
-Nếu bạn muốn tích hợp toàn bộ cấu trúc thư mục Harness (`docs/`, `scripts/`, `AGENTS.md`) trực tiếp vào dự án hiện tại của mình, hãy chuyển đến thư mục dự án đó và chạy:
+Để tích hợp toàn bộ khung làm việc của Harness (`docs/`, `scripts/`, `AGENTS.md`) vào một dự án phần mềm có sẵn của bạn, hãy di chuyển tới thư mục gốc của dự án đó và thực thi:
 
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --yes
 ```
 
-#### Các tùy chọn nâng cao khi cập nhật:
-
-*   **Cập nhật bảo toàn (Merge)**: Đối với các dự án đã tích hợp sẵn Harness từ trước và bạn chỉ muốn tải thêm các file mới bổ sung mà không ghi đè lên các tài liệu hiện có:
+#### Các tùy chọn nâng cao khi cập nhật Harness trong dự án:
+*   **Cập nhật bảo toàn (Merge - Khuyên dùng)**: Chỉ bổ sung các file Harness còn thiếu, không làm ảnh hưởng tới các tài liệu đặc tả hiện có của bạn:
     ```bash
     curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --yes
     ```
-*   **Ghi đè hoàn toàn (Override)**: Sao lưu toàn bộ thư mục Harness cũ và cài đặt mới hoàn toàn:
+*   **Ghi đè hoàn toàn (Override)**: Sao lưu toàn bộ thư mục Harness cũ sang bản backup và cài đặt mới hoàn toàn:
     ```bash
     curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --override --yes
     ```
-*   **Làm sạch Agent Shim**: Chuyển đổi tệp `AGENTS.md` cồng kềnh cũ sang dạng shim gọn nhẹ ổn định:
+*   **Làm sạch Agent Shim**: Cập nhật file `AGENTS.md` thành một shim gọn nhẹ hướng dẫn Agent truy cập các liên kết tài liệu:
     ```bash
     curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --refresh-agent-shim --yes
     ```

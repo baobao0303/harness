@@ -1,0 +1,137 @@
+name: Post-Merge Maintenance
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  prepare:
+    name: Update changelog and release metadata
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-24.04
+    outputs:
+      cli_changed: ${{ steps.maintenance.outputs.cli_changed }}
+      release_tag: ${{ steps.maintenance.outputs.release_tag }}
+      maintenance_ref: ${{ steps.maintenance.outputs.maintenance_ref }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure Git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Update maintenance files
+        id: maintenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          git pull --ff-only origin main
+
+          pr_json="$(gh pr view "$PR_NUMBER" --json number,title,author,files,mergeCommit)"
+          pr_title="$(jq -r '.title' <<<"$pr_json")"
+          pr_author="$(jq -r '.author.login // "unknown"' <<<"$pr_json")"
+          merge_sha="$(jq -r '.mergeCommit.oid // empty' <<<"$pr_json")"
+          changed_files="$(jq -r '.files[].path' <<<"$pr_json")"
+
+          cli_changed=false
+          if grep -Eq '^(crates/harness-cli/|scripts/schema/|scripts/build-harness-cli-release\.sh$|Cargo\.toml$|Cargo\.lock$)' <<<"$changed_files"; then
+            cli_changed=true
+          fi
+
+          release_tag=""
+          if [ "$cli_changed" = true ]; then
+            old_version="$(awk -F'"' '/^version = / { print $2; exit }' crates/harness-cli/Cargo.toml)"
+            IFS=. read -r major minor patch <<<"$old_version"
+            new_version="$major.$minor.$((patch + 1))"
+            release_tag="harness-cli-v$new_version"
+
+            NEW_VERSION="$new_version" perl -0pi -e 's/(\[package\]\s+name = "harness-cli"\s+version = ")[^"]+(")/$1$ENV{NEW_VERSION}$2/s' crates/harness-cli/Cargo.toml
+            NEW_VERSION="$new_version" perl -0pi -e 's/(name = "harness-cli"\nversion = ")[^"]+(")/$1$ENV{NEW_VERSION}$2/' Cargo.lock
+            printf '%s\n' "$release_tag" > scripts/harness-cli-release-tag
+          fi
+
+          date_utc="$(date -u +%Y-%m-%d)"
+          tmp_changelog="$(mktemp)"
+          if [ -f CHANGELOG.md ]; then
+            cp CHANGELOG.md "$tmp_changelog"
+          else
+            printf '# Changelog\n\n' > "$tmp_changelog"
+          fi
+
+          entry="$(mktemp)"
+          {
+            printf '## %s - PR #%s\n\n' "$date_utc" "$PR_NUMBER"
+            printf -- '- %s (@%s)\n' "$pr_title" "$pr_author"
+            if [ -n "$merge_sha" ]; then
+              printf -- '- Merge commit: `%s`\n' "$merge_sha"
+            fi
+            if [ "$cli_changed" = true ]; then
+              printf -- '- Harness CLI release: `%s`\n' "$release_tag"
+            else
+              printf -- '- Harness CLI release: not required\n'
+            fi
+            printf -- '- Changed files:\n'
+            sed 's/^/  - `/' <<<"$changed_files" | sed 's/$/`/'
+            printf '\n'
+          } > "$entry"
+
+          {
+            sed -n '1p' "$tmp_changelog"
+            printf '\n'
+            cat "$entry"
+            sed '1d' "$tmp_changelog" | sed '/./,$!d'
+          } > CHANGELOG.md
+
+          if git diff --quiet; then
+            maintenance_ref="$(git rev-parse HEAD)"
+          else
+            if [ "$cli_changed" = true ]; then
+              commit_message="chore(release): prepare $release_tag"
+            else
+              commit_message="docs(changelog): record PR #$PR_NUMBER"
+            fi
+            git add CHANGELOG.md Cargo.lock crates/harness-cli/Cargo.toml scripts/harness-cli-release-tag
+            git commit -m "$commit_message"
+            git push origin HEAD:main
+            maintenance_ref="$(git rev-parse HEAD)"
+          fi
+
+          if [ "$cli_changed" = true ]; then
+            if git ls-remote --exit-code --tags origin "refs/tags/$release_tag" >/dev/null 2>&1; then
+              echo "Tag $release_tag already exists."
+            else
+              git tag -a "$release_tag" -m "Harness CLI $release_tag"
+              git push origin "$release_tag"
+            fi
+          fi
+
+          {
+            echo "cli_changed=$cli_changed"
+            echo "release_tag=$release_tag"
+            echo "maintenance_ref=$maintenance_ref"
+          } >> "$GITHUB_OUTPUT"
+
+  release-cli:
+    name: Build and publish Harness CLI
+    needs: prepare
+    if: ${{ needs.prepare.outputs.cli_changed == 'true' }}
+    uses: ./.github/workflows/harness-cli-release.yml
+    permissions:
+      contents: write
+    with:
+      release_tag: ${{ needs.prepare.outputs.release_tag }}
+      checkout_ref: ${{ needs.prepare.outputs.release_tag }}

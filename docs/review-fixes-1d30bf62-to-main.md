@@ -24,9 +24,9 @@ Harness intake: `#34`
   - `cargo fmt --check`
   - `cargo test --workspace` passed with 10 tests.
   - Separate `bash -n` checks for `scripts/install-harness.sh`,
-    `scripts/harness`, and `scripts/build-harness-cli-release.sh`.
+    `scripts/bin/harness-cli`, and `scripts/build-harness-cli-release.sh`.
   - `git diff --check`
-  - `scripts/harness query matrix`
+  - `scripts/bin/harness-cli query matrix`
 
 ## Pass 2
 
@@ -42,11 +42,11 @@ Harness intake: `#34`
   - Temp `--override --refresh-agent-shim --yes` install preserved the original
     `AGENTS.md` in `.harness-backup/.../AGENTS.md`.
   - Separate `bash -n` checks for `scripts/install-harness.sh`,
-    `scripts/harness`, and `scripts/build-harness-cli-release.sh`.
+    `scripts/bin/harness-cli`, and `scripts/build-harness-cli-release.sh`.
   - `cargo fmt --check`
   - `cargo test --workspace` passed with 10 tests.
   - `git diff --check`
-  - `scripts/harness query matrix`
+  - `scripts/bin/harness-cli query matrix`
 
 ## Pass 3
 
@@ -72,11 +72,11 @@ Harness intake: `#34`
   - Temp existing-Harness `--merge --yes` install preserved the original
     `scripts/bin/harness-cli` checksum and content.
   - Separate `bash -n` checks for `scripts/install-harness.sh`,
-    `scripts/harness`, and `scripts/build-harness-cli-release.sh`.
+    `scripts/bin/harness-cli`, and `scripts/build-harness-cli-release.sh`.
   - `cargo fmt --check`
   - `cargo test --workspace` passed with 10 tests.
   - `git diff --check`
-  - `scripts/harness query matrix`
+  - `scripts/bin/harness-cli query matrix`
 
 ## Pass 5
 
@@ -100,11 +100,11 @@ Harness intake: `#34`
     away; the installer downloaded from the published release URL and installed
     an executable `scripts/bin/harness-cli`.
   - Separate `bash -n` checks for `scripts/install-harness.sh`,
-    `scripts/harness`, and `scripts/build-harness-cli-release.sh`.
+    `scripts/bin/harness-cli`, and `scripts/build-harness-cli-release.sh`.
   - `cargo fmt --check`
   - `cargo test --workspace` passed with 10 tests.
   - `git diff --check`
-  - `scripts/harness query matrix`
+  - `scripts/bin/harness-cli query matrix`
 
 ## Pass 6
 
@@ -116,8 +116,8 @@ Harness intake: `#34`
 - Fixes: none.
 - Validation:
   - Separate `bash -n` checks for `scripts/install-harness.sh`,
-    `scripts/harness`, and `scripts/build-harness-cli-release.sh`.
+    `scripts/bin/harness-cli`, and `scripts/build-harness-cli-release.sh`.
   - `cargo fmt --check`
   - `cargo test --workspace` passed with 10 tests.
   - `git diff --check`
-  - `scripts/harness query matrix`
+  - `scripts/bin/harness-cli query matrix`
