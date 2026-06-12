@@ -1,5 +1,112 @@
 # Changelog
 
+## 2026-06-12 - PR #8
+
+- Cleanup/remove agents and ide files (@baobao0303)
+- Merge commit: `3e1ad3b7e236567190f15969698559781c5a6787`
+- Harness CLI release: not required
+- Changed files:
+  - `.agents/agents/design/design-brand-guardian.md`
+  - `.agents/agents/design/design-image-prompt-engineer.md`
+  - `.agents/agents/design/design-inclusive-visuals-specialist.md`
+  - `.agents/agents/design/design-ui-designer.md`
+  - `.agents/agents/design/design-ux-architect.md`
+  - `.agents/agents/design/design-ux-researcher.md`
+  - `.agents/agents/design/design-visual-storyteller.md`
+  - `.agents/agents/design/design-whimsy-injector.md`
+  - `.agents/agents/design/manager.md`
+  - `.agents/agents/engineering/engineering-ai-data-remediation-engineer.md`
+  - `.agents/agents/engineering/engineering-ai-engineer.md`
+  - `.agents/agents/engineering/engineering-autonomous-optimization-architect.md`
+  - `.agents/agents/engineering/engineering-backend-architect.md`
+  - `.agents/agents/engineering/engineering-cms-developer.md`
+  - `.agents/agents/engineering/engineering-code-reviewer.md`
+  - `.agents/agents/engineering/engineering-codebase-onboarding-engineer.md`
+  - `.agents/agents/engineering/engineering-data-engineer.md`
+  - `.agents/agents/engineering/engineering-database-optimizer.md`
+  - `.agents/agents/engineering/engineering-devops-automator.md`
+  - `.agents/agents/engineering/engineering-email-intelligence-engineer.md`
+  - `.agents/agents/engineering/engineering-embedded-firmware-engineer.md`
+  - `.agents/agents/engineering/engineering-feishu-integration-developer.md`
+  - `.agents/agents/engineering/engineering-filament-optimization-specialist.md`
+  - `.agents/agents/engineering/engineering-frontend-developer.md`
+  - `.agents/agents/engineering/engineering-git-workflow-master.md`
+  - `.agents/agents/engineering/engineering-incident-response-commander.md`
+  - `.agents/agents/engineering/engineering-minimal-change-engineer.md`
+  - `.agents/agents/engineering/engineering-mobile-app-builder.md`
+  - `.agents/agents/engineering/engineering-rapid-prototyper.md`
+  - `.agents/agents/engineering/engineering-security-engineer.md`
+  - `.agents/agents/engineering/engineering-senior-developer.md`
+  - `.agents/agents/engineering/engineering-software-architect.md`
+  - `.agents/agents/engineering/engineering-solidity-smart-contract-engineer.md`
+  - `.agents/agents/engineering/engineering-sre.md`
+  - `.agents/agents/engineering/engineering-technical-writer.md`
+  - `.agents/agents/engineering/engineering-threat-detection-engineer.md`
+  - `.agents/agents/engineering/engineering-voice-ai-integration-engineer.md`
+  - `.agents/agents/engineering/engineering-wechat-mini-program-developer.md`
+  - `.agents/agents/engineering/manager.md`
+  - `.agents/agents/examples/README.md`
+  - `.agents/agents/examples/manager.md`
+  - `.agents/agents/examples/nexus-spatial-discovery.md`
+  - `.agents/agents/examples/workflow-book-chapter.md`
+  - `.agents/agents/examples/workflow-landing-page.md`
+  - `.agents/agents/examples/workflow-startup-mvp.md`
+  - `.agents/agents/examples/workflow-with-memory.md`
+  - `.agents/agents/integrations/README.md`
+  - `.agents/agents/integrations/aider/README.md`
+  - `.agents/agents/integrations/antigravity/README.md`
+  - `.agents/agents/integrations/claude-code/README.md`
+  - `.agents/agents/integrations/cursor/README.md`
+  - `.agents/agents/integrations/gemini-cli/README.md`
+  - `.agents/agents/integrations/github-copilot/README.md`
+  - `.agents/agents/integrations/kimi/README.md`
+  - `.agents/agents/integrations/manager.md`
+  - `.agents/agents/integrations/mcp-memory/README.md`
+  - `.agents/agents/integrations/mcp-memory/backend-architect-with-memory.md`
+  - `.agents/agents/integrations/mcp-memory/setup.sh`
+  - `.agents/agents/integrations/openclaw/README.md`
+  - `.agents/agents/integrations/opencode/README.md`
+  - `.agents/agents/integrations/qwen/README.md`
+  - `.agents/agents/integrations/windsurf/README.md`
+  - `.agents/agents/product/manager.md`
+  - `.agents/agents/product/product-behavioral-nudge-engine.md`
+  - `.agents/agents/product/product-feedback-synthesizer.md`
+  - `.agents/agents/product/product-manager.md`
+  - `.agents/agents/product/product-sprint-prioritizer.md`
+  - `.agents/agents/product/product-trend-researcher.md`
+  - `.agents/agents/project-management/manager.md`
+  - `.agents/agents/project-management/project-management-experiment-tracker.md`
+  - `.agents/agents/project-management/project-management-jira-workflow-steward.md`
+  - `.agents/agents/project-management/project-management-project-shepherd.md`
+  - `.agents/agents/project-management/project-management-studio-operations.md`
+  - `.agents/agents/project-management/project-management-studio-producer.md`
+  - `.agents/agents/project-management/project-manager-senior.md`
+  - `.agents/agents/specialized/accounts-payable-agent.md`
+  - `.agents/agents/specialized/agentic-identity-trust.md`
+  - `.agents/agents/specialized/agents-orchestrator.md`
+  - `.agents/agents/specialized/automation-governance-architect.md`
+  - `.agents/agents/specialized/blockchain-security-auditor.md`
+  - `.agents/agents/specialized/compliance-auditor.md`
+  - `.agents/agents/specialized/corporate-training-designer.md`
+  - `.agents/agents/specialized/customer-service.md`
+  - `.agents/agents/specialized/data-consolidation-agent.md`
+  - `.agents/agents/specialized/government-digital-presales-consultant.md`
+  - `.agents/agents/specialized/healthcare-customer-service.md`
+  - `.agents/agents/specialized/healthcare-marketing-compliance.md`
+  - `.agents/agents/specialized/hospitality-guest-services.md`
+  - `.agents/agents/specialized/hr-onboarding.md`
+  - `.agents/agents/specialized/identity-graph-operator.md`
+  - `.agents/agents/specialized/language-translator.md`
+  - `.agents/agents/specialized/legal-billing-time-tracking.md`
+  - `.agents/agents/specialized/legal-client-intake.md`
+  - `.agents/agents/specialized/legal-document-review.md`
+  - `.agents/agents/specialized/loan-officer-assistant.md`
+  - `.agents/agents/specialized/lsp-index-engineer.md`
+  - `.agents/agents/specialized/manager.md`
+  - `.agents/agents/specialized/real-estate-buyer-seller.md`
+  - `.agents/agents/specialized/recruitment-specialist.md`
+  - `.agents/agents/specialized/report-distribution-agent.md`
+
 ## 2026-06-09 - PR #13
 
 - docs(phase5): Phase 5 — Evolution Infrastructure scope (@hoangnb24)
