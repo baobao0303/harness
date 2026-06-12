@@ -9,20 +9,32 @@ You are editing the web dashboard interface for Harness. You must follow these c
 ---
 
 ## 🎨 1. Design & Aesthetic Rules (Rich Aesthetics)
-- **Colors**: Sleek dark mode using a premium dark background (`#0b0f19`). Use cards with a glassmorphism style (`backdrop-filter: blur(12px)` and border highlight `rgba(255,255,255,0.08)`).
-- **Typography**: Import Google Fonts `Outfit`. Keep headings semi-bold and clean.
-- **Accents**: Neon green (`#10b981`) for passing tests/success. Electric blue (`#3b82f6`) for information/links. Rose red (`#ef4444`) for errors/failures.
-- **Interactivity**: Every button, card, and text link must have smooth micro-animations on hover/active states (`transition: all 0.3s ease`).
+- **Colors**: Sleek dark mode by default (`#090d16`). Card components must use glassmorphism styles (`backdrop-filter: blur(10px)` and border highlights).
+- **Theme Toggle**: Support both dark (`body.dark`) and light (`body.light`) themes. Save choice in `localStorage`.
+- **Typography**: Import Google Fonts `Outfit` for general text and `JetBrains Mono` for code/evidence.
+- **Accents**: Neon green (`#10b981` / HSL success) for passing tests/success. Electric blue (`#3b82f6` / HSL primary) for highlights/links. Rose red (`#ef4444` / HSL danger) for errors/failures. Amber (`#f59e0b` / HSL warning) for in-progress.
+- **Interactivity**: Every button, card, and text link must have smooth micro-animations on hover/active states (`transition: all 0.2s ease`).
 
 ---
 
 ## 🏗️ 2. Structure & Organization
+- **Single Page Application (SPA)**: Maintain the dashboard as a single-page application using HTML tab panels. Navigating should switch active views by toggling `.active` classes in Javascript. Do not perform full-page reloads.
 - **Separation of Concerns**: Do not mix HTML, inline CSS, or inline Javascript. Keep stylesheets in `style.css` and logic scripts in `app.js`.
-- **Vanilla over framework**: Keep the UI clean without heavy libraries or CSS frameworks (like Tailwind). Only use vanilla JS (`fetch()`, dynamic DOM manipulation).
+- **Vanilla over framework**: Keep the UI clean without heavy libraries or NPM dependencies. Only use vanilla JS (`fetch()`, dynamic DOM manipulation).
+- **Search System**: Support Cmd/Ctrl+K shortcut to toggle the search overlay. Match queries against the in-memory cache of telemetry data.
 
 ---
 
 ## ⚙️ 3. Rust Backend API Conventions
 - Server is built in Rust using **Axum** and **Tokio**.
-- Handlers should properly check the environment variable `HARNESS_DB` or default to `./harness.db` to locate the database.
-- Use `rusqlite` for database queries and map rows safely. Return clean JSON payloads using Axum's `Json` type and appropriate HTTP status codes (`200 OK`, `201 Created`, `500 Internal Server Error`).
+- Expose SQLite telemetry tables using JSON REST endpoints:
+  - `GET /api/stats` (counts)
+  - `GET /api/matrix` (stories list with proofs)
+  - `GET /api/decisions` (architectural decisions)
+  - `GET /api/traces` (agent run logs, limit 50)
+  - `GET /api/intakes` (feature requirements)
+  - `GET /api/backlog` (improvement proposals)
+  - `GET /api/interventions` (CI/reviewer corrections)
+  - `GET /api/tools` (registered CLI tools)
+- Handle corresponding `POST` endpoints to insert new items (Intake, Story, Trace, Backlog).
+- Handlers should default database path to `./harness.db` (via env `HARNESS_DB`). Use `rusqlite` for queries and serialize using `serde`. Return appropriate HTTP status codes.

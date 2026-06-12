@@ -56,6 +56,27 @@ Mọi yêu cầu công việc đi qua Harness sẽ tuân theo quy trình chuẩn
 
 ---
 
+## 🖥️ Web UI Performance Dashboard
+
+Harness đi kèm một giao diện Dashboard quản lý hiệu năng hoạt động của dự án thời gian thực, lấy cảm hứng từ giao diện **Paperclip** với các hiệu ứng kính mờ (glassmorphism).
+
+### Các tính năng nổi bật của Web UI:
+1. **Interactive SQLite Console 💻**: Giao diện thực thi câu lệnh SQL trực tiếp, được tích hợp cổng bảo mật (chỉ cho phép các lệnh truy vấn an toàn như `SELECT` hoặc `PRAGMA`).
+2. **Omnibar Command Palette 🔍**: Nhấn `Cmd+K` (hoặc ô tìm kiếm ở sidebar) để mở thanh điều lệnh đa năng hỗ trợ các lệnh tắt (như `/goto [tab]`, `/verify [adr]`, `/approve [intervention]`, `/create [entity]`).
+3. **Real-time Agent Workloads 👥**: Theo dõi trạng thái hoạt động của các AI Agent trong tổ chức thời gian thực thông qua luồng WebSocket sự kiện telemetry.
+4. **Drag-and-Drop Kanban Priority Sandbox 🗂️**: Bảng Kanban kéo thả cho các đề xuất cải tiến Backlog, tự động cập nhật mức độ ưu tiên trực tiếp xuống SQLite qua API.
+5. **Friction & Blocker Analytics 📈**: Biểu đồ phân tích tần suất ma sát phát triển (frictions) của từng Agent và log lỗi phát sinh để kịp thời hỗ trợ.
+
+### Cách khởi chạy Web UI:
+Biên dịch và khởi chạy server Axum:
+```bash
+cargo run --package harness-web
+```
+Dashboard sẽ hiển thị tại: **`http://localhost:3000`**
+
+---
+
+
 ## 📥 Hướng dẫn cài đặt bằng Terminal
 
 Bạn có thể cài đặt Harness theo hai cách: **Cài đặt toàn cục (Global)** để chạy lệnh `harness` ở bất kỳ đâu, hoặc **Cài đặt cục bộ (Local)** vào một dự án cụ thể.
