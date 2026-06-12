@@ -2,6 +2,8 @@
 
 document.addEventListener("DOMContentLoaded", () => {
     loadData();
+    // Auto-refresh data every 3 seconds to enable real-time dashboard updates
+    setInterval(loadData, 3000);
 });
 
 // Load stats and test matrix
