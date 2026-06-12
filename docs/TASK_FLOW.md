@@ -1,6 +1,6 @@
 # Quy trình chạy Nhiệm vụ (Harness Task Execution Flow)
 
-Tài liệu này mô tả chi tiết luồng chạy của một nhiệm vụ (Task) trong hệ thống Harness thông qua sơ đồ trực quan Mermaid và hướng dẫn từng bước thực hiện.
+Tài liệu này mô tả chi tiết luồng chạy của một nhiệm vụ (Task) trong hệ thống Harness thông qua sơ đồ trực quan Mermaid và hướng dẫn từng bước thực hiện cho từng vai trò Agent chuyên biệt.
 
 ---
 
@@ -10,39 +10,42 @@ Sơ đồ dưới đây thể hiện các bước thực hiện tuần tự và 
 
 ```mermaid
 graph TD
-    Start([Ý định / Yêu cầu từ Con người]) --> Phase1[Bước 1: Phân loại rủi ro - Intake]
+    Start([Ý định / Yêu cầu từ Con người]) --> Phase1[Bước 1: Phân loại rủi ro - PM Agent]
     
-    subgraph Giai đoạn Khởi tạo (PM / BA)
+    subgraph Giai đoạn Khởi tạo (PM & BA)
         Phase1 -->|Lệnh: harness intake| RiskCheck{Phân loại làn đường?}
         RiskCheck -->|Tiny| LowRisk[Làn đường Tiny: Dev chạy thẳng code]
         RiskCheck -->|Normal / High-risk| HighRisk[Làn đường Normal/High-risk: Yêu cầu đặc tả]
     end
 
-    subgraph Giai đoạn Đặc tả & Lập kế hoạch (PM / BA / Architect)
-        HighRisk --> CreatePRD["Viết PRD & Thiết kế Kiến trúc (ADR)"]
-        CreatePRD --> SliceStories["Phân rã thành các Story và xác định cách kiểm chứng"]
+    subgraph Giai đoạn Đặc tả & Lập kế hoạch (PM, BA & Architect)
+        HighRisk --> CreatePRD["PM & BA Agent:<br>Viết PRD & Đặc tả chức năng"]
+        CreatePRD --> SliceStories["PM & BA Agent:<br>Phân rã thành các Story & AC"]
         SliceStories -->|Lệnh: harness story add| RegisterStories[Đăng ký Stories vào database]
     end
 
-    subgraph Giai đoạn Phát triển & Viết Test (FE / BE / QA)
-        LowRisk --> DevCode["Viết code tính năng"]
-        RegisterStories --> DevCode
-        DevCode --> WriteTests["Viết mã kiểm thử tự động (Unit / Integration / E2E)"]
+    subgraph Giai đoạn Phát triển (FE & BE)
+        LowRisk --> DevFE["FE Agent:<br>Xây dựng giao diện (UI)"]
+        LowRisk --> DevBE["BE Agent:<br>Xây dựng API & Database"]
+        RegisterStories --> DevFE
+        RegisterStories --> DevBE
     end
 
-    subgraph Giai đoạn Kiểm chứng & Nghiệm thu (QA / Auditor)
-        WriteTests --> UpdateStory["Cập nhật bằng chứng kiểm thử vào Story"]
+    subgraph Giai đoạn Kiểm thử & Báo cáo (QA)
+        DevFE --> WriteTests["QA Agent:<br>Viết mã kiểm thử tự động (Unit / Integration / E2E)"]
+        DevBE --> WriteTests
+        WriteTests --> UpdateStory["QA Agent:<br>Cập nhật bằng chứng kiểm thử vào Story"]
         UpdateStory -->|Lệnh: harness story update| DB[(SQLite Database)]
-        UpdateStory --> RunVerify["Chạy lệnh xác minh tự động"]
+        UpdateStory --> RunVerify["QA Agent:<br>Chạy lệnh xác minh tự động"]
         RunVerify -->|Lệnh: harness story verify| VerifyCheck{Mọi bài test đều PASS?}
         VerifyCheck -->|No| FixCode[Sửa code / Fix bugs]
         FixCode --> WriteTests
-        VerifyCheck -->|Yes| RecordTrace["Ghi nhận vết thực thi của Agent"]
+        VerifyCheck -->|Yes| RecordTrace["QA/Dev Agent:<br>Ghi nhận vết thực thi"]
         RecordTrace -->|Lệnh: harness trace| LogTrace[Lưu nhật ký Trace vào DB]
     end
 
-    subgraph Giai đoạn Hoàn tất
-        LogTrace --> AuditCheck["Chạy Audit kiểm tra độ trôi (Drift) & Cải tiến"]
+    subgraph Giai đoạn Hoàn tất (Auditor)
+        LogTrace --> AuditCheck["Auditor Agent:<br>Chạy Audit kiểm tra độ trôi (Drift)"]
         AuditCheck -->|Lệnh: harness audit & propose| Finished([Hoàn thành & Bàn giao])
     end
 
@@ -57,33 +60,39 @@ graph TD
 
 ## 🔄 2. Sơ đồ Tuần tự Tương tác (Sequence Diagram)
 
-Sơ đồ dưới đây biểu diễn cách các vai trò Agent tương tác với nhau và với `harness-cli` trong một vòng đời chạy task:
+Sơ đồ dưới đây biểu diễn cách cả 5 vai trò Agent tương tác với nhau và với `harness-cli` trong một vòng đời chạy task:
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Human as Người dùng
     participant PM as PM Agent
-    participant Dev as FE/BE Agent
+    participant BA as BA Agent
+    participant FE as FE Agent
+    participant BE as BE Agent
     participant QA as QA Agent
-    participant CLI as Harness CLI (SQLite)
+    participant CLI as Harness CLI
 
     %% Khởi tạo
     Human->>PM: Yêu cầu tính năng mới (Ví dụ: Đăng nhập)
     PM->>CLI: Chạy lệnh 'intake' (Phân loại rủi ro)
     
     %% Đặc tả
-    PM->>PM: Viết PRD & Phân tách thành US-001
+    PM->>BA: Giao thông tin yêu cầu tính năng
+    BA->>BA: Viết specs chức năng & Định nghĩa AC (Acceptance Criteria)
     PM->>CLI: Chạy lệnh 'story add' (Đăng ký US-001)
 
     %% Phát triển
-    Note over Dev: Đọc spec và viết mã nguồn
-    Dev->>QA: Bàn giao code hoàn thành
+    Note over FE,BE: Đọc specs và tiến hành code song song
+    FE->>FE: Code UI & Responsive
+    BE->>BE: Code API & Migrations
+    FE->>QA: Bàn giao UI hoàn thành
+    BE->>QA: Bàn giao API hoàn thành
 
     %% Kiểm thử & Báo cáo
-    Note over QA: Viết & chạy bộ test tự động
-    QA->>CLI: Chạy lệnh 'story update' (Ghi nhận unit:1, integration:1, e2e:1)
-    QA->>CLI: Chạy lệnh 'story verify' (Xác minh độc lập)
+    Note over QA: Thiết lập test cases & chạy test
+    QA->>CLI: Chạy lệnh 'story update' (Ghi nhận bằng chứng test)
+    QA->>CLI: Chạy lệnh 'story verify' (Xác minh story độc lập)
     CLI-->>QA: Trả về kết quả xác minh (Success)
 
     %% Hoàn tất
@@ -119,3 +128,18 @@ sequenceDiagram
 ```bash
 ./scripts/bin/harness-cli trace --summary "Hoàn thành code & test" --story US-001 --agent Antigravity --outcome completed
 ```
+
+---
+
+## 🧠 4. Hướng dẫn nạp vai trò Agent (Calling Agent Personas)
+
+Để gọi đúng Agent thực hiện tác vụ cho từng giai đoạn, bạn chỉ cần ra lệnh cho AI trong phần chat (prompt) trỏ tới file chỉ dẫn nhập vai tương ứng:
+
+*   **Giai đoạn Khởi tạo & Lập kế hoạch**:
+    > *"Hãy đóng vai trò là **PM Agent** (đọc cấu hình tại `.agents/personas/pm.md`) và **BA Agent** (đọc `.agents/personas/ba.md`) để phân tích yêu cầu tính năng [Mô tả yêu cầu], phân làn rủi ro và chia nhỏ câu chuyện."*
+*   **Giai đoạn Phát triển Frontend**:
+    > *"Hãy đóng vai trò là **FE Agent** (đọc cấu hình tại `.agents/personas/fe.md`) để hiện thực hóa giao diện UI cho câu chuyện US-001."*
+*   **Giai đoạn Phát triển Backend**:
+    > *"Hãy đóng vai trò là **BE Agent** (đọc cấu hình tại `.agents/personas/be.md`) để xây dựng database schema, API endpoint cho câu chuyện US-002."*
+*   **Giai đoạn Kiểm thử & Đăng ký bằng chứng**:
+    > *"Hãy đóng vai trò là **QA Agent** (đọc cấu hình tại `.agents/personas/qa.md`) để viết kịch bản test tự động, chạy lệnh xác minh và ghi nhận bằng chứng lên ma trận kiểm thử của Harness."*
