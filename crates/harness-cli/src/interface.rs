@@ -13,8 +13,8 @@ use crate::application::{
 use crate::domain::{
     parse_optional_integer, parse_tool_args, proof_display, validate_responsibility, BacklogFilter,
     BacklogRecord, BoolFlag, ContextScoreResult, CsvList, DecisionRecord, FrictionRecord,
-    HarnessStats, ImprovementProposal, InputType, IntakeRecord, InterventionRecord, Priority, RiskLane,
-    StoryMatrixRecord, StoryVerifyAllResult, ToolEntry, TraceQualityTier, TraceRecord,
+    HarnessStats, ImprovementProposal, InputType, IntakeRecord, InterventionRecord, Priority,
+    RiskLane, StoryMatrixRecord, StoryVerifyAllResult, ToolEntry, TraceQualityTier, TraceRecord,
     TraceScoreResult, RISK_LANE_HELP,
 };
 

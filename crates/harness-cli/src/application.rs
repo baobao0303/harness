@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use crate::domain::{
     AuditResult, BacklogFilter, BacklogRecord, BoolFlag, ContextScoreResult, CsvList,
     DecisionRecord, FrictionRecord, HarnessStats, ImprovementProposal, InputType, IntakeRecord,
-    InterventionRecord, Priority, RiskLane, StoryMatrixRecord, StoryVerifyAllResult, StoryVerifyStatus,
-    ToolArgSpec, ToolEntry, TraceRecord, TraceScoreResult,
+    InterventionRecord, Priority, RiskLane, StoryMatrixRecord, StoryVerifyAllResult,
+    StoryVerifyStatus, ToolArgSpec, ToolEntry, TraceRecord, TraceScoreResult,
 };
 use crate::infrastructure::{HarnessRepository, SqliteHarnessRepository};
 

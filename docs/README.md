@@ -34,6 +34,15 @@ The documentation files in `docs/` are dynamically driven and maintained by the 
 * **Scrum Master** (`.agents/agents/project-management/`) ➔ Tracks active agile execution loops and `sprint-status.yaml`.
 * **Master Dev Loop** (`.agents/workflow/harness-loop.md`) ➔ Orchestrates the 6-step sequential development loop (Intake ➔ Design ➔ Stories ➔ Dev ➔ Review ➔ Retro) that updates all matrix and database records.
 
+### Role Steering Personas (`.agents/personas/`)
+
+We provide ready-to-use role guidelines to steer AI Agent behavior during task execution:
+- [PM Persona](file:///Users/bao312/Desktop/BrewCompany/harness/.agents/personas/pm.md): For feature intake, PRDs, and story decomposition.
+- [BA Persona](file:///Users/bao312/Desktop/BrewCompany/harness/.agents/personas/ba.md): For functional specification and acceptance criteria.
+- [FE Persona](file:///Users/bao312/Desktop/BrewCompany/harness/.agents/personas/fe.md): For styling system, responsiveness, and frontend UI components.
+- [BE Persona](file:///Users/bao312/Desktop/BrewCompany/harness/.agents/personas/be.md): For API design, database migrations, security, and performance.
+- [QA Persona](file:///Users/bao312/Desktop/BrewCompany/harness/.agents/personas/qa.md): For test scenarios, verification, and regression matrices.
+
 ## Current State
 
 Harness v0 exists before implementation. These docs define how the project will

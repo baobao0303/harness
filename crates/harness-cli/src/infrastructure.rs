@@ -1753,7 +1753,9 @@ mod tests {
         BacklogAddInput, BacklogCloseInput, DecisionAddInput, IntakeInput, InterventionAddInput,
         InterventionFilter, StoryAddInput, StoryUpdateInput, ToolRegisterInput, TraceInput,
     };
-    use crate::domain::{BacklogFilter, BoolFlag, CsvList, InputType, RiskLane, TraceQualityTier};
+    use crate::domain::{
+        BacklogFilter, BoolFlag, CsvList, InputType, Priority, RiskLane, TraceQualityTier,
+    };
 
     fn test_repository() -> (TempDir, SqliteHarnessRepository) {
         let temp_dir = tempfile::tempdir().unwrap();
@@ -1911,6 +1913,7 @@ mod tests {
                 contract_doc: None,
                 verify_command: Some("echo ok".to_owned()),
                 notes: None,
+                priority: Priority::P2,
             })
             .unwrap();
         assert_eq!(
@@ -1932,6 +1935,7 @@ mod tests {
                 e2e: None,
                 platform: None,
                 verify_command: Some("npm test".to_owned()),
+                priority: None,
             })
             .unwrap();
 
@@ -1977,6 +1981,7 @@ mod tests {
                 contract_doc: None,
                 verify_command: Some(verify_command),
                 notes: None,
+                priority: Priority::P2,
             })
             .unwrap();
         let pass = repository.verify_story("US-PASS").unwrap();
@@ -2002,6 +2007,7 @@ mod tests {
                 contract_doc: None,
                 verify_command: Some("exit 1".to_owned()),
                 notes: None,
+                priority: Priority::P2,
             })
             .unwrap();
         let fail = repository.verify_story("US-FAIL").unwrap();
@@ -2023,6 +2029,7 @@ mod tests {
                 contract_doc: None,
                 verify_command: None,
                 notes: None,
+                priority: Priority::P2,
             })
             .unwrap();
         assert!(matches!(
@@ -2048,6 +2055,7 @@ mod tests {
                     contract_doc: None,
                     verify_command: command.map(str::to_owned),
                     notes: None,
+                    priority: Priority::P2,
                 })
                 .unwrap();
         }
@@ -2128,6 +2136,7 @@ mod tests {
                 contract_doc: None,
                 verify_command: None,
                 notes: None,
+                priority: Priority::P2,
             })
             .unwrap();
         let trace_id = repository
@@ -2195,6 +2204,7 @@ mod tests {
                 contract_doc: None,
                 verify_command: Some("exit 0".to_owned()),
                 notes: None,
+                priority: Priority::P2,
             })
             .unwrap();
         repository
@@ -2207,6 +2217,7 @@ mod tests {
                 e2e: None,
                 platform: None,
                 verify_command: None,
+                priority: None,
             })
             .unwrap();
         repository
@@ -2218,6 +2229,7 @@ mod tests {
                 risk: Some(RiskLane::Tiny),
                 predicted_impact: Some("Expected improvement".to_owned()),
                 notes: None,
+                priority: Priority::P2,
             })
             .unwrap();
         repository
@@ -2290,6 +2302,7 @@ mod tests {
                 contract_doc: None,
                 verify_command: None,
                 notes: None,
+                priority: Priority::P2,
             })
             .unwrap();
         repository
@@ -2302,6 +2315,7 @@ mod tests {
                 e2e: None,
                 platform: None,
                 verify_command: None,
+                priority: None,
             })
             .unwrap();
         assert_eq!(repository.query_matrix().unwrap()[0].unit, 1);
@@ -2315,6 +2329,7 @@ mod tests {
                 risk: Some(RiskLane::HighRisk),
                 predicted_impact: None,
                 notes: None,
+                priority: Priority::P2,
             })
             .unwrap();
         repository
@@ -2586,6 +2601,7 @@ implemented
                 risk: Some(RiskLane::Tiny),
                 predicted_impact: Some("Should improve trace review.".to_owned()),
                 notes: None,
+                priority: Priority::P2,
             })
             .unwrap();
         let implemented_id = repository
@@ -2597,6 +2613,7 @@ implemented
                 risk: Some(RiskLane::Normal),
                 predicted_impact: Some("Should reduce missing proof.".to_owned()),
                 notes: None,
+                priority: Priority::P2,
             })
             .unwrap();
         repository

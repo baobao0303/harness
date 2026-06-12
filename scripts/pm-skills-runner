@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+import os
+import sys
+import re
+
+def parse_frontmatter(content):
+    lines = content.splitlines()
+    if not lines or lines[0].strip() != '---':
+        return {}, content
+    frontmatter = {}
+    body_start = 1
+    for i in range(1, len(lines)):
+        line = lines[i].strip()
+        if line == '---':
+            body_start = i + 1
+            break
+        if ':' in line:
+            key, val = line.split(':', 1)
+            frontmatter[key.strip()] = val.strip().strip('"').strip("'")
+    body = "\n".join(lines[body_start:])
+    return frontmatter, body
+
+def parse_argument_hint(hint_str):
+    if not hint_str:
+        return []
+    matches = re.finditer(r'(\[([^\]]+)\]|<([^>]+)>)', hint_str)
+    args = []
+    for m in matches:
+        raw_token = m.group(1)
+        if raw_token.startswith('['):
+            required = False
+            content = m.group(2)
+        else:
+            required = True
+            content = m.group(3)
+        
+        parts = content.split(';', 1)
+        main_part = parts[0].strip()
+        
+        if '|' in main_part:
+            arg_type = "enum"
+            choices = [c.strip().lower() for c in main_part.split('|')]
+            name = main_part.replace('|', '_')
+        else:
+            arg_type = "string"
+            choices = []
+            name = main_part
+        
+        name = name.lower()
+        name = re.sub(r'[^a-z0-9_]', '_', name)
+        name = re.sub(r'_+', '_', name).strip('_')
+        
+        args.append({
+            "name": name,
+            "type": arg_type,
+            "required": required,
+            "choices": choices
+        })
+    return args
+
+def validate_args(spec, inputs):
+    matched = {}
+    input_idx = 0
+    for param in spec:
+        if input_idx >= len(inputs):
+            if param["required"]:
+                return False, f"Missing required argument: {param['name']}"
+            continue
+            
+        val = inputs[input_idx]
+        
+        if not param["required"]:
+            if param["type"] == "enum":
+                if val.lower() in param["choices"]:
+                    matched[param["name"]] = val
+                    input_idx += 1
+                else:
+                    # Optional enum didn't match, skip this param
+                    pass
+            else:
+                matched[param["name"]] = val
+                input_idx += 1
+        else:
+            # Required parameter
+            if param["type"] == "enum":
+                if val.lower() in param["choices"]:
+                    matched[param["name"]] = val
+                    input_idx += 1
+                else:
+                    return False, f"Invalid value for {param['name']}: expected one of {param['choices']}, got '{val}'"
+            else:
+                matched[param["name"]] = val
+                input_idx += 1
+                
+    if input_idx < len(inputs):
+        return False, f"Unexpected extra arguments: {inputs[input_idx:]}"
+        
+    return True, matched
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: pm-skills-runner <command> [args...]", file=sys.stderr)
+        sys.exit(1)
+        
+    command_name = sys.argv[1]
+    passed_args = sys.argv[2:]
+
+    if not re.match(r'^[a-zA-Z0-9_-]+$', command_name):
+        print(f"Error: Invalid command name '{command_name}'. Command name must contain only alphanumeric characters, dashes, and underscores.", file=sys.stderr)
+        sys.exit(1)
+
+
+    # Resolve pm-skills folder
+    pm_skills_dir = os.environ.get("PM_SKILLS_DIR")
+    if not pm_skills_dir:
+        # Resolve via repository root or hardcoded fallback
+        repo_root = os.environ.get("HARNESS_REPO_ROOT")
+        if not repo_root:
+            cur = os.path.abspath(os.path.dirname(__file__))
+            while cur and os.path.basename(cur) != "BrewCompany":
+                parent = os.path.dirname(cur)
+                if parent == cur:
+                    break
+                cur = parent
+            repo_root = os.path.join(cur, "harness") if os.path.isdir(os.path.join(cur, "harness")) else cur
+        
+        parent_dir = os.path.dirname(repo_root)
+        pm_skills_dir = os.path.join(parent_dir, "pm-skills")
+        if not os.path.isdir(pm_skills_dir):
+            pm_skills_dir = "/Users/bao312/Desktop/BrewCompany/pm-skills"
+
+    # Search for command markdown file
+    command_file_path = None
+    for plugin in os.listdir(pm_skills_dir):
+        plugin_path = os.path.join(pm_skills_dir, plugin)
+        if os.path.isdir(plugin_path):
+            candidate = os.path.join(plugin_path, "commands", f"{command_name}.md")
+            if os.path.isfile(candidate):
+                command_file_path = candidate
+                break
+
+    if not command_file_path:
+        print(f"Error: Command '{command_name}' not found under pm-skills directory.", file=sys.stderr)
+        sys.exit(1)
+
+    with open(command_file_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    frontmatter, body = parse_frontmatter(content)
+    argument_hint = frontmatter.get("argument-hint", "")
+    description = frontmatter.get("description", "")
+
+    # Perform validation if argument-hint is specified
+    if argument_hint:
+        spec = parse_argument_hint(argument_hint)
+        success, err_or_matched = validate_args(spec, passed_args)
+        if not success:
+            print(f"Validation Error: {err_or_matched}", file=sys.stderr)
+            sys.exit(1)
+
+    # Output workflow
+    print(f"Description: {description}\n")
+    print(body.strip())
+
+if __name__ == "__main__":
+    main()
