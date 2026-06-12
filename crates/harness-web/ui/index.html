@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harness Dashboard 🚀</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar/Navigation -->
+        <header class="app-header">
+            <div class="logo">
+                <span class="rocket">🚀</span>
+                <h1>Harness Dashboard</h1>
+            </div>
+            <div class="status-indicator">
+                <span class="pulse-dot"></span>
+                <span id="db-status">Đang kết nối Database</span>
+            </div>
+        </header>
+
+        <!-- Stats Grid (Glassmorphism Cards) -->
+        <section class="stats-grid">
+            <div class="stat-card" id="card-intakes">
+                <h3>Feature Intakes</h3>
+                <p class="stat-value" id="count-intakes">-</p>
+                <button class="action-btn" onclick="openModal('intake-modal')">+ Đăng ký Intake</button>
+            </div>
+            <div class="stat-card" id="card-stories">
+                <h3>User Stories</h3>
+                <p class="stat-value" id="count-stories">-</p>
+                <button class="action-btn" onclick="openModal('story-modal')">+ Tạo Story</button>
+            </div>
+            <div class="stat-card" id="card-decisions">
+                <h3>Decisions (ADRs)</h3>
+                <p class="stat-value" id="count-decisions">-</p>
+            </div>
+            <div class="stat-card" id="card-traces">
+                <h3>Agent Traces</h3>
+                <p class="stat-value" id="count-traces">-</p>
+                <button class="action-btn" onclick="openModal('trace-modal')">+ Ghi nhận Trace</button>
+            </div>
+        </section>
+
+        <!-- Verification Matrix Section -->
+        <section class="matrix-section">
+            <div class="section-header">
+                <h2>📊 Verification Proof Matrix</h2>
+                <button class="refresh-btn" onclick="loadData()">🔄 Refresh</button>
+            </div>
+            <div class="table-container">
+                <table id="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>Story ID</th>
+                            <th>Tiêu đề</th>
+                            <th>Mức ưu tiên</th>
+                            <th>Trạng thái</th>
+                            <th>Unit Proof</th>
+                            <th>Integration Proof</th>
+                            <th>E2E Proof</th>
+                            <th>Bằng chứng (Evidence)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrix-body">
+                        <tr>
+                            <td colspan="8" class="loading-cell">Đang tải dữ liệu...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal: Đăng ký Intake -->
+    <div id="intake-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('intake-modal')">&times;</span>
+            <h2>🆕 Đăng ký Feature Intake</h2>
+            <form id="intake-form" onsubmit="submitIntake(event)">
+                <div class="form-group">
+                    <label for="intake-type">Loại yêu cầu:</label>
+                    <select id="intake-type" required>
+                        <option value="new_spec">New Spec</option>
+                        <option value="spec_slice">Spec Slice</option>
+                        <option value="change_request">Change Request</option>
+                        <option value="new_initiative">New Initiative</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="harness_improvement">Harness Improvement</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="intake-summary">Nội dung tóm tắt:</label>
+                    <textarea id="intake-summary" required placeholder="Tóm tắt yêu cầu nghiệp vụ..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="intake-lane">Làn đường rủi ro:</label>
+                    <select id="intake-lane" required>
+                        <option value="tiny">Tiny (Rủi ro thấp)</option>
+                        <option value="normal">Normal (Bình thường)</option>
+                        <option value="high_risk">High Risk (Rủi ro cao)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="intake-notes">Ghi chú thêm:</label>
+                    <textarea id="intake-notes" placeholder="Ghi chú thêm..."></textarea>
+                </div>
+                <button type="submit" class="submit-btn">Đăng ký</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Tạo Story -->
+    <div id="story-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('story-modal')">&times;</span>
+            <h2>🆕 Tạo User Story</h2>
+            <form id="story-form" onsubmit="submitStory(event)">
+                <div class="form-group">
+                    <label for="story-id">ID câu chuyện (e.g. US-001):</label>
+                    <input type="text" id="story-id" required placeholder="US-XXX" />
+                </div>
+                <div class="form-group">
+                    <label for="story-title">Tiêu đề:</label>
+                    <input type="text" id="story-title" required placeholder="Tiêu đề story..." />
+                </div>
+                <div class="form-group">
+                    <label for="story-lane">Làn đường rủi ro:</label>
+                    <select id="story-lane" required>
+                        <option value="tiny">Tiny</option>
+                        <option value="normal">Normal</option>
+                        <option value="high_risk">High Risk</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="story-priority">Mức ưu tiên:</label>
+                    <select id="story-priority" required>
+                        <option value="P0">P0 (Khẩn cấp)</option>
+                        <option value="P1">P1 (Cao)</option>
+                        <option value="P2" selected>P2 (Trung bình)</option>
+                        <option value="P3">P3 (Thấp)</option>
+                    </select>
+                </div>
+                <button type="submit" class="submit-btn">Tạo Story</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Ghi nhận Trace -->
+    <div id="trace-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('trace-modal')">&times;</span>
+            <h2>🆕 Ghi nhận Agent Trace</h2>
+            <form id="trace-form" onsubmit="submitTrace(event)">
+                <div class="form-group">
+                    <label for="trace-summary">Tóm tắt công việc:</label>
+                    <input type="text" id="trace-summary" required placeholder="Agent đã làm gì..." />
+                </div>
+                <div class="form-group">
+                    <label for="trace-story-id">Story ID (Tùy chọn):</label>
+                    <input type="text" id="trace-story-id" placeholder="US-XXX" />
+                </div>
+                <div class="form-group">
+                    <label for="trace-agent">Tên Agent:</label>
+                    <input type="text" id="trace-agent" required placeholder="Ví dụ: Antigravity, PM Agent..." value="Antigravity" />
+                </div>
+                <div class="form-group">
+                    <label for="trace-outcome">Kết quả:</label>
+                    <select id="trace-outcome" required>
+                        <option value="completed">Completed (Thành công)</option>
+                        <option value="partial">Partial (Một phần)</option>
+                        <option value="blocked">Blocked (Bị chặn)</option>
+                        <option value="failed">Failed (Thất bại)</option>
+                    </select>
+                </div>
+                <button type="submit" class="submit-btn">Ghi nhận</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

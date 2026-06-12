@@ -1,0 +1,28 @@
+---
+description: Custom Cursor rule for Harness Web Frontend development. Dictates visual aesthetics, file organization, and REST API handlers in crates/harness-web.
+globs: crates/harness-web/**/*
+---
+# Harness Web Frontend Rules
+
+You are editing the web dashboard interface for Harness. You must follow these coding and design guidelines:
+
+---
+
+## 🎨 1. Design & Aesthetic Rules (Rich Aesthetics)
+- **Colors**: Sleek dark mode using a premium dark background (`#0b0f19`). Use cards with a glassmorphism style (`backdrop-filter: blur(12px)` and border highlight `rgba(255,255,255,0.08)`).
+- **Typography**: Import Google Fonts `Outfit`. Keep headings semi-bold and clean.
+- **Accents**: Neon green (`#10b981`) for passing tests/success. Electric blue (`#3b82f6`) for information/links. Rose red (`#ef4444`) for errors/failures.
+- **Interactivity**: Every button, card, and text link must have smooth micro-animations on hover/active states (`transition: all 0.3s ease`).
+
+---
+
+## 🏗️ 2. Structure & Organization
+- **Separation of Concerns**: Do not mix HTML, inline CSS, or inline Javascript. Keep stylesheets in `style.css` and logic scripts in `app.js`.
+- **Vanilla over framework**: Keep the UI clean without heavy libraries or CSS frameworks (like Tailwind). Only use vanilla JS (`fetch()`, dynamic DOM manipulation).
+
+---
+
+## ⚙️ 3. Rust Backend API Conventions
+- Server is built in Rust using **Axum** and **Tokio**.
+- Handlers should properly check the environment variable `HARNESS_DB` or default to `./harness.db` to locate the database.
+- Use `rusqlite` for database queries and map rows safely. Return clean JSON payloads using Axum's `Json` type and appropriate HTTP status codes (`200 OK`, `201 Created`, `500 Internal Server Error`).
