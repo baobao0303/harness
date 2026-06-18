@@ -1822,3 +1822,41 @@ function updateAgentWorkloads(logText) {
         }
     }
 }
+
+// --- Poll real agent status from /api/agent-status ---
+async function pollAgentStatus() {
+    try {
+        const res = await fetch("/api/agent-status");
+        if (!res.ok) return;
+        const data = await res.json();
+        const agents = {
+            "pm": document.getElementById("agent-status-pm"),
+            "ba": document.getElementById("agent-status-ba"),
+            "fe": document.getElementById("agent-status-fe"),
+            "be": document.getElementById("agent-status-be"),
+            "qa": document.getElementById("agent-status-qa"),
+            "aud": document.getElementById("agent-status-aud")
+        };
+        
+        data.agents.forEach(a => {
+            const key = a.agent.toLowerCase();
+            const el = agents[key];
+            if (!el) return;
+            
+            const isRunning = a.status === "working" || a.status === "assigned";
+            el.className = `agent-status-badge ${isRunning ? "running" : "idle"}`;
+            el.innerHTML = `<span class="status-dot"></span>${isRunning ? "Running" : "Idle"}`;
+            
+            const workEl = document.getElementById(`agent-work-${key}`);
+            if (workEl && a.current_task) {
+                workEl.innerText = `Task: ${a.current_task}`;
+            }
+        });
+    } catch (e) {
+        console.debug("Agent status poll failed:", e);
+    }
+}
+
+// Start polling every 5 seconds
+setInterval(pollAgentStatus, 5000);
+pollAgentStatus(); // initial
