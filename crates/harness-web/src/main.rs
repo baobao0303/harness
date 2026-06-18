@@ -12,6 +12,7 @@ use std::sync::Arc;
 use tower_http::services::ServeDir;
 use tokio::process::Command;
 use tokio::time::{sleep, Duration};
+use std::fs;
 
 struct AppState {
     db_path: PathBuf,
@@ -24,6 +25,20 @@ struct Stats {
     decisions: i64,
     backlog: i64,
     traces: i64,
+}
+
+#[derive(Serialize)]
+struct AgentStatus {
+    agent: String,
+    status: String,  // idle, working, assigned
+    current_task: Option<String>,
+    last_update: Option<String>,
+}
+
+#[derive(Serialize)]
+struct AgentStatusResponse {
+    agents: Vec<AgentStatus>,
+    timestamp: String,
 }
 
 #[derive(Serialize)]
@@ -272,6 +287,7 @@ async fn main() {
         .route("/api/ws", get(ws_handler))
         .route("/api/intervention/:id/resolve", post(resolve_intervention))
         .route("/api/query", post(execute_sql_query))
+        .route("/api/agent-status", get(get_agent_status))
         .nest_service("/personas", ServeDir::new(personas_dir))
         .fallback_service(ServeDir::new(ui_dir))
         .with_state(state);
@@ -299,6 +315,46 @@ async fn get_stats(State(state): State<Arc<AppState>>) -> impl IntoResponse {
         decisions,
         backlog,
         traces,
+    })
+    .into_response()
+}
+
+async fn get_agent_status() -> impl IntoResponse {
+    let state_path = PathBuf::from("/d/harness/.agents/comms/state/agent_status.json");
+    let mut agents = Vec::new();
+    let default_agents = ["pm", "ba", "fe", "be", "qa", "aud"];
+
+    if state_path.exists() {
+        if let Ok(content) = fs::read_to_string(&state_path) {
+            if let Ok(state) = serde_json::from_str::<serde_json::Value>(&content) {
+                for agent_name in default_agents {
+                    let agent_data = state.get(agent_name).cloned().unwrap_or(serde_json::json!({}));
+                    agents.push(AgentStatus {
+                        agent: agent_name.to_uppercase(),
+                        status: agent_data.get("status").and_then(|v| v.as_str()).unwrap_or("idle").to_string(),
+                        current_task: agent_data.get("current_task").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                        last_update: agent_data.get("last_update").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                    });
+                }
+            }
+        }
+    }
+
+    // Fallback if file doesn't exist
+    if agents.is_empty() {
+        for agent_name in default_agents {
+            agents.push(AgentStatus {
+                agent: agent_name.to_uppercase(),
+                status: "idle".to_string(),
+                current_task: None,
+                last_update: None,
+            });
+        }
+    }
+
+    Json(AgentStatusResponse {
+        agents,
+        timestamp: chrono::Utc::now().to_rfc3339(),
     })
     .into_response()
 }
