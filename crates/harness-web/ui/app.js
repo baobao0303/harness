@@ -1860,3 +1860,126 @@ async function pollAgentStatus() {
 // Start polling every 5 seconds
 setInterval(pollAgentStatus, 5000);
 pollAgentStatus(); // initial
+
+
+// ===== Discussion Tab =====
+let discussionPollInterval = null;
+
+async function loadDiscussion() {
+    try {
+        const bus = window.messageBus || (window.messageBus = new MessageBus());
+        // Try to load from message bus file
+        const response = await fetch('/api/discussion');
+        if (response.ok) {
+            const data = await response.json();
+            renderDiscussion(data.messages || []);
+        } else {
+            // Fallback: load from local file via message bus
+            const messages = bus.getAllMessages();
+            renderDiscussion(messages);
+        }
+    } catch (e) {
+        // Fallback to demo messages
+        renderDiscussion(getDemoDiscussionMessages());
+    }
+}
+
+function renderDiscussion(messages) {
+    const container = document.getElementById('discussion-messages');
+    const countEl = document.getElementById('discussion-count');
+    
+    if (!messages || messages.length === 0) {
+        container.innerHTML = `
+            <div class="discussion-empty">
+                <div class="empty-icon">💬</div>
+                <p>No discussion yet. Start a task to see agents collaborate.</p>
+            </div>`;
+        countEl.textContent = '0 messages';
+        return;
+    }
+    
+    countEl.textContent = `${messages.length} message${messages.length !== 1 ? 's' : ''}`;
+    
+    container.innerHTML = messages.map(msg => renderDiscussionMessage(msg)).join('');
+    container.scrollTop = container.scrollHeight;
+}
+
+function renderDiscussionMessage(msg) {
+    const agent = (msg.role || msg.agent || 'hermes').toLowerCase();
+    const agentLabel = agent === 'hermes' ? 'HERMES' : agent.toUpperCase();
+    const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('vi-VN') : '';
+    const content = escapeHtml(msg.content || msg.text || JSON.stringify(msg));
+    
+    return `
+        <div class="discussion-message ${agent}">
+            <div class="discussion-avatar ${agent}">${agentLabel.charAt(0)}</div>
+            <div class="discussion-content">
+                <div class="discussion-meta">
+                    <span class="discussion-agent ${agent}">${agentLabel}</span>
+                    <span class="discussion-time">${time}</span>
+                    ${msg.task_id ? `<span class="discussion-task">Task: ${msg.task_id}</span>` : ''}
+                </div>
+                <div class="discussion-text">${content}</div>
+            </div>
+        </div>`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function clearDiscussion() {
+    if (window.messageBus) {
+        window.messageBus.clearAll();
+    }
+    loadDiscussion();
+}
+
+function getDemoDiscussionMessages() {
+    return [
+        { role: 'hermes', content: '🚀 New task: Build LDP Builder Platform - 80% deployment reduction target', timestamp: new Date(Date.now() - 300000).toISOString(), task_id: 'US-2024-001' },
+        { role: 'ba', content: '📋 Decomposing intake US-2024-001 into 6 subtasks for PM/FE/BE/QA/AUD', timestamp: new Date(Date.now() - 280000).toISOString(), task_id: 'US-2024-001' },
+        { role: 'pm', content: '📊 Created specs: User stories for drag-drop builder, template marketplace, CI/CD integration', timestamp: new Date(Date.now() - 250000).toISOString(), task_id: 'US-2024-001' },
+        { role: 'fe', content': '🎨 Will use Next.js 14 + React 18 + Tailwind. Component lib: drag-drop canvas, property panel, preview iframe', timestamp: new Date(Date.now() - 220000).toISOString(), task_id: 'US-2024-001' },
+        { role: 'be', content': '⚙️ API design: POST /templates, GET /templates/:id, WebSocket for real-time collab. SQLite + Prisma', timestamp: new Date(Date.now() - 190000).toISOString(), task_id: 'US-2024-001' },
+        { role: 'qa', content': '🧪 Test plan: E2E Cypress for builder flow, unit tests for components, load test for 100 concurrent users', timestamp: new Date(Date.now() - 160000).toISOString(), task_id: 'US-2024-001' },
+        { role: 'aud', content': '🔍 Security review: XSS in iframe preview, auth on template publish, rate limit on AI gen', timestamp: new Date(Date.now() - 130000).toISOString(), task_id: 'US-2024-001' },
+        { role: 'ba', content': '✅ All agents aligned. Acceptance criteria defined. Handoff to FE/BE for implementation.', timestamp: new Date(Date.now() - 100000).toISOString(), task_id: 'US-2024-001' },
+        { role: 'hermes', content': '📦 Task US-2024-001 assigned to team. Monitoring progress via agent status API.', timestamp: new Date(Date.now() - 50000).toISOString(), task_id: 'US-2024-001' }
+    ];
+}
+
+// Start discussion polling when tab is active
+function startDiscussionPolling() {
+    loadDiscussion();
+    if (discussionPollInterval) clearInterval(discussionPollInterval);
+    discussionPollInterval = setInterval(loadDiscussion, 3000);
+}
+
+function stopDiscussionPolling() {
+    if (discussionPollInterval) {
+        clearInterval(discussionPollInterval);
+        discussionPollInterval = null;
+    }
+}
+
+// Hook into tab switching
+const originalSwitchTab = window.switchTab;
+window.switchTab = function(tabId) {
+    originalSwitchTab(tabId);
+    if (tabId === 'discussion') {
+        startDiscussionPolling();
+    } else {
+        stopDiscussionPolling();
+    }
+};
+
+// Initialize if discussion tab is active on load
+document.addEventListener('DOMContentLoaded', () => {
+    const activeTab = document.querySelector('.nav-item.active')?.dataset.tab;
+    if (activeTab === 'discussion') {
+        startDiscussionPolling();
+    }
+});

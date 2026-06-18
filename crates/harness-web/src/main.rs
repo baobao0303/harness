@@ -288,6 +288,7 @@ async fn main() {
         .route("/api/intervention/:id/resolve", post(resolve_intervention))
         .route("/api/query", post(execute_sql_query))
         .route("/api/agent-status", get(get_agent_status))
+        .route("/api/discussion", get(get_discussion))
         .nest_service("/personas", ServeDir::new(personas_dir))
         .fallback_service(ServeDir::new(ui_dir))
         .with_state(state);
@@ -317,6 +318,22 @@ async fn get_stats(State(state): State<Arc<AppState>>) -> impl IntoResponse {
         traces,
     })
     .into_response()
+}
+
+async fn get_discussion() -> impl IntoResponse {
+    let messages_path = PathBuf::from("/d/harness/.agents/comms/messages/messages.json");
+    let messages = if messages_path.exists() {
+        match tokio::fs::read_to_string(&messages_path).await {
+            Ok(content) => match serde_json::from_str::<Vec<serde_json::Value>>(&content) {
+                Ok(msgs) => msgs,
+                Err(_) => vec![],
+            },
+            Err(_) => vec![],
+        }
+    } else {
+        vec![]
+    };
+    Json(json!({ "messages": messages })).into_response()
 }
 
 async fn get_agent_status() -> impl IntoResponse {

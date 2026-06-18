@@ -72,6 +72,10 @@
                         <span class="nav-icon">👥</span>
                         <span class="nav-label">Agent Directory</span>
                     </a>
+                    <a href="#" class="nav-item" data-tab="discussion">
+                        <span class="nav-icon">💬</span>
+                        <span class="nav-label">Discussion</span>
+                    </a>
                 </div>
 
                 <div class="nav-section">
@@ -408,6 +412,27 @@
                                         <a href="/personas/aud.md" target="_blank" class="persona-link">View Persona ↗</a>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Panel: Discussion -->
+                <div id="panel-discussion" class="tab-panel">
+                    <div class="discussion-header">
+                        <h2>💬 Agent Discussion</h2>
+                        <p class="discussion-subtitle">Real-time inter-agent collaboration chat</p>
+                        <div class="discussion-controls">
+                            <button class="cta-btn secondary" onclick="clearDiscussion()">Clear</button>
+                            <button class="cta-btn secondary" onclick="loadDiscussion()">Reload</button>
+                            <span id="discussion-count" class="discussion-count">0 messages</span>
+                        </div>
+                    </div>
+                    <div class="discussion-container">
+                        <div class="discussion-messages" id="discussion-messages">
+                            <div class="discussion-empty">
+                                <div class="empty-icon">💬</div>
+                                <p>No discussion yet. Start a task to see agents collaborate.</p>
                             </div>
                         </div>
                     </div>
