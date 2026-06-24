@@ -48,7 +48,7 @@ Mọi yêu cầu công việc đi qua Harness sẽ tuân theo quy trình chuẩn
                           └──> AI Agent thực hiện viết code & kiểm thử
                                 └──> Ghi nhận Quyết định kiến trúc & Khó khăn (Friction)
 ```
-![Harness Integrated Developer IDE Performance Dashboard](docs/assets/harness-dashboard.png)
+![Harness Integrated Developer IDE Performance Dashboard](docs/assets/harness-dashboard-cropped.png)
 
 ---
 
