@@ -7,6 +7,7 @@ use axum::{
 };
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tower_http::services::ServeDir;
@@ -16,6 +17,7 @@ use std::fs;
 
 struct AppState {
     db_path: PathBuf,
+    repo_root: PathBuf,
 }
 
 #[derive(Serialize)]
@@ -255,7 +257,7 @@ async fn main() {
     println!("Starting Harness Web Server...");
     println!("Database path: {}", db_path.display());
 
-    let state = Arc::new(AppState { db_path });
+    let state = Arc::new(AppState { db_path, repo_root: repo_root.clone() });
 
     // Serve static files from the UI directory
     let ui_dir = std::env::current_dir().unwrap().join("crates/harness-web/ui");
@@ -320,8 +322,8 @@ async fn get_stats(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     .into_response()
 }
 
-async fn get_discussion() -> impl IntoResponse {
-    let messages_path = PathBuf::from("/d/harness/.agents/comms/messages/messages.json");
+async fn get_discussion(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let messages_path = state.repo_root.join(".agents/comms/messages/messages.json");
     let messages = if messages_path.exists() {
         match tokio::fs::read_to_string(&messages_path).await {
             Ok(content) => match serde_json::from_str::<Vec<serde_json::Value>>(&content) {
@@ -336,8 +338,8 @@ async fn get_discussion() -> impl IntoResponse {
     Json(json!({ "messages": messages })).into_response()
 }
 
-async fn get_agent_status() -> impl IntoResponse {
-    let state_path = PathBuf::from("/d/harness/.agents/comms/state/agent_status.json");
+async fn get_agent_status(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let state_path = state.repo_root.join(".agents/comms/state/agent_status.json");
     let mut agents = Vec::new();
     let default_agents = ["pm", "ba", "fe", "be", "qa", "aud"];
 
