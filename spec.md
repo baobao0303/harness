@@ -22,6 +22,11 @@
    - 3.6 [Sub-Agent Skill Discovery & Resolution Protocol (`harness skill find / search`)](#36-sub-agent-skill-discovery--resolution-protocol-harness-skill-find--search)
    - 3.7 [Remote Skill Server & Centralized Registry Architecture (`harness skill sync / pull`)](#37-remote-skill-server--centralized-registry-architecture-harness-skill-sync--pull)
 4. [Git Worktree Isolation & Runtime Management](#4-git-worktree-isolation--runtime-management)
+   - 4.1 [Worktree Directory Structure](#41-worktree-directory-structure)
+   - 4.2 [Runtime Environment Isolation](#42-runtime-environment-isolation)
+   - 4.3 [Repository-Level Memory Indexing](#43-repository-level-memory-indexing)
+   - 4.4 [Automatic Lifecycle Pruning](#44-automatic-lifecycle-pruning)
+   - 4.5 [Herdr Terminal Agent Multiplexer Integration (`herdr` CLI & Socket API)](#45-herdr-terminal-agent-multiplexer-integration-herdr-cli--socket-api)
 5. [Loop Execution Engine & Verification Proof Loop](#5-loop-execution-engine--verification-proof-loop)
 6. [Durable Memory & Observability (`harness.db`)](#6-durable-memory--observability-harnessdb)
    - 6.1 [Relational Schema Architecture](#61-relational-schema-architecture)
@@ -455,6 +460,42 @@ git worktree remove .worktrees/task-<id> --force
 ```
 Điều này ngăn chặn việc tích tụ các thư mục rác và đảm bảo dọn dẹp môi trường local.
 
+### 4.5. Herdr Terminal Agent Multiplexer Integration (`herdr` CLI & Socket API)
+
+Thay vì dựng giao diện Web UI cồng kềnh, Harness tích hợp trực tiếp với **[Herdr](https://herdr.dev/)** — một bộ multiplexer terminal thuần nhị phân (Agent Multiplexer) dành riêng cho các AI Coding Agents (tương tự như `tmux` nhưng hiểu ngữ cảnh trạng thái Agent):
+
+```text
+                  ┌──────────────────────────────────────────────┐
+                  │          Herdr Agent Multiplexer             │
+                  │   - Persistent PTY Sessions (No Laptop)      │
+                  │   - Statuses: Working | Blocked | Done       │
+                  │   - Remote SSH / Mobile Attach Support       │
+                  └──────────────────────┬───────────────────────┘
+                                         │
+                   ┌─────────────────────┴─────────────────────┐
+                   │ Herdr Socket API & CLI Engine Integration │
+                   └─────────────────────┬─────────────────────┘
+                                         │
+                  ┌──────────────────────┴──────────────────────┐
+                  ▼                                             ▼
+┌───────────────────────────────────┐       ┌───────────────────────────────────┐
+│ Worktree Pane 1: .worktrees/task-1│       │ Worktree Pane 2: .worktrees/task-2│
+│ Executing: ./scripts/harness dev  │       │ Executing: ./scripts/harness audit│
+└───────────────────────────────────┘       └───────────────────────────────────┘
+```
+
+#### Các Lợi ích Kỹ thuật của việc Kết hợp Herdr với Harness:
+1. **Duy trì Phiên chạy Bền vững (Persistent PTY & Remote SSH Attach)**:
+   - Các Sub-Agents của Harness chạy trong các PTY pane độc lập do Herdr quản lý trên server / Mac Mini.
+   - Lập trình viên hoặc Chief of Staff có thể gấp laptop lại, SSH từ điện thoại/tablet vào Herdr để theo dõi tiến độ mà các tiến trình của Agent không bao giờ bị chết.
+2. **Trạng thái Trực quan của Agent (Semantic Agent State)**:
+   - Herdr tự động nhận biết và hiển thị trạng thái trực quan của từng Agent trên giao diện TUI:
+     - **`working`**: Agent đang suy luận & viết mã nguồn trong Worktree.
+     - **`blocked`**: Agent đang dừng lại chờ duyệt quyền hoặc chờ feedback.
+     - **`done`**: Agent đã vượt qua bài test và hoàn thành nhiệm vụ.
+3. **Điều phối Tự động qua Socket API (`herdr` Orchestration Engine)**:
+   - Chief of Staff (Mina) hoặc Harness CLI có thể gọi Herdr Socket API (`/docs/socket-api/`) để tự động mở tab mới, chia pane, điều phối các Main Agents (Claude Code, OpenCode, Codex, Harness CLI) vận hành song song trên từng Worktree cách ly.
+
 ---
 
 ## 5. Loop Execution Engine & Verification Proof Loop
@@ -618,3 +659,4 @@ Harness đi kèm một bộ đánh giá **Loop Readiness Score** (thang điểm 
 - **[2026-07-25]**: Bổ sung Mục 6.2 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) tích hợp tính năng **Visual Telemetry & `tldraw` Dynamic Diagramming (`harness trace export --format tldraw`)** — tự động chuyển đổi nhật ký tương tác Sub-Agents thành tệp `.tldr` JSON Snapshot để mở, xem và tương tác sơ đồ kéo-thả hoàn toàn offline tại [offline.tldraw.com](https://offline.tldraw.com).
 - **[2026-07-25]**: Chuẩn hóa Bảng Danh mục Sub-Agents (`Sub-Agent Ecosystem Registry Table`) tại Mục 3 trong [spec.md](file:///Users/bao312/Desktop/harness/spec.md#L165-L180) tổng hợp 6 Sub-Agents được setup chính thức (Chief of Staff, Implementer, Verifier, Explorer, Triage Monitor, Security & Skill Auditor).
 - **[2026-07-25]**: Bổ sung Bảng Ma trận Hiệp đồng 5 Khối Loop Engineering (`cobusgreyling/loop-engineering`) kết hợp với **Chief of Staff (Mina)** vào Mục 1.5 trong [spec.md](file:///Users/bao312/Desktop/harness/spec.md#L85-L102), xác định rõ ràng sự phân công giữa Mina, Sub-Agents và cơ chế vận hành của Harness CLI từ Intake tới Telemetry Trace.
+- **[2026-07-25]**: Bổ sung Mục 4.5 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) tích hợp **Herdr Terminal Agent Multiplexer (`herdr` CLI & Socket API)** — giải pháp multiplexer thuần nhị phân chạy bền vững trên server/Mac Mini, hỗ trợ SSH attach từ điện thoại/tablet, tự động hiển thị semantic agent state (`working`, `blocked`, `done`), và cung cấp Socket API để Chief of Staff tự động chia pane/tab điều phối các Sub-Agents trên từng Worktree.
