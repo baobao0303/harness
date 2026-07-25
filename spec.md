@@ -11,6 +11,7 @@
    - 1.2 [Problem Statement: Prompt Engineering vs. Loop Engineering](#12-problem-statement-prompt-engineering-vs-loop-engineering)
    - 1.3 [The 4-Tier Agentic Engineering Hierarchy](#13-the-4-tier-agentic-engineering-hierarchy)
    - 1.4 [Architectural Separation Rationales (Lý do & Triết lý Tách biệt Kiến trúc)](#14-architectural-separation-rationales-l%C3%BD-do--tri%E1%BA%BFt-l%C3%BD-t%C3%A1ch-bi%E1%BB%87t-ki%E1%BA%BFt-tr%C3%BAc)
+   - 1.5 [Unified Loop Engineering & Chief of Staff Synergy Matrix](#15-unified-loop-engineering--chief-of-staff-synergy-matrix)
 2. [System Architecture & Dual-Loop Mechanics](#2-system-architecture--dual-loop-mechanics)
 3. [Sub-Agent Ecosystem & Topologies](#3-sub-agent-ecosystem--topologies)
    - 3.1 [Topology A: Implementer ➔ Verifier (Maker / Checker Split)](#31-topology-a-implementer--verifier-maker--checker-split)
@@ -80,7 +81,19 @@ Harness thiết lập 4 nguyên tắc tách biệt kiến trúc chiến lược 
 
 #### D. Tại sao tách biệt vai trò Sub-Agents (Implementer ➔ Verifier, Explorer ➔ Implementer)?
 1. **Triệt tiêu thiên vị định kiến (Confirmation Bias Prevention)**: Agent tự viết code thường có xu hướng tin rằng code của mình đúng. Việc tách riêng một **Verifier Agent** độc lập để rà soát Git Diff và chạy kiểm thử giúp đảm bảo tính khách quan và chất lượng khắt khe.
-2. **Tiết kiệm dung lượng Cửa sổ Ngữ cảnh (Context Window Economy)**: Với codebase lớn, việc cho Agent **Explorer** duyệt và nén kiến thức thành sơ đồ 20 dòng sẽ giúp Agent **Implementer** chỉ nhận đúng context cần thiết, tránh trôi lặp token và suy giảm trí nhớ.
+2. **Tiết kiệm dung lượng Cửa sổ Ngữ cảnh (Context Window Economy)**: With codebase lớn, việc cho Agent **Explorer** duyệt và nén kiến thức thành sơ đồ 20 dòng sẽ giúp Agent **Implementer** chỉ nhận đúng context cần thiết, tránh trôi lặp token và suy giảm trí nhớ.
+
+### 1.5. Unified Loop Engineering & Chief of Staff Synergy Matrix
+
+Nghiên cứu từ bài mở rộng *Loop Engineering — Design the system that prompts your agents* (từ repository `cobusgreyling/loop-engineering`) được tổng hợp và kết hợp chặt chẽ với mô hình **Chief of Staff (Mina)** thành ma trận hiệp đồng 5 khối:
+
+| 5 Khối Loop Engineering (cobusgreyling) | Vai trò Chief of Staff (Mina) | Vai trò Sub-Agents (Implementer / Verifier) | Cơ chế Harness Vận hành |
+| :--- | :--- | :--- | :--- |
+| **Block 1: Input / Requirements Intake** | Tiếp nhận ý đồ (high-level vision) từ con người, phân tách thành User Stories & Specs. | Không trực tiếp làm việc với con người; nhận Stories đã phân tách từ Mina. | Lệnh `harness intake` phân loại rủi ro (Tiny, Normal, High-Risk) và lưu DB `harness.db`. |
+| **Block 2: Prompt & Persona Engineering** | Xác định phong cách làm việc, nạp `AGENTS.md` và chọn vai trò cho các Sub-Agent. | Nhận Persona Header (`.agents/personas/<role>.md`) và `SKILL.md` tự động. | **Progressive Disclosure**: Nạp quy tắc lũy tiến theo từng bước, tránh cạn token window. |
+| **Block 3: Task Execution & Topologies** | Quản lý tiến độ tổng thể, tháo gỡ điểm nghẽn (unblock), điều phối tác vụ dài hạn. | Realize implementation trong Git Worktrees cách ly (`.worktrees/task-<id>`). | Topologies A/B/C/D điều phối các Sub-Agents thực thi tác vụ dài hạn (Long-Horizontal Tasks). |
+| **Block 4: Automated Verification Loop** | Đánh giá báo cáo từ Verifier trước khi nghiệm thu bàn giao cho người dùng. | **Verifier** audit git diff, chạy unit/integration tests, đóng gói log lỗi nếu fail. | **Auto-Feedback Loop**: Tự động gửi lại log lỗi để Sub-Agent tự sửa (tối đa N retries). |
+| **Block 5: Memory & Telemetry Trace Output** | Đọc dữ liệu lịch sử trong `harness.db` để theo dõi hiệu suất và ma sát (friction). | Ghi vết hành động (trace) và các ma sát vào `harness.db` SQLite database. | Xuất sơ đồ `tldraw` (`.tldr`) tương tác để xem lại toàn bộ luồng trao đổi giữa các Agents. |
 
 ---
 
@@ -604,3 +617,4 @@ Harness đi kèm một bộ đánh giá **Loop Readiness Score** (thang điểm 
 - **[2026-07-25]**: Quy định chuẩn bảo mật môi trường: Đưa các thông tin nhạy cảm (Private Skill Server URL, Auth Tokens, Model Keys) vào file cục bộ `.env` (gitignored), duy trì tệp mẫu `.env.example` trên Git để hướng dẫn cấu hình, và bổ sung hướng dẫn vào [AGENTS.md](file:///Users/bao312/Desktop/harness/AGENTS.md) & [spec.md](file:///Users/bao312/Desktop/harness/spec.md#L375-L397).
 - **[2026-07-25]**: Bổ sung Mục 6.2 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) tích hợp tính năng **Visual Telemetry & `tldraw` Dynamic Diagramming (`harness trace export --format tldraw`)** — tự động chuyển đổi nhật ký tương tác Sub-Agents thành tệp `.tldr` JSON Snapshot để mở, xem và tương tác sơ đồ kéo-thả hoàn toàn offline tại [offline.tldraw.com](https://offline.tldraw.com).
 - **[2026-07-25]**: Chuẩn hóa Bảng Danh mục Sub-Agents (`Sub-Agent Ecosystem Registry Table`) tại Mục 3 trong [spec.md](file:///Users/bao312/Desktop/harness/spec.md#L165-L180) tổng hợp 6 Sub-Agents được setup chính thức (Chief of Staff, Implementer, Verifier, Explorer, Triage Monitor, Security & Skill Auditor).
+- **[2026-07-25]**: Bổ sung Bảng Ma trận Hiệp đồng 5 Khối Loop Engineering (`cobusgreyling/loop-engineering`) kết hợp với **Chief of Staff (Mina)** vào Mục 1.5 trong [spec.md](file:///Users/bao312/Desktop/harness/spec.md#L85-L102), xác định rõ ràng sự phân công giữa Mina, Sub-Agents và cơ chế vận hành của Harness CLI từ Intake tới Telemetry Trace.
