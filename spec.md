@@ -116,19 +116,25 @@ Human Intent / Spec
 └────────┬────────┘
          │
          ▼
-┌─────────────────┐
-│ Worktree Spawn  │ ──► Tạo thư mục cách ly .worktrees/task-<id>
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Persona & Skill │ ──► Tự động inject Persona (Dev, QA, BA) & SKILL.md
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Sub-Agent Exec  │ ──► Sub-agent thực thi viết code trong Worktree
-└────────┬────────┘
+┌─────────────────────────┐
+│ Worktree Spawn          │ ──► Tạo thư mục cách ly .worktrees/task-<id>
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│ Persona Injection       │ ──► Inject Persona Header (.agents/personas/<role>.md)
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐     ┌──────────────────────────────────────────────┐
+│ Skill Resolution Engine │ ──► │ 1. Local Match (.agents/skills/<name>/)      │
+└────────────┬────────────┘     │ 2. Remote Server Fallback (harness skill pull│
+             │                  │ 3. Mid-Session Search (harness skill search) │
+             │                  └──────────────────────────────────────────────┘
+             ▼
+┌─────────────────────────┐
+│ Sub-Agent Execution     │ ──► Sub-agent nhận Context & thực thi viết code trong Worktree
+└────────────┬────────────┘
          │
          ▼
 ┌─────────────────┐     (Thất bại & test lỗi)
