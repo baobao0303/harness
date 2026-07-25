@@ -375,6 +375,26 @@ Sử dụng **Server bên ngoài (Remote Skill Hub / Skill Server)** để quả
 ./scripts/harness skill push "custom-team-skill"
 ```
 
+#### C. Quy chuẩn Bảo mật Biến Môi trường (`.env` & `.env.example` Protocol):
+
+1. **Không commit `.env` lên Git**:
+   - Các thông tin cấu hình như URL Private Skill Server (`HARNESS_SKILL_SERVER=https://skills-hub.yourdomain.com/api/v1`), Token xác thực (`HARNESS_SKILL_SERVER_TOKEN`), và API Keys bắt buộc phải lưu trong file `.env` cục bộ.
+   - File `.env` được ghi chú bắt buộc trong `.gitignore` để triệt tiêu nguy cơ rò rỉ mã bảo mật lên GitHub.
+
+2. **Duy trì Tệp Mẫu `.env.example` trên GitHub**:
+   - Dự án duy trì tệp mẫu `.env.example` trên Git chứa danh sách toàn bộ các biến môi trường cùng mô tả hướng dẫn, giúp các lập trình viên hoặc AI Agent khác khi clone repo về đều biết chính xác cần thiết lập những tham số nào.
+
+3. **Tệp Mẫu `.env.example` chuẩn**:
+   ```ini
+   # Remote Skill Server Endpoint
+   HARNESS_SKILL_SERVER=https://skills-hub.yourdomain.com/api/v1
+   HARNESS_SKILL_SERVER_TOKEN=your_private_auth_token_here
+
+   # Default Model Selection for Harness CLI & Sub-Agents
+   HARNESS_MODEL=gemini-3.6-flash
+   HARNESS_DB=./harness.db
+   ```
+
 ---
 
 ## 4. Git Worktree Isolation & Runtime Management
@@ -528,3 +548,4 @@ Harness đi kèm một bộ đánh giá **Loop Readiness Score** (thang điểm 
 - **[2026-07-25]**: Bổ sung Mục 3.5 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) quy định **Model Selection & Sub-Agent Dispatch Protocol via `./scripts/harness`** — phân bổ Model Tiers (`flash` cho Auditor/Reviewer vs `pro` cho Implementer/Mina), pin cờ `--workdir`, inject Persona Header, và chuẩn hóa JSON Protocol giữa các agents khi gọi qua script CLI.
 - **[2026-07-25]**: Bổ sung Mục 3.6 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) quy định **Sub-Agent Skill Discovery & Resolution Protocol (`harness skill find / search`)** — gồm 3 cấp độ: (1) Explicit Preloading (`--skills`), (2) Dynamic Auto-Match (`harness skill find`), và (3) Mid-Session On-Demand Search (`harness skill search`). Tránh nạp tràn context window, áp dụng triết lý Progressive Skill Loading.
 - **[2026-07-25]**: Bổ sung Mục 3.7 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) tích hợp kiến trúc **Remote Skill Server & Centralized Registry (`harness skill sync / pull`)** — hỗ trợ quản lý 100+ Skill tập trung từ xa, tự động đồng bộ về local cache (`~/.harness/skills/`), cơ chế dự phòng Remote Fallback khi local chưa có Skill, và phân quyền kiểm soát tuân thủ (Enterprise Compliance).
+- **[2026-07-25]**: Quy định chuẩn bảo mật môi trường: Đưa các thông tin nhạy cảm (Private Skill Server URL, Auth Tokens, Model Keys) vào file cục bộ `.env` (gitignored), duy trì tệp mẫu `.env.example` trên Git để hướng dẫn cấu hình, và bổ sung hướng dẫn vào [AGENTS.md](file:///Users/bao312/Desktop/harness/AGENTS.md) & [spec.md](file:///Users/bao312/Desktop/harness/spec.md#L375-L397).

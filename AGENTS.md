@@ -19,4 +19,9 @@ This repo uses Harness. Before work, read:
 Use the Rust Harness CLI at `scripts/bin/harness-cli` on macOS/Linux or
 `scripts/bin/harness-cli.exe` on Windows as the main operational tool.
 
+## Environment Configuration
+- Never commit `.env` or private keys to Git.
+- Reference `.env.example` for required environment variables (`HARNESS_SKILL_SERVER`, `HARNESS_MODEL`, `HARNESS_DB`).
+- Copy `.env.example` to `.env` when setting up local environments.
+
 <!-- HARNESS:END -->

@@ -13,6 +13,10 @@ scripts/bin/harness-cli
 # Harness durable layer
 scripts/bin/harness-cli.exe
 
+# Local environment variables (do not commit to Git)
+.env
+*.env.local
+
 # IDE / Agent specific local folders
 .agents/
 .cursor/
