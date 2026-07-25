@@ -10,9 +10,9 @@
 |---|------|-------|-------------|--------|
 | 1 | Exploration & Baseline | Codebase inspection, harness database status check, story registration check | none | DONE |
 | 2 | R1: Storefront Catalog & Autocomplete Search | Navigation bar, hero carousel, footer, multi-attribute filter sidebar, autocomplete search (<50ms), product view | M1 | DONE |
-| 3 | R2: Shopping Cart & Dynamic Checkout | Slide-over cart drawer, quantity controls, promo coupon validation, 3-step checkout wizard | M2 | IN_PROGRESS |
-| 4 | R3: Order Engine State Machine & Customer Dashboard | Customer authentication, state machine transitions, order tracking timeline, invoice PDF export | M3 | PLANNED |
-| 5 | E2E Verification & Harness Telemetry | `./scripts/harness story verify US-EC-001`, `./scripts/harness story verify US-EC-003`, `./scripts/harness audit`, `./scripts/harness export-trace --format tldraw` | M2, M3, M4 | PLANNED |
+| 3 | R2: Shopping Cart & Dynamic Checkout | Slide-over cart drawer, quantity controls, promo coupon validation, 3-step checkout wizard | M2 | DONE |
+| 4 | R3: Order Engine State Machine & Customer Dashboard | Customer authentication, state machine transitions, order tracking timeline, invoice PDF export | M3 | DONE |
+| 5 | E2E Verification & Harness Telemetry | `./scripts/harness story verify US-EC-001`, `./scripts/harness story verify US-EC-003`, `./scripts/harness audit`, `./scripts/harness export-trace --format tldraw` | M2, M3, M4 | IN_PROGRESS |
 
 ## Interface Contracts
 ### Storefront Catalog ↔ API

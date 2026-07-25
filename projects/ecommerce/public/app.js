@@ -18,7 +18,11 @@ const app = {
     currentSlide: 0,
     slideInterval: null,
     searchDebounceTimer: null,
-    currentModalProduct: null
+    currentModalProduct: null,
+    token: localStorage.getItem('ec_token') || null,
+    user: JSON.parse(localStorage.getItem('ec_user') || 'null'),
+    authMode: 'login',
+    myOrders: []
   },
 
   init() {
@@ -29,6 +33,7 @@ const app = {
     this.fetchCategories();
     this.fetchProducts();
     this.renderCartDrawer();
+    this.initAuth();
   },
 
   // US-EC-001: Light/Dark Theme Switcher
@@ -296,6 +301,34 @@ const app = {
       checkoutClose.addEventListener('click', () => this.closeCheckoutModal());
       checkoutModal.addEventListener('click', (e) => {
         if (e.target === checkoutModal) this.closeCheckoutModal();
+      });
+    }
+
+    // Auth Modal Bindings US-EC-010
+    const authModal = document.getElementById('auth-modal');
+    const authClose = document.getElementById('auth-modal-close');
+    if (authClose && authModal) {
+      authClose.addEventListener('click', () => this.closeAuthModal());
+      authModal.addEventListener('click', (e) => {
+        if (e.target === authModal) this.closeAuthModal();
+      });
+    }
+
+    // Orders Modal Bindings US-EC-012
+    const ordersModal = document.getElementById('orders-modal');
+    const ordersClose = document.getElementById('orders-modal-close');
+    if (ordersClose && ordersModal) {
+      ordersClose.addEventListener('click', () => this.closeOrdersModal());
+      ordersModal.addEventListener('click', (e) => {
+        if (e.target === ordersModal) this.closeOrdersModal();
+      });
+    }
+
+    // Invoice Modal Bindings US-EC-012
+    const invoiceModal = document.getElementById('invoice-modal');
+    if (invoiceModal) {
+      invoiceModal.addEventListener('click', (e) => {
+        if (e.target === invoiceModal) this.closeInvoiceModal();
       });
     }
   },
@@ -934,9 +967,14 @@ const app = {
         coupon_code: this.state.appliedCoupon ? this.state.appliedCoupon.code : null
       };
 
+      const headers = { 'Content-Type': 'application/json' };
+      if (this.state.token) {
+        headers['Authorization'] = `Bearer ${this.state.token}`;
+      }
+
       const res = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload)
       });
 
@@ -970,6 +1008,403 @@ const app = {
     } finally {
       if (btn) btn.disabled = false;
     }
+  },
+
+  // US-EC-010: Authentication State Management
+  async initAuth() {
+    const token = localStorage.getItem('ec_token');
+    if (token) {
+      this.state.token = token;
+      try {
+        const res = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          this.state.user = data.user;
+          localStorage.setItem('ec_user', JSON.stringify(data.user));
+        } else {
+          this.logout();
+        }
+      } catch (err) {
+        console.error('Failed to verify token:', err);
+      }
+    }
+    this.updateAuthUI();
+  },
+
+  updateAuthUI() {
+    const authBtn = document.getElementById('auth-btn');
+    const userMenu = document.getElementById('user-menu');
+    const userEmailEl = document.getElementById('user-display-email');
+
+    if (this.state.user && this.state.token) {
+      if (authBtn) authBtn.style.display = 'none';
+      if (userMenu) userMenu.style.display = 'flex';
+      if (userEmailEl) userEmailEl.textContent = this.state.user.email;
+    } else {
+      if (authBtn) authBtn.style.display = 'inline-block';
+      if (userMenu) userMenu.style.display = 'none';
+      if (userEmailEl) userEmailEl.textContent = '';
+    }
+  },
+
+  openAuthModal() {
+    const modal = document.getElementById('auth-modal');
+    if (modal) {
+      modal.classList.add('active');
+      this.switchAuthTab('login');
+    }
+  },
+
+  closeAuthModal() {
+    const modal = document.getElementById('auth-modal');
+    if (modal) modal.classList.remove('active');
+    const errorMsg = document.getElementById('auth-error-msg');
+    if (errorMsg) errorMsg.textContent = '';
+  },
+
+  switchAuthTab(mode) {
+    this.state.authMode = mode;
+    const loginTab = document.getElementById('login-tab');
+    const regTab = document.getElementById('register-tab');
+    const titleEl = document.getElementById('auth-form-title');
+    const submitBtn = document.getElementById('auth-submit-btn');
+    const errorMsg = document.getElementById('auth-error-msg');
+
+    if (errorMsg) errorMsg.textContent = '';
+
+    if (mode === 'login') {
+      if (loginTab) loginTab.classList.add('active');
+      if (regTab) regTab.classList.remove('active');
+      if (titleEl) titleEl.textContent = 'Customer Login';
+      if (submitBtn) submitBtn.textContent = 'Sign In';
+    } else {
+      if (regTab) regTab.classList.add('active');
+      if (loginTab) loginTab.classList.remove('active');
+      if (titleEl) titleEl.textContent = 'Create Customer Account';
+      if (submitBtn) submitBtn.textContent = 'Create Account';
+    }
+  },
+
+  async handleAuthSubmit() {
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const errorMsg = document.getElementById('auth-error-msg');
+    const submitBtn = document.getElementById('auth-submit-btn');
+
+    if (!email || !password) {
+      if (errorMsg) errorMsg.textContent = 'Please provide both email and password.';
+      return;
+    }
+
+    if (submitBtn) submitBtn.disabled = true;
+    if (errorMsg) errorMsg.textContent = '';
+
+    const endpoint = this.state.authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.token) {
+        if (errorMsg) errorMsg.textContent = `❌ ${data.error || 'Authentication failed'}`;
+        if (submitBtn) submitBtn.disabled = false;
+        return;
+      }
+
+      this.state.token = data.token;
+      this.state.user = data.user;
+      localStorage.setItem('ec_token', data.token);
+      localStorage.setItem('ec_user', JSON.stringify(data.user));
+
+      this.updateAuthUI();
+      this.closeAuthModal();
+      const form = document.getElementById('auth-form');
+      if (form) form.reset();
+    } catch (err) {
+      if (errorMsg) errorMsg.textContent = `❌ Network error: ${err.message}`;
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  },
+
+  logout() {
+    this.state.token = null;
+    this.state.user = null;
+    localStorage.removeItem('ec_token');
+    localStorage.removeItem('ec_user');
+    this.updateAuthUI();
+  },
+
+  // US-EC-012: Customer Dashboard & Order History
+  async openOrdersModal() {
+    const modal = document.getElementById('orders-modal');
+    if (modal) {
+      modal.classList.add('active');
+      await this.fetchMyOrders();
+    }
+  },
+
+  closeOrdersModal() {
+    const modal = document.getElementById('orders-modal');
+    if (modal) modal.classList.remove('active');
+  },
+
+  async fetchMyOrders() {
+    const container = document.getElementById('orders-list-container');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align: center; padding: 2rem;">Loading your order history...</div>';
+
+    try {
+      const headers = {};
+      if (this.state.token) {
+        headers['Authorization'] = `Bearer ${this.state.token}`;
+      }
+
+      const url = this.state.token
+        ? '/api/orders/my-orders'
+        : `/api/orders/my-orders?user_id=${this.state.user ? this.state.user.id : 'u_customer1'}`;
+
+      const res = await fetch(url, { headers });
+      const data = await res.json();
+
+      if (!res.ok) {
+        container.innerHTML = `<div style="color: var(--danger); padding: 1.5rem; text-align: center;">${data.error || 'Failed to fetch orders.'}</div>`;
+        return;
+      }
+
+      this.state.myOrders = data.orders || [];
+      this.renderMyOrders();
+    } catch (err) {
+      container.innerHTML = `<div style="color: var(--danger); padding: 1.5rem; text-align: center;">Error loading orders: ${err.message}</div>`;
+    }
+  },
+
+  renderMyOrders() {
+    const container = document.getElementById('orders-list-container');
+    if (!container) return;
+
+    if (!this.state.myOrders || this.state.myOrders.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+          <p style="font-size: 2.5rem; margin-bottom: 0.5rem;">📦</p>
+          <h4>No orders found</h4>
+          <p style="font-size: 0.85rem; margin-top: 0.5rem;">You have not placed any orders yet.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = this.state.myOrders.map(order => {
+      const dateStr = new Date(order.created_at || Date.now()).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+
+      const steps = ['pending', 'processing', 'shipped', 'delivered'];
+      const currentIdx = steps.indexOf(order.status);
+      const isCancelled = order.status === 'cancelled';
+
+      const progressPercent = isCancelled ? 0 : Math.max(0, (currentIdx / 3) * 100);
+
+      const timelineHtml = isCancelled ? `
+        <div class="tracking-timeline">
+          <div class="tracking-timeline-title" style="color: var(--danger);">Order Cancelled</div>
+          <p style="font-size: 0.85rem; color: var(--danger); margin: 0;">This order was cancelled and is no longer being processed.</p>
+        </div>
+      ` : `
+        <div class="tracking-timeline">
+          <div class="tracking-timeline-title">Order Tracking Timeline</div>
+          <div class="tracking-steps">
+            <div class="tracking-line">
+              <div class="tracking-line-progress" style="width: ${progressPercent}%;"></div>
+            </div>
+            ${steps.map((step, idx) => {
+              const completed = currentIdx >= idx;
+              const active = currentIdx === idx;
+              const label = step.charAt(0).toUpperCase() + step.slice(1);
+              return `
+                <div class="tracking-step ${completed ? 'completed' : ''} ${active ? 'active' : ''}">
+                  <div class="step-circle">${completed ? '✓' : (idx + 1)}</div>
+                  <span class="step-label">${label}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+
+      const itemsHtml = order.items.map(item => `
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <img src="${item.images && item.images[0] ? item.images[0] : ''}" style="width: 36px; height: 36px; border-radius: 6px; object-fit: cover;" />
+              <span style="font-weight: 600;">${item.product_title || 'Product'}</span>
+            </div>
+          </td>
+          <td>${item.quantity}</td>
+          <td>${this.formatPrice(item.unit_price)}</td>
+          <td style="font-weight: 700;">${this.formatPrice(item.unit_price * item.quantity)}</td>
+        </tr>
+      `).join('');
+
+      return `
+        <div class="order-card" id="order-card-${order.id}">
+          <div class="order-card-header">
+            <div>
+              <span class="order-id-badge">${order.id}</span>
+              <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;">${dateStr}</span>
+            </div>
+            <span class="order-status-badge status-${order.status}">${order.status}</span>
+          </div>
+
+          ${timelineHtml}
+
+          <table class="order-items-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <div class="order-card-footer">
+            <div>
+              <span style="font-size: 0.85rem; color: var(--text-secondary);">Total Paid: </span>
+              <span style="font-size: 1.1rem; font-weight: 800; color: var(--accent-primary);">${this.formatPrice(order.total_amount)}</span>
+            </div>
+            <button class="btn-secondary btn-sm export-invoice-btn" onclick="app.exportInvoice('${order.id}')">📄 Export Invoice</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  // US-EC-012: Clean Printable Invoice Export
+  exportInvoice(orderId) {
+    const order = (this.state.myOrders || []).find(o => o.id === orderId);
+    if (!order) {
+      alert('Order details not found.');
+      return;
+    }
+
+    const container = document.getElementById('invoice-content-body');
+    const modal = document.getElementById('invoice-modal');
+    if (!container || !modal) return;
+
+    const dateStr = new Date(order.created_at || Date.now()).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    const addr = order.shipping_address || {};
+
+    const itemsHtml = order.items.map(item => `
+      <tr>
+        <td><strong>${item.product_title || 'Product'}</strong></td>
+        <td style="text-align: center;">${item.quantity}</td>
+        <td style="text-align: right;">$${item.unit_price.toFixed(2)}</td>
+        <td style="text-align: right;">$${(item.unit_price * item.quantity).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    const subtotal = order.items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
+    const tax = Math.round(subtotal * 0.08 * 100) / 100;
+    const shipping = subtotal >= 100 ? 0 : 10;
+
+    container.innerHTML = `
+      <div class="invoice-header-row">
+        <div>
+          <div class="invoice-brand">🛍️ Storefront Pro</div>
+          <div style="font-size: 0.85rem; color: #64748b; margin-top: 0.25rem;">
+            100 E-Commerce Way, Suite 500<br />
+            San Francisco, CA 94105<br />
+            support@storefrontpro.com
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <h2 style="margin: 0; font-size: 1.75rem; color: #1e293b;">INVOICE</h2>
+          <div style="font-size: 0.9rem; font-family: monospace; font-weight: 700; color: #4f46e5; margin-top: 0.25rem;">#${order.id}</div>
+          <div style="font-size: 0.85rem; color: #64748b;">Date: ${dateStr}</div>
+          <div style="font-size: 0.85rem; color: #64748b;">Status: <strong style="text-transform: uppercase;">${order.status}</strong></div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2rem; padding: 1rem; background: #f8fafc; border-radius: 8px;">
+        <div>
+          <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; text-transform: uppercase; color: #64748b;">Billed To / Shipping Address</h4>
+          <div style="font-size: 0.9rem; line-height: 1.4;">
+            <strong>${addr.fullname || 'Customer'}</strong><br />
+            ${addr.address || ''}<br />
+            ${addr.city || ''}, ${addr.zip || ''}, ${addr.country || ''}
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; text-transform: uppercase; color: #64748b;">Payment Method</h4>
+          <div style="font-size: 0.9rem; font-weight: 600; color: #1e293b;">
+            ${(order.payment_method || 'Credit Card').toUpperCase().replace('_', ' ')}
+          </div>
+          ${order.coupon_code ? `<div style="font-size: 0.85rem; color: #16a34a; margin-top: 0.25rem;">Coupon Applied: ${order.coupon_code}</div>` : ''}
+        </div>
+      </div>
+
+      <table class="invoice-table">
+        <thead>
+          <tr>
+            <th>Item Description</th>
+            <th style="text-align: center;">Qty</th>
+            <th style="text-align: right;">Unit Price</th>
+            <th style="text-align: right;">Line Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+        <div style="width: 260px;">
+          <div style="display: flex; justify-content: space-between; padding: 0.35rem 0; font-size: 0.9rem; color: #64748b;">
+            <span>Subtotal:</span>
+            <span>$${subtotal.toFixed(2)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 0.35rem 0; font-size: 0.9rem; color: #64748b;">
+            <span>Estimated Tax (8%):</span>
+            <span>$${tax.toFixed(2)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 0.35rem 0; font-size: 0.9rem; color: #64748b;">
+            <span>Shipping:</span>
+            <span>$${shipping.toFixed(2)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 0.75rem 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; border-top: 2px solid #e2e8f0; margin-top: 0.5rem;">
+            <span>Total Amount:</span>
+            <span>$${order.total_amount.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 3rem; text-align: center; font-size: 0.85rem; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+        Thank you for shopping with Storefront Pro! For support inquiries, contact support@storefrontpro.com.
+      </div>
+    `;
+
+    modal.classList.add('active');
+  },
+
+  closeInvoiceModal() {
+    const modal = document.getElementById('invoice-modal');
+    if (modal) modal.classList.remove('active');
   }
 };
 

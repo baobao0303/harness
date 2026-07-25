@@ -72,8 +72,16 @@
         <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
       </div>
 
-      <!-- Actions: Theme Switcher & Cart Badge US-EC-001 -->
+      <!-- Actions: Auth, Theme Switcher & Cart Badge US-EC-001 / US-EC-010 -->
       <div class="nav-actions">
+        <div id="auth-nav-container">
+          <button id="auth-btn" class="btn-secondary btn-sm" onclick="app.openAuthModal()">Login / Register</button>
+          <div id="user-menu" style="display: none; align-items: center; gap: 0.5rem;">
+            <button id="my-orders-btn" class="btn-secondary btn-sm" onclick="app.openOrdersModal()">My Orders 📦</button>
+            <span id="user-display-email" style="font-size: 0.85rem; font-weight: 600;"></span>
+            <button id="logout-btn" class="btn-icon" title="Logout" onclick="app.logout()">🚪</button>
+          </div>
+        </div>
         <button id="theme-toggle" class="btn-icon" title="Toggle Light/Dark Theme">
           <span id="theme-icon">🌙</span>
         </button>
@@ -541,6 +549,57 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Auth Modal US-EC-010 -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="auth-modal-card">
+      <button class="modal-close" id="auth-modal-close">&times;</button>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="login-tab" onclick="app.switchAuthTab('login')">Login</button>
+        <button class="auth-tab" id="register-tab" onclick="app.switchAuthTab('register')">Register</button>
+      </div>
+      <form id="auth-form" onsubmit="event.preventDefault(); app.handleAuthSubmit();">
+        <h3 id="auth-form-title" style="margin-bottom: 1rem;">Customer Login</h3>
+        <div class="form-group">
+          <label for="auth-email">Email Address *</label>
+          <input type="email" id="auth-email" required placeholder="user@example.com" class="filter-input" />
+        </div>
+        <div class="form-group">
+          <label for="auth-password">Password *</label>
+          <input type="password" id="auth-password" required placeholder="••••••••" class="filter-input" />
+        </div>
+        <div id="auth-error-msg" class="coupon-feedback" style="color: var(--danger); margin-bottom: 1rem;"></div>
+        <button type="submit" id="auth-submit-btn" class="btn-primary" style="width: 100%;">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Customer Dashboard & Orders Modal US-EC-012 -->
+  <div class="modal-overlay" id="orders-modal">
+    <div class="orders-modal-card">
+      <button class="modal-close" id="orders-modal-close">&times;</button>
+      <div class="orders-header">
+        <h2>📦 Customer Dashboard — My Orders</h2>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">View your order history, tracking progress, and printable invoices.</p>
+      </div>
+      <div class="orders-list-body" id="orders-list-container">
+        <!-- Dynamic order cards & tracking timeline rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Printable Order Invoice Modal US-EC-012 -->
+  <div class="modal-overlay" id="invoice-modal">
+    <div class="invoice-modal-card" id="invoice-printable-area">
+      <div class="invoice-actions no-print">
+        <button class="btn-primary" onclick="window.print()">🖨️ Print / Save PDF</button>
+        <button class="btn-secondary" onclick="app.closeInvoiceModal()">Close</button>
+      </div>
+      <div class="invoice-content" id="invoice-content-body">
+        <!-- Formatted clean printable invoice content rendered by JS -->
+      </div>
     </div>
   </div>
 
