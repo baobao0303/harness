@@ -1171,9 +1171,12 @@ pub fn yes_no(value: i64) -> String {
 
 pub fn export_trace_tldraw(traces: &[TraceRecord]) -> String {
     let mut records = Vec::new();
+
+    records.push(r#"{"id":"document:document","typeName":"document","title":"Harness Trace Diagram"}"#.to_owned());
+    records.push(r#"{"id":"page:page","typeName":"page","name":"Page 1","index":"a1"}"#.to_owned());
     
     records.push(format!(
-        r#"{{"id":"shape:title","typeName":"shape","type":"geo","x":100,"y":40,"props":{{"geo":"rectangle","w":600,"h":60,"color":"blue","richText":{{"type":"doc","content":[{{"type":"paragraph","content":[{{"type":"text","text":"🚀 HARNESS EXECUTION TRACE GRAPH"}}]}}]}}}}}}"#
+        r#"{{"id":"shape:title","typeName":"shape","type":"geo","parentId":"page:page","x":100,"y":40,"props":{{"geo":"rectangle","w":600,"h":60,"color":"blue","richText":{{"type":"doc","content":[{{"type":"paragraph","content":[{{"type":"text","text":"🚀 HARNESS EXECUTION TRACE GRAPH"}}]}}]}}}}}}"#
     ));
     
     for (i, trace) in traces.iter().enumerate() {
@@ -1187,13 +1190,13 @@ pub fn export_trace_tldraw(traces: &[TraceRecord]) -> String {
         };
         
         records.push(format!(
-            r#"{{"id":"shape:trace_{}","typeName":"shape","type":"geo","x":100,"y":{},"props":{{"geo":"rectangle","w":500,"h":90,"color":"{}","richText":{{"type":"doc","content":[{{"type":"paragraph","content":[{{"type":"text","text":"Trace #{}: {}"}}]}},{{"type":"paragraph","content":[{{"type":"text","text":"Outcome: {}"}}]}}]}}}}}}"#,
+            r#"{{"id":"shape:trace_{}","typeName":"shape","type":"geo","parentId":"page:page","x":100,"y":{},"props":{{"geo":"rectangle","w":500,"h":90,"color":"{}","richText":{{"type":"doc","content":[{{"type":"paragraph","content":[{{"type":"text","text":"Trace #{}: {}"}}]}},{{"type":"paragraph","content":[{{"type":"text","text":"Outcome: {}"}}]}}]}}}}}}"#,
             trace.id, y_pos, color, trace.id, summary, outcome
         ));
     }
     
     format!(
-        r#"{{"tldrawFileFormatVersion":1,"schema":{{"schemaVersion":2,"sequences":{{}}}},"records":[{}]}}"#,
+        r#"{{"tldrawFileFormatVersion":1,"schema":{{"schemaVersion":2,"sequences":{{"com.tldraw.store":4,"com.tldraw.asset":1,"com.tldraw.camera":1,"com.tldraw.document":2,"com.tldraw.instance":25,"com.tldraw.instance_page_state":5,"com.tldraw.page":1,"com.tldraw.pointer":1,"com.tldraw.shape":4,"com.tldraw.shape.geo":9}}}},"records":[{}]}}"#,
         records.join(",")
     )
 }
