@@ -48,34 +48,11 @@ Mọi yêu cầu công việc đi qua Harness sẽ tuân theo quy trình chuẩn
                           └──> AI Agent thực hiện viết code & kiểm thử
                                 └──> Ghi nhận Quyết định kiến trúc & Khó khăn (Friction)
 ```
-![Harness Integrated Developer IDE Performance Dashboard](docs/assets/harness-dashboard-cropped.png)
-
----
-
-## 🖥️ Web UI Performance Dashboard
-
-Harness đi kèm một giao diện Dashboard quản lý hiệu năng hoạt động của dự án thời gian thực, lấy cảm hứng từ giao diện **Paperclip** với các hiệu ứng kính mờ (glassmorphism).
-
-### Các tính năng nổi bật của Web UI:
-1. **Interactive SQLite Console 💻**: Giao diện thực thi câu lệnh SQL trực tiếp, được tích hợp cổng bảo mật (chỉ cho phép các lệnh truy vấn an toàn như `SELECT` hoặc `PRAGMA`).
-2. **Omnibar Command Palette 🔍**: Nhấn `Cmd+K` (hoặc ô tìm kiếm ở sidebar) để mở thanh điều lệnh đa năng hỗ trợ các lệnh tắt (như `/goto [tab]`, `/verify [adr]`, `/approve [intervention]`, `/create [entity]`).
-3. **Real-time Agent Workloads 👥**: Theo dõi trạng thái hoạt động của các AI Agent trong tổ chức thời gian thực thông qua luồng WebSocket sự kiện telemetry.
-4. **Drag-and-Drop Kanban Priority Sandbox 🗂️**: Bảng Kanban kéo thả cho các đề xuất cải tiến Backlog, tự động cập nhật mức độ ưu tiên trực tiếp xuống SQLite qua API.
-5. **Friction & Blocker Analytics 📈**: Biểu đồ phân tích tần suất ma sát phát triển (frictions) của từng Agent và log lỗi phát sinh để kịp thời hỗ trợ.
-
-### Cách khởi chạy Web UI:
-Biên dịch và khởi chạy server Axum:
-```bash
-cargo run --package harness-web
-```
-Dashboard sẽ hiển thị tại: **`http://localhost:3000`**
-
----
 
 
 ## 📥 Hướng dẫn cài đặt và Khởi chạy Chi tiết (Installation & Setup)
 
-Harness có thể được cài đặt toàn cục dưới dạng CLI để phục vụ việc điều phối Agent, hoặc khởi chạy nhanh chóng trực tiếp từ mã nguồn để phát triển và trải nghiệm Dashboard.
+Harness có thể được cài đặt toàn cục dưới dạng CLI để phục vụ việc điều phối Agent, hoặc sử dụng trực tiếp qua script `./scripts/harness` từ mã nguồn.
 
 ### 📋 1. Yêu cầu hệ thống (System Requirements)
 Trước khi bắt đầu, hãy đảm bảo hệ thống của bạn đã được cài đặt:
@@ -86,10 +63,10 @@ Trước khi bắt đầu, hãy đảm bảo hệ thống của bạn đã đư�
 
 ### 🚀 2. Khởi chạy nhanh từ Mã nguồn (Quickstart from Source)
 
-Để chạy thử nghiệm toàn bộ hệ thống Harness (bao gồm CLI và Web UI Dashboard) ngay từ mã nguồn vừa tải về, hãy thực hiện theo các bước sau:
+Để chạy thử nghiệm Harness CLI ngay từ mã nguồn vừa tải về, hãy thực hiện theo các bước sau:
 
 #### Bước 2.1: Biên dịch và cài đặt CLI cục bộ
-Biên dịch dự án Harness CLI từ mã nguồn và tạo liên kết (hoặc chép) file nhị phân vào thư mục bin cá nhân để có thể gọi lệnh `harness` từ bất kỳ đâu:
+Biên dịch dự án Harness CLI từ mã nguồn và tạo liên kết (hoặc chép) file nhị phân vào thư mục bin cá nhân để có thể gọi lệnh `harness` từ bất kỳ đâu (hoặc dùng trực tiếp `./scripts/harness`):
 ```bash
 # Biên dịch CLI với phiên bản release tối ưu hóa
 cargo build --release --package harness-cli
@@ -107,12 +84,12 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
 #### Bước 2.2: Khởi tạo cơ sở dữ liệu (`harness.db`)
 Chạy lệnh khởi tạo để tự động tạo file database SQLite và áp dụng các tệp schema di trú (migrations) trong thư mục `scripts/schema/`:
 ```bash
-harness init
+harness init   # hoặc: ./scripts/harness init
 ```
 Lệnh này sẽ tạo ra file cơ sở dữ liệu `harness.db` tại gốc thư mục dự án và thiết lập cấu trúc bảng cho intakes, stories, decisions, traces,...
 
-#### Bước 2.3: Nạp dữ liệu mẫu (Seed Demo Data)
-Để Web UI Dashboard hiển thị đầy đủ các biểu đồ, dữ liệu mẫu, Kanban và lịch sử hoạt động như hình minh họa ở trên, hãy nạp file dữ liệu mẫu:
+#### Bước 2.3: Nạp dữ liệu mẫu (Seed Demo Data - Optional)
+Để nạp sẵn các dữ liệu thử nghiệm (intakes, stories, decisions,...):
 ```bash
 sqlite3 harness.db < scripts/seed_demo_data.sql
 ```
@@ -123,17 +100,7 @@ sqlite3 harness.db < scripts/seed_demo_data.sql
 cargo test
 ```
 
-#### Bước 2.5: Khởi chạy Web UI Performance Dashboard
-Biên dịch và chạy Axum web server:
-```bash
-cargo run --package harness-web
-```
-Sau khi server chạy, hãy truy cập vào trình duyệt: **`http://localhost:3000`** để bắt đầu tương tác với các tính năng:
-*   **Kanban board**: Kéo thả để cập nhật độ ưu tiên.
-*   **SQL Console**: Truy vấn SQLite trực tiếp.
-*   **Omnibar**: Nhấn `Cmd+K` để thực thi nhanh các lệnh tắt.
 
----
 
 ### 🌎 3. Cài đặt Toàn cục qua CLI Script (Global Installation)
 

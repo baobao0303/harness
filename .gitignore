@@ -12,3 +12,8 @@ scripts/bin/harness-cli
 
 # Harness durable layer
 scripts/bin/harness-cli.exe
+
+# IDE / Agent specific local folders
+.agents/
+.cursor/
+
