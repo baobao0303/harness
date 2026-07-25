@@ -18,6 +18,7 @@
    - 3.3 [Topology C: Triage-Only Agent](#33-topology-c-triage-only-agent)
    - 3.4 [Topology D: Chief of Staff Orchestrator (Mina Pattern)](#34-topology-d-chief-of-staff-orchestrator-mina-pattern)
    - 3.5 [Model Selection & Sub-Agent Dispatch Protocol via `./scripts/harness`](#35-model-selection--sub-agent-dispatch-protocol-via-scriptsharness)
+   - 3.6 [Sub-Agent Skill Discovery & Resolution Protocol (`harness skill find / search`)](#36-sub-agent-skill-discovery--resolution-protocol-harness-skill-find--search)
 4. [Git Worktree Isolation & Runtime Management](#4-git-worktree-isolation--runtime-management)
 5. [Loop Execution Engine & Verification Proof Loop](#5-loop-execution-engine--verification-proof-loop)
 6. [Durable Memory & Observability (`harness.db`)](#6-durable-memory--observability-harnessdb)
@@ -259,6 +260,62 @@ Khi vận hành từ giao diện chat hoặc script điều phối (`./scripts/h
        --prompt "Verify git diff and run cargo test"
    ```
 
+### 3.6. Sub-Agent Skill Discovery & Resolution Protocol (`harness skill find / search`)
+
+Để Sub-Agent không bị nạp thừa dữ liệu (gây lãng phí token) nhưng vẫn tìm đúng quy trình nghiệp vụ cần thiết khi thực thi nhiệm vụ, Harness xây dựng **Cơ chế Khám phá & Nạp Kỹ năng (Skill Discovery & Resolution Pipeline)** qua 3 cấp độ:
+
+```text
+Ý đồ Nhiệm vụ (Sub-Agent Prompt)
+             │
+             ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Explicit Preloading (--skills "skill-a,skill-b")         │
+└────────────────────────────┬────────────────────────────────┘
+                             │ (Nếu không chỉ định rõ)
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 2. Dynamic Auto-Match (harness skill find "<intent>")       │
+│    So khớp từ khóa nhiệm vụ với frontmatter trong SKILL.md  │
+└────────────────────────────┬────────────────────────────────┘
+                             │ (Khi Sub-Agent bị rào cản/stuck)
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 3. On-Demand Mid-Session Search (harness skill search)      │
+│    Sub-Agent tự gọi CLI để tìm và nạp bổ sung Skill         │
+└────────────────────────────┘
+```
+
+#### A. Các Phương thức Tìm kiếm & Nạp Skill cho Sub-Agent:
+
+1. **Nạp Chỉ định Trực tiếp (Explicit Preloading)**:
+   Orchestrator chỉ định danh sách Skill cần thiết ngay trong lệnh spawn:
+   ```bash
+   ./scripts/harness subagent spawn \
+       --role "Implementer" \
+       --skills "harness-create-story,harness-qa-generate-e2e-tests" \
+       --workdir ".worktrees/task-US-014" \
+       --prompt "Implement authentication module"
+   ```
+
+2. **Tự động Tìm kiếm Theo Ngữ cảnh (Dynamic Auto-Matching)**:
+   Khi không chỉ định cờ `--skills`, Harness CLI tự động quét bộ nhớ `.agents/skills/` và so khớp mô tả trong frontmatter `description` để chọn ra tối đa 2-3 Skill phù hợp nhất với prompt:
+   ```bash
+   # Lệnh CLI tìm kiếm Skill dựa trên ý định
+   ./scripts/harness skill find "viết E2E test cho API authentication"
+   # Đầu ra: .agents/skills/harness-qa-generate-e2e-tests/SKILL.md
+   ```
+
+3. **Tự Tìm kiếm Bổ sung Giữa Phiên (On-Demand Mid-Session Search)**:
+   Trong quá trình thực thi, nếu Sub-Agent phát sinh nhu cầu mới (ví dụ: cần tạo bản ghi ADR hoặc thiết kế DB), Sub-Agent tự gọi lệnh CLI để tra cứu và đọc file `SKILL.md` bổ sung:
+   ```bash
+   # Sub-Agent thực thi lệnh tra cứu trong Worktree
+   ./scripts/harness skill search "architecture decision record"
+   ```
+
+#### B. Nguyên tắc Nạp Lũy tiến (Progressive Skill Loading Rule):
+- **Không nạp tràn**: Chỉ nạp file `SKILL.md` (chứa quy tắc chính). Không nạp các thư mục con `scripts/`, `templates/`, `references/` trừ khi Sub-Agent chủ động yêu cầu.
+- **Cách ly phạm vi Skill**: Mọi Skill được tra cứu từ thư mục gốc dự án nhưng được thực thi hoàn toàn bên trong môi trường cách ly của Worktree (`.worktrees/task-<id>`).
+
 ---
 
 ## 4. Git Worktree Isolation & Runtime Management
@@ -410,3 +467,4 @@ Harness đi kèm một bộ đánh giá **Loop Readiness Score** (thang điểm 
 - **[2026-07-25]**: Bổ sung Mục 1.4 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) giải thích rõ ràng **4 Lý do Tách biệt Kiến trúc**: (A) Loại bỏ Web UI vì Agent-First/Headless, (B) Tách Policy (`docs/`) và Durable State (`harness.db`), (C) Tách biệt môi trường bằng Git Worktrees, (D) Tách biệt vai trò Sub-Agents (Implementer vs. Verifier, Explorer vs. Implementer).
 - **[2026-07-25]**: Nghiên cứu & tích hợp mô hình **Chief of Staff Orchestrator (Mina Pattern)** từ vietsub video YouTube vào Mục 3.4 của [spec.md](file:///Users/bao312/Desktop/harness/spec.md) — xác định cơ chế High-Level Delegation, Progressive Disclosure qua Markdown, điều phối Main Agents độc lập qua Hurder/CLI, và thực thi các tác vụ dài hạn (Long-Horizontal Tasks).
 - **[2026-07-25]**: Bổ sung Mục 3.5 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) quy định **Model Selection & Sub-Agent Dispatch Protocol via `./scripts/harness`** — phân bổ Model Tiers (`flash` cho Auditor/Reviewer vs `pro` cho Implementer/Mina), pin cờ `--workdir`, inject Persona Header, và chuẩn hóa JSON Protocol giữa các agents khi gọi qua script CLI.
+- **[2026-07-25]**: Bổ sung Mục 3.6 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) quy định **Sub-Agent Skill Discovery & Resolution Protocol (`harness skill find / search`)** — gồm 3 cấp độ: (1) Explicit Preloading (`--skills`), (2) Dynamic Auto-Match (`harness skill find`), và (3) Mid-Session On-Demand Search (`harness skill search`). Tránh nạp tràn context window, áp dụng triết lý Progressive Skill Loading.
