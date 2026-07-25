@@ -23,6 +23,8 @@
 4. [Git Worktree Isolation & Runtime Management](#4-git-worktree-isolation--runtime-management)
 5. [Loop Execution Engine & Verification Proof Loop](#5-loop-execution-engine--verification-proof-loop)
 6. [Durable Memory & Observability (`harness.db`)](#6-durable-memory--observability-harnessdb)
+   - 6.1 [Relational Schema Architecture](#61-relational-schema-architecture)
+   - 6.2 [Visual Telemetry & `tldraw` Dynamic Diagramming (`harness trace export --format tldraw`)](#62-visual-telemetry--tldraw-dynamic-diagramming-harness-trace-export--format-tldraw)
 7. [Loop Readiness Score & Audit Framework (`harness audit`)](#7-loop-readiness-score--audit-framework-harness-audit)
 8. [CLI Command Reference & Extension Roadmap](#8-cli-command-reference--extension-roadmap)
 9. [Appendices & Discussion Log (/learn)](#9-appendices--discussion-log-learn)
@@ -494,6 +496,44 @@ CREATE TABLE traces (
 );
 ```
 
+### 6.2. Visual Telemetry & `tldraw` Dynamic Diagramming (`harness trace export --format tldraw`)
+
+Harness tích hợp khả năng xuất sơ đồ tương tác đa Agent trực quan dưới định dạng **`tldraw` (`.tldr` JSON Snapshot)** để mở trực tiếp trên [offline.tldraw.com](https://offline.tldraw.com) hoặc canvas cục bộ mà **hoàn toàn offline và bảo mật tuyệt đối (Local-First)**.
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  Harness Trace Database (harness.db traces table)           │
+│  - Dispatch logs, Sub-agent communications, Test outcomes   │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+                             ▼ (Execute CLI Exporter)
+┌─────────────────────────────────────────────────────────────┐
+│  ./scripts/harness trace export --format tldraw             │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+                             ▼ (Generates JSON Snapshot)
+┌─────────────────────────────────────────────────────────────┐
+│  agent-trace-<id>.tldr  (Interactive Visual Canvas)         │
+│  - Mở trực tiếp trên offline.tldraw.com / local canvas      │
+│  - Kẻ sơ đồ luồng trao đổi giữa Chief of Staff & Sub-Agents │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Các Đặc trưng Kỹ thuật của `tldraw` Visual Diagramming:
+1. **Trực quan hóa Luồng Tương tác (Multi-Agent Interaction Graph)**:
+   - Tự động chuyển đổi các bản ghi trace giao tiếp giữa **Chief of Staff (Mina)** và các **Sub-Agents (Implementer, Verifier, Explorer)** thành sơ đồ khối (boxes/shapes) và mũi tên kết nối (arrows/bindings).
+2. **Local-First & Bảo mật Ngoại tuyến (Offline Safety)**:
+   - Định dạng tệp `.tldr` là JSON thuần túy (tuân theo `TLRecord` & `TldrawFile` schema).
+   - Mở và chỉnh sửa kéo-thả hoàn toàn offline tại [offline.tldraw.com](https://offline.tldraw.com) mà không lo rò rỉ mã nguồn hay ngữ cảnh trao đổi của Agent lên Internet.
+3. **Lệnh CLI Xuất Sơ đồ**:
+   ```bash
+   # 1. Xuất sơ đồ tldraw tương tác từ trace hoạt động gần nhất
+   ./scripts/harness trace export --format tldraw --out trace-diagram.tldr
+
+   # 2. Xuất sơ đồ Mermaid cho tài liệu Markdown
+   ./scripts/harness trace export --format mermaid --out trace-diagram.md
+   ```
+
 ---
 
 ## 7. Loop Readiness Score & Audit Framework (`harness audit`)
@@ -549,3 +589,4 @@ Harness đi kèm một bộ đánh giá **Loop Readiness Score** (thang điểm 
 - **[2026-07-25]**: Bổ sung Mục 3.6 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) quy định **Sub-Agent Skill Discovery & Resolution Protocol (`harness skill find / search`)** — gồm 3 cấp độ: (1) Explicit Preloading (`--skills`), (2) Dynamic Auto-Match (`harness skill find`), và (3) Mid-Session On-Demand Search (`harness skill search`). Tránh nạp tràn context window, áp dụng triết lý Progressive Skill Loading.
 - **[2026-07-25]**: Bổ sung Mục 3.7 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) tích hợp kiến trúc **Remote Skill Server & Centralized Registry (`harness skill sync / pull`)** — hỗ trợ quản lý 100+ Skill tập trung từ xa, tự động đồng bộ về local cache (`~/.harness/skills/`), cơ chế dự phòng Remote Fallback khi local chưa có Skill, và phân quyền kiểm soát tuân thủ (Enterprise Compliance).
 - **[2026-07-25]**: Quy định chuẩn bảo mật môi trường: Đưa các thông tin nhạy cảm (Private Skill Server URL, Auth Tokens, Model Keys) vào file cục bộ `.env` (gitignored), duy trì tệp mẫu `.env.example` trên Git để hướng dẫn cấu hình, và bổ sung hướng dẫn vào [AGENTS.md](file:///Users/bao312/Desktop/harness/AGENTS.md) & [spec.md](file:///Users/bao312/Desktop/harness/spec.md#L375-L397).
+- **[2026-07-25]**: Bổ sung Mục 6.2 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) tích hợp tính năng **Visual Telemetry & `tldraw` Dynamic Diagramming (`harness trace export --format tldraw`)** — tự động chuyển đổi nhật ký tương tác Sub-Agents thành tệp `.tldr` JSON Snapshot để mở, xem và tương tác sơ đồ kéo-thả hoàn toàn offline tại [offline.tldraw.com](https://offline.tldraw.com).
