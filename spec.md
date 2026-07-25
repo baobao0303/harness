@@ -164,7 +164,20 @@ Human Intent / Spec
 
 ## 3. Sub-Agent Ecosystem & Topologies
 
-Harness hỗ trợ 3 mô hình phân chia Sub-Agent (Sub-Agent Topologies) nhằm tối ưu hóa ngữ cảnh và độ chính xác:
+Harness quy định **6 Loại Sub-Agents Chuyên biệt** được phân bổ theo 4 mô hình kiến trúc (Topologies) nhằm tối ưu hóa ngữ cảnh, tiết kiệm token và đảm bảo chất lượng kiểm thử:
+
+### 📊 Bảng Danh mục Sub-Agents được Setup trong Harness:
+
+| Tên Sub-Agent | Vai trò (Role) | Model Tier | Quyền hạn (Permissions) | Mô hình (Topology) | Nhiệm vụ chính |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Chief of Staff (Mina)** | High-Level Orchestrator | `pro` | Read/Write (Task Registry) | Topology D | Tiếp nhận ý đồ người dùng, phân tách task, unblock và điều phối Main Agents. |
+| **Implementer** | Coder / Maker | `pro` | Read/Write (Worktree) | Topology A / B | Viết mã nguồn, tái cấu trúc và sửa lỗi trong Git Worktree cách ly. |
+| **Verifier** | QA / Auditor / Checker | `flash` | Read-Only (Verify Test) | Topology A | Audit git diff, chạy linter/unit test, đóng gói log lỗi cho Auto-Feedback. |
+| **Explorer** | Codebase Navigator | `flash` | Read-Only | Topology B | Đọc & khảo sát codebase lớn, nén ngữ cảnh thành 20 dòng để tránh cạn token. |
+| **Triage Monitor** | Health & Issue Scanner | `flash_lite` | Read-Only | Topology C | Quét định kỳ CI log, GitHub issues, cập nhật mức độ ưu tiên backlog vào DB. |
+| **Security & Skill Auditor**| Remote Skill Sync & Audit | `flash` / `pro` | Read/Write (Skills) | Remote Pipeline | Kiểm tra tuân thủ an ninh, đồng bộ 100+ Skill từ Remote Skill Server (`harness skill sync`). |
+
+---
 
 ```text
 Topology A: Maker / Checker Split
@@ -590,3 +603,4 @@ Harness đi kèm một bộ đánh giá **Loop Readiness Score** (thang điểm 
 - **[2026-07-25]**: Bổ sung Mục 3.7 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) tích hợp kiến trúc **Remote Skill Server & Centralized Registry (`harness skill sync / pull`)** — hỗ trợ quản lý 100+ Skill tập trung từ xa, tự động đồng bộ về local cache (`~/.harness/skills/`), cơ chế dự phòng Remote Fallback khi local chưa có Skill, và phân quyền kiểm soát tuân thủ (Enterprise Compliance).
 - **[2026-07-25]**: Quy định chuẩn bảo mật môi trường: Đưa các thông tin nhạy cảm (Private Skill Server URL, Auth Tokens, Model Keys) vào file cục bộ `.env` (gitignored), duy trì tệp mẫu `.env.example` trên Git để hướng dẫn cấu hình, và bổ sung hướng dẫn vào [AGENTS.md](file:///Users/bao312/Desktop/harness/AGENTS.md) & [spec.md](file:///Users/bao312/Desktop/harness/spec.md#L375-L397).
 - **[2026-07-25]**: Bổ sung Mục 6.2 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) tích hợp tính năng **Visual Telemetry & `tldraw` Dynamic Diagramming (`harness trace export --format tldraw`)** — tự động chuyển đổi nhật ký tương tác Sub-Agents thành tệp `.tldr` JSON Snapshot để mở, xem và tương tác sơ đồ kéo-thả hoàn toàn offline tại [offline.tldraw.com](https://offline.tldraw.com).
+- **[2026-07-25]**: Chuẩn hóa Bảng Danh mục Sub-Agents (`Sub-Agent Ecosystem Registry Table`) tại Mục 3 trong [spec.md](file:///Users/bao312/Desktop/harness/spec.md#L165-L180) tổng hợp 6 Sub-Agents được setup chính thức (Chief of Staff, Implementer, Verifier, Explorer, Triage Monitor, Security & Skill Auditor).
