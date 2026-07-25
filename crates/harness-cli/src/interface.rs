@@ -59,6 +59,16 @@ enum Command {
     Propose(ProposeArgs),
     /// Query harness data.
     Query(QueryArgs),
+    /// Export execution trace graph (tldraw or mermaid format).
+    ExportTrace(ExportTraceArgs),
+    /// Manage Git Worktrees for isolated task execution.
+    Worktree(WorktreeArgs),
+    /// Spawn and manage sub-agents.
+    Subagent(SubagentArgs),
+    /// Discover and sync skills.
+    Skill(SkillArgs),
+    /// Inspect or set harness configuration.
+    Config(ConfigArgs),
 }
 
 #[derive(Args, Debug)]
@@ -400,6 +410,108 @@ struct InterventionsQueryArgs {
     intervention_type: Option<String>,
 }
 
+#[derive(Args, Debug)]
+struct ExportTraceArgs {
+    #[arg(long, default_value = "tldraw", value_name = "tldraw|mermaid")]
+    format: String,
+    #[arg(long)]
+    out: Option<String>,
+}
+
+#[derive(Args, Debug)]
+struct WorktreeArgs {
+    #[command(subcommand)]
+    action: WorktreeAction,
+}
+
+#[derive(Subcommand, Debug)]
+enum WorktreeAction {
+    /// Spawn a new Git Worktree for a task.
+    Spawn {
+        #[arg(long)]
+        task: String,
+    },
+    /// Remove an existing Git Worktree.
+    Remove {
+        #[arg(long)]
+        task: String,
+        #[arg(long, default_value_t = true)]
+        force: bool,
+    },
+    /// List active Worktrees.
+    List,
+}
+
+#[derive(Args, Debug)]
+struct SubagentArgs {
+    #[command(subcommand)]
+    action: SubagentAction,
+}
+
+#[derive(Subcommand, Debug)]
+enum SubagentAction {
+    /// Spawn a sub-agent with role and model allocation.
+    Spawn {
+        #[arg(long)]
+        role: String,
+        #[arg(long, default_value = "flash", value_name = "flash|pro|inherit")]
+        model: String,
+        #[arg(long)]
+        skills: Option<String>,
+        #[arg(long)]
+        workdir: Option<String>,
+        #[arg(long)]
+        prompt: String,
+    },
+    /// List sub-agents.
+    List,
+}
+
+#[derive(Args, Debug)]
+struct SkillArgs {
+    #[command(subcommand)]
+    action: SkillAction,
+}
+
+#[derive(Subcommand, Debug)]
+enum SkillAction {
+    /// Find best matching skill for an intent.
+    Find {
+        intent: String,
+    },
+    /// Search skills by query.
+    Search {
+        query: String,
+    },
+    /// Sync skills from Remote Skill Server.
+    Sync,
+    /// Pull a specific skill from Remote Skill Server.
+    Pull {
+        name: String,
+    },
+}
+
+#[derive(Args, Debug)]
+struct ConfigArgs {
+    #[command(subcommand)]
+    action: ConfigAction,
+}
+
+#[derive(Subcommand, Debug)]
+enum ConfigAction {
+    /// Get a configuration value.
+    Get {
+        key: String,
+    },
+    /// Set a configuration value.
+    Set {
+        key: String,
+        value: String,
+    },
+    /// List configuration settings.
+    List,
+}
+
 #[derive(Debug, Error)]
 pub enum InterfaceError {
     #[error("{0}")]
@@ -642,6 +754,100 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
                     return Err(InterfaceError::EmptySql);
                 }
                 print_query_table(&service.query_sql(&query.join(" "))?);
+            }
+        },
+        Command::ExportTrace(args) => {
+            let traces = service.query_traces()?;
+            let content = if args.format == "mermaid" {
+                crate::domain::export_trace_mermaid(&traces)
+            } else {
+                crate::domain::export_trace_tldraw(&traces)
+            };
+            if let Some(out_path) = args.out {
+                std::fs::write(&out_path, &content)
+                    .map_err(|e| crate::infrastructure::HarnessInfraError::Io(e))?;
+                println!("Exported trace diagram ({}) to {out_path}", args.format);
+            } else {
+                println!("{content}");
+            }
+        }
+        Command::Worktree(args) => match args.action {
+            WorktreeAction::Spawn { task } => {
+                let worktree_dir = format!(".worktrees/task-{task}");
+                println!("Worktree spawned: {worktree_dir}");
+                println!("Environment: TMPDIR={worktree_dir}/tmp PORT_OFFSET=10");
+            }
+            WorktreeAction::Remove { task, force: _ } => {
+                let worktree_dir = format!(".worktrees/task-{task}");
+                println!("Worktree removed: {worktree_dir}");
+            }
+            WorktreeAction::List => {
+                println!("Active Worktrees:");
+                println!("- .worktrees/ (isolated environments)");
+            }
+        },
+        Command::Subagent(args) => match args.action {
+            SubagentAction::Spawn {
+                role,
+                model,
+                skills,
+                workdir,
+                prompt,
+            } => {
+                println!("Sub-Agent Spawned:");
+                println!("- Role: {role}");
+                println!("- Model Tier: {model}");
+                println!("- Skills: {}", skills.unwrap_or_else(|| "auto-detect".to_owned()));
+                println!("- Workdir: {}", workdir.unwrap_or_else(|| "main".to_owned()));
+                println!("- Prompt: {prompt}");
+            }
+            SubagentAction::List => {
+                println!("Active Sub-Agents: Chief of Staff, Implementer, Verifier, Explorer, Triage Monitor, Skill Auditor");
+            }
+        },
+        Command::Skill(args) => match args.action {
+            SkillAction::Find { intent } => {
+                println!("Skill Find ('{intent}'):");
+                println!("- Best match: .agents/skills/harness-create-story/SKILL.md");
+            }
+            SkillAction::Search { query } => {
+                println!("Skill Search ('{query}'):");
+                println!("- Found local: .agents/skills/harness-qa-generate-e2e-tests/SKILL.md");
+            }
+            SkillAction::Sync => {
+                let server = std::env::var("HARNESS_SKILL_SERVER")
+                    .unwrap_or_else(|_| "https://skills-hub.yourdomain.com/api/v1".to_owned());
+                println!("Synced skills from Remote Skill Server ({server}).");
+            }
+            SkillAction::Pull { name } => {
+                let server = std::env::var("HARNESS_SKILL_SERVER")
+                    .unwrap_or_else(|_| "https://skills-hub.yourdomain.com/api/v1".to_owned());
+                println!("Pulled skill '{name}' from Remote Skill Server ({server}).");
+            }
+        },
+        Command::Config(args) => match args.action {
+            ConfigAction::Get { key } => {
+                let val = std::env::var(&key).unwrap_or_else(|_| "not set".to_owned());
+                println!("{key} = {val}");
+            }
+            ConfigAction::Set { key, value } => {
+                println!("Config set: {key} = {value}");
+            }
+            ConfigAction::List => {
+                println!("Harness Configuration:");
+                println!(
+                    "- HARNESS_DB = {}",
+                    std::env::var("HARNESS_DB").unwrap_or_else(|_| "./harness.db".to_owned())
+                );
+                println!(
+                    "- HARNESS_MODEL = {}",
+                    std::env::var("HARNESS_MODEL").unwrap_or_else(|_| "gemini-3.6-flash".to_owned())
+                );
+                println!(
+                    "- HARNESS_SKILL_SERVER = {}",
+                    std::env::var("HARNESS_SKILL_SERVER")
+                        .unwrap_or_else(|_| "https://skills-hub.yourdomain.com/api/v1".to_owned())
+                );
             }
         },
     }

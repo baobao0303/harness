@@ -1169,6 +1169,57 @@ pub fn yes_no(value: i64) -> String {
     }
 }
 
+pub fn export_trace_tldraw(traces: &[TraceRecord]) -> String {
+    let mut records = Vec::new();
+    
+    records.push(format!(
+        r#"{{"id":"shape:title","typeName":"shape","type":"geo","x":100,"y":40,"props":{{"geo":"rectangle","w":600,"h":60,"color":"blue","richText":{{"type":"doc","content":[{{"type":"paragraph","content":[{{"type":"text","text":"🚀 HARNESS EXECUTION TRACE GRAPH"}}]}}]}}}}}}"#
+    ));
+    
+    for (i, trace) in traces.iter().enumerate() {
+        let y_pos = 140 + (i * 120);
+        let summary = trace.task_summary.replace('"', "\\\"").replace('\n', "\\n");
+        let outcome = trace.outcome.as_deref().unwrap_or("unknown");
+        let color = match outcome {
+            "pass" => "green",
+            "fail" => "red",
+            _ => "yellow",
+        };
+        
+        records.push(format!(
+            r#"{{"id":"shape:trace_{}","typeName":"shape","type":"geo","x":100,"y":{},"props":{{"geo":"rectangle","w":500,"h":90,"color":"{}","richText":{{"type":"doc","content":[{{"type":"paragraph","content":[{{"type":"text","text":"Trace #{}: {}"}}]}},{{"type":"paragraph","content":[{{"type":"text","text":"Outcome: {}"}}]}}]}}}}}}"#,
+            trace.id, y_pos, color, trace.id, summary, outcome
+        ));
+    }
+    
+    format!(
+        r#"{{"tldrawFileFormatVersion":1,"schema":{{"schemaVersion":2,"sequences":{{}}}},"records":[{}]}}"#,
+        records.join(",")
+    )
+}
+
+pub fn export_trace_mermaid(traces: &[TraceRecord]) -> String {
+    let mut lines = Vec::new();
+    lines.push("```mermaid".to_owned());
+    lines.push("graph TD;".to_owned());
+    lines.push("    Title[\"🚀 HARNESS EXECUTION TRACE\"]".to_owned());
+    
+    for (i, trace) in traces.iter().enumerate() {
+        let summary = trace.task_summary.replace('"', "'");
+        let node_id = format!("T{}", trace.id);
+        lines.push(format!("    {node_id}[\"Trace #{}: {}\"]", trace.id, summary));
+        if i == 0 {
+            lines.push(format!("    Title --> {node_id}"));
+        } else {
+            let prev_id = format!("T{}", traces[i - 1].id);
+            lines.push(format!("    {prev_id} --> {node_id}"));
+        }
+    }
+    
+    lines.push("```".to_owned());
+    lines.join("\n")
+}
+
 pub fn proof_display(value: i64, numeric: bool) -> String {
     if numeric {
         value.to_string()
@@ -1197,6 +1248,25 @@ mod tests {
     #[test]
     fn parses_high_risk_lane_alias() {
         assert_eq!("high-risk".parse::<RiskLane>().unwrap(), RiskLane::HighRisk);
+    }
+
+    #[test]
+    fn exports_traces_to_tldraw_json_and_mermaid() {
+        use crate::domain::TraceRecord;
+        let traces = vec![TraceRecord {
+            id: 1,
+            task_summary: "Implement authentication".to_owned(),
+            outcome: Some("pass".to_owned()),
+            harness_friction: None,
+            created_at: "2026-07-25 12:00:00".to_owned(),
+        }];
+        let tldraw = export_trace_tldraw(&traces);
+        assert!(tldraw.contains("tldrawFileFormatVersion"));
+        assert!(tldraw.contains("Implement authentication"));
+
+        let mermaid = export_trace_mermaid(&traces);
+        assert!(mermaid.contains("```mermaid"));
+        assert!(mermaid.contains("Implement authentication"));
     }
 
     #[test]
