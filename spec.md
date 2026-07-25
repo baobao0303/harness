@@ -19,6 +19,7 @@
    - 3.4 [Topology D: Chief of Staff Orchestrator (Mina Pattern)](#34-topology-d-chief-of-staff-orchestrator-mina-pattern)
    - 3.5 [Model Selection & Sub-Agent Dispatch Protocol via `./scripts/harness`](#35-model-selection--sub-agent-dispatch-protocol-via-scriptsharness)
    - 3.6 [Sub-Agent Skill Discovery & Resolution Protocol (`harness skill find / search`)](#36-sub-agent-skill-discovery--resolution-protocol-harness-skill-find--search)
+   - 3.7 [Remote Skill Server & Centralized Registry Architecture (`harness skill sync / pull`)](#37-remote-skill-server--centralized-registry-architecture-harness-skill-sync--pull)
 4. [Git Worktree Isolation & Runtime Management](#4-git-worktree-isolation--runtime-management)
 5. [Loop Execution Engine & Verification Proof Loop](#5-loop-execution-engine--verification-proof-loop)
 6. [Durable Memory & Observability (`harness.db`)](#6-durable-memory--observability-harnessdb)
@@ -316,6 +317,58 @@ Khi vận hành từ giao diện chat hoặc script điều phối (`./scripts/h
 - **Không nạp tràn**: Chỉ nạp file `SKILL.md` (chứa quy tắc chính). Không nạp các thư mục con `scripts/`, `templates/`, `references/` trừ khi Sub-Agent chủ động yêu cầu.
 - **Cách ly phạm vi Skill**: Mọi Skill được tra cứu từ thư mục gốc dự án nhưng được thực thi hoàn toàn bên trong môi trường cách ly của Worktree (`.worktrees/task-<id>`).
 
+### 3.7. Remote Skill Server & Centralized Registry Architecture (`harness skill sync / pull`)
+
+Sử dụng **Server bên ngoài (Remote Skill Hub / Skill Server)** để quản lý, lưu trữ và tự động cập nhật bộ kỹ năng cho tất cả các máy local và Agent workspaces là một **kiến trúc mở rộng doanh nghiệp (Enterprise-Grade Architecture Extension)** rất hiệu quả.
+
+```text
+               ┌──────────────────────────────────────────────┐
+               │    Remote Skill Server (Skill Registry)      │
+               │    https://skills-hub.yourdomain.com         │
+               │  - Quản lý tập trung 100+ Skills (Git/REST)   │
+               │  - Phân quyền Access Control & Compliance     │
+               └──────────────────────┬───────────────────────┘
+                                      │
+                 ┌────────────────────┴────────────────────┐
+                 │ Sync / Pull API (HTTP / REST / MCP Gateway)│
+                 └────────────────────┬────────────────────┘
+                                      │
+                                      ▼
+             ┌──────────────────────────────────────────────────┐
+             │       Local Project Workspaces (Harness)         │
+             │                                                  │
+             │  1. Local Cache (~/.harness/skills/ or .agents/)│
+             │  2. Remote Fallback (Khi local tìm không thấy)   │
+             │  3. Auto-Sync (`harness skill sync` khi init)    │
+             └──────────────────────────────────────────────────┘
+```
+
+#### A. 4 Lợi ích Kiến trúc của Remote Skill Server:
+1. **Quản lý & Cập nhật Tập trung (Centralized Governance & Updates)**:
+   - Khi đội ngũ phát triển cập nhật quy chuẩn code, tiêu chuẩn an ninh hoặc quy trình mới, chỉ cần update file `SKILL.md` trên Remote Skill Server. Tất cả các dự án local của Agent sẽ tự động nhận phiên bản mới nhất mà không phải chỉnh sửa thủ công từng repo.
+2. **Cơ chế Remote Fallback Search (Dự phòng Từ xa)**:
+   - Khi Sub-Agent thực hiện `harness skill search "<query>"`, nếu chưa có file Skill tương ứng ở local (`.agents/skills/`), Harness CLI sẽ tự động gửi truy vấn tới Remote Skill Server để tải và nạp Skill đó tức thì vào context.
+3. **Bộ nhớ Đệm Cục bộ & Hoạt động Ngoại tuyến (Offline Caching)**:
+   - Tất cả các Skill tải từ Remote Server được lưu đệm tại `~/.harness/skills/` hoặc `.agents/skills/`. Nếu mất kết nối mạng, Agent vẫn sử dụng bộ đệm offline bình thường.
+4. **Phân quyền & Kiểm soát Tuân thủ (Compliance & Access Control)**:
+   - Server từ xa có thể phân quyền Skill theo từng dự án hoặc từng vai trò Agent (ví dụ: chỉ Agent Auditor mới được cấp quyền tải các Skill kiểm định bảo mật nâng cao).
+
+#### B. Các Lệnh CLI Hỗ trợ Remote Skill Server:
+
+```bash
+# 1. Cấu hình URL của Remote Skill Server
+./scripts/harness config set skill_server "https://skills-hub.yourdomain.com/api/v1"
+
+# 2. Đồng bộ toàn bộ Skill mới nhất từ Server về máy local
+./scripts/harness skill sync
+
+# 3. Pull một Skill cụ thể từ Remote Server về dự án
+./scripts/harness skill pull "harness-security-audit"
+
+# 4. Push một Skill mới tạo ở local lên Remote Server
+./scripts/harness skill push "custom-team-skill"
+```
+
 ---
 
 ## 4. Git Worktree Isolation & Runtime Management
@@ -468,3 +521,4 @@ Harness đi kèm một bộ đánh giá **Loop Readiness Score** (thang điểm 
 - **[2026-07-25]**: Nghiên cứu & tích hợp mô hình **Chief of Staff Orchestrator (Mina Pattern)** từ vietsub video YouTube vào Mục 3.4 của [spec.md](file:///Users/bao312/Desktop/harness/spec.md) — xác định cơ chế High-Level Delegation, Progressive Disclosure qua Markdown, điều phối Main Agents độc lập qua Hurder/CLI, và thực thi các tác vụ dài hạn (Long-Horizontal Tasks).
 - **[2026-07-25]**: Bổ sung Mục 3.5 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) quy định **Model Selection & Sub-Agent Dispatch Protocol via `./scripts/harness`** — phân bổ Model Tiers (`flash` cho Auditor/Reviewer vs `pro` cho Implementer/Mina), pin cờ `--workdir`, inject Persona Header, và chuẩn hóa JSON Protocol giữa các agents khi gọi qua script CLI.
 - **[2026-07-25]**: Bổ sung Mục 3.6 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) quy định **Sub-Agent Skill Discovery & Resolution Protocol (`harness skill find / search`)** — gồm 3 cấp độ: (1) Explicit Preloading (`--skills`), (2) Dynamic Auto-Match (`harness skill find`), và (3) Mid-Session On-Demand Search (`harness skill search`). Tránh nạp tràn context window, áp dụng triết lý Progressive Skill Loading.
+- **[2026-07-25]**: Bổ sung Mục 3.7 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) tích hợp kiến trúc **Remote Skill Server & Centralized Registry (`harness skill sync / pull`)** — hỗ trợ quản lý 100+ Skill tập trung từ xa, tự động đồng bộ về local cache (`~/.harness/skills/`), cơ chế dự phòng Remote Fallback khi local chưa có Skill, và phân quyền kiểm soát tuân thủ (Enterprise Compliance).
