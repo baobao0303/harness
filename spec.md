@@ -17,6 +17,7 @@
    - 3.2 [Topology B: Explorer ➔ Implementer](#32-topology-b-explorer--implementer)
    - 3.3 [Topology C: Triage-Only Agent](#33-topology-c-triage-only-agent)
    - 3.4 [Topology D: Chief of Staff Orchestrator (Mina Pattern)](#34-topology-d-chief-of-staff-orchestrator-mina-pattern)
+   - 3.5 [Model Selection & Sub-Agent Dispatch Protocol via `./scripts/harness`](#35-model-selection--sub-agent-dispatch-protocol-via-scriptsharness)
 4. [Git Worktree Isolation & Runtime Management](#4-git-worktree-isolation--runtime-management)
 5. [Loop Execution Engine & Verification Proof Loop](#5-loop-execution-engine--verification-proof-loop)
 6. [Durable Memory & Observability (`harness.db`)](#6-durable-memory--observability-harnessdb)
@@ -223,6 +224,41 @@ Mô hình **Chief of Staff (Mina)** là một cấp điều phối quản lý ca
 4. **Quản lý Tác vụ Dài hạn (Long-Horizontal Execution)**:
    - Nhờ Chief of Staff giữ ngữ cảnh và lịch sử dự án bền vững trong `harness.db`, hệ thống có thể duy trì hoạt động trong thời gian dài (multi-day horizontal tasks) mà không bị đứt gãy hay cạn kiệt context.
 
+### 3.5. Model Selection & Sub-Agent Dispatch Protocol via `./scripts/harness`
+
+Khi vận hành từ giao diện chat hoặc script điều phối (`./scripts/harness`), mỗi Agent cần được trang bị 4 yếu tố cấu hình để chọn đúng Model và kích hoạt Sub-Agents thành công:
+
+#### A. Các Yếu tố Cần thiết cho Mỗi Agent (Per-Agent Requirements):
+1. **Model Tier & Selection (`--model` / `ModelTier`)**:
+   - **`flash` / `flash_lite`**: Phân bổ cho các Agent đóng vai trò **Explorer, Auditor, Triage, Reviewer** (tốc độ phản hồi cực nhanh, tối ưu chi phí token).
+   - **`pro`**: Phân bổ cho các Agent đóng vai trò **Implementer, Architect, Chief of Staff (Mina)** (yêu cầu khả năng suy luận sâu và viết mã phức tạp).
+   - **`inherit`**: Kế thừa trực tiếp Model từ phiên chat chính (Main Session).
+2. **Context Scope Pinning (`--workdir`)**:
+   - Chỉ định chính xác đường dẫn thư mục công tác (`.worktrees/task-<id>`) cho từng Sub-Agent để cách ly phạm vi đọc/ghi tệp tin.
+3. **Persona & Skill Injection Header**:
+   - Tự động nạp cấu hình vai trò từ `.agents/personas/<role>.md` và bộ quy tắc nghiệp vụ trong `.agents/skills/` vào prompt khởi tạo.
+4. **Structured JSON Output Protocol**:
+   - Định dạng đầu ra giữa các Agent theo chuẩn JSON (`harness trace --json`, `harness story update --json`) để máy tính xử lý và chuyển giao context không bị lỗi.
+
+#### B. Cơ chế Chọn Model & Spawn Sub-Agent từ Chat / Script:
+
+1. **Chọn Model trực tiếp trong Chat / CLI Session**:
+   ```bash
+   # Thiết lập Model cụ thể thông qua biến môi trường hoặc cờ CLI
+   HARNESS_MODEL=gemini-3.6-flash ./scripts/harness agent run --role reviewer
+   ```
+
+2. **Cách Orchestrator Gọi Sub-Agent với Model Chỉ định**:
+   Main Agent (hoặc Chief of Staff) kích hoạt Sub-Agent thông qua tool call `invoke_subagent` hoặc lệnh CLI wrapper:
+   ```bash
+   # Ví dụ lệnh spawn Sub-Agent với Model Tier chỉ định qua script
+   ./scripts/harness subagent spawn \
+       --role "Verifier" \
+       --model "flash" \
+       --workdir ".worktrees/task-US-014" \
+       --prompt "Verify git diff and run cargo test"
+   ```
+
 ---
 
 ## 4. Git Worktree Isolation & Runtime Management
@@ -373,3 +409,4 @@ Harness đi kèm một bộ đánh giá **Loop Readiness Score** (thang điểm 
 - **[2026-07-25]**: Chuẩn hóa toàn bộ tài liệu kiến trúc [spec.md](file:///Users/bao312/Desktop/harness/spec.md) thành bản đặc tả kỹ thuật chi tiết chuẩn sản phẩm (Production-Grade Architecture Specification Manual).
 - **[2026-07-25]**: Bổ sung Mục 1.4 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) giải thích rõ ràng **4 Lý do Tách biệt Kiến trúc**: (A) Loại bỏ Web UI vì Agent-First/Headless, (B) Tách Policy (`docs/`) và Durable State (`harness.db`), (C) Tách biệt môi trường bằng Git Worktrees, (D) Tách biệt vai trò Sub-Agents (Implementer vs. Verifier, Explorer vs. Implementer).
 - **[2026-07-25]**: Nghiên cứu & tích hợp mô hình **Chief of Staff Orchestrator (Mina Pattern)** từ vietsub video YouTube vào Mục 3.4 của [spec.md](file:///Users/bao312/Desktop/harness/spec.md) — xác định cơ chế High-Level Delegation, Progressive Disclosure qua Markdown, điều phối Main Agents độc lập qua Hurder/CLI, và thực thi các tác vụ dài hạn (Long-Horizontal Tasks).
+- **[2026-07-25]**: Bổ sung Mục 3.5 vào [spec.md](file:///Users/bao312/Desktop/harness/spec.md) quy định **Model Selection & Sub-Agent Dispatch Protocol via `./scripts/harness`** — phân bổ Model Tiers (`flash` cho Auditor/Reviewer vs `pro` cho Implementer/Mina), pin cờ `--workdir`, inject Persona Header, và chuẩn hóa JSON Protocol giữa các agents khi gọi qua script CLI.
