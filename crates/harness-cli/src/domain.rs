@@ -1176,22 +1176,25 @@ pub fn export_trace_tldraw(traces: &[TraceRecord]) -> String {
     records.push(r#"{"id":"page:page","typeName":"page","name":"Page 1","index":"a1"}"#.to_owned());
     
     records.push(format!(
-        r#"{{"id":"shape:title","typeName":"shape","type":"geo","parentId":"page:page","x":100,"y":40,"props":{{"geo":"rectangle","w":600,"h":60,"color":"blue","richText":{{"type":"doc","content":[{{"type":"paragraph","content":[{{"type":"text","text":"🚀 HARNESS EXECUTION TRACE GRAPH"}}]}}]}}}}}}"#
+        r#"{{"id":"shape:title","typeName":"shape","type":"geo","parentId":"page:page","index":"a1","x":100,"y":40,"props":{{"geo":"rectangle","w":650,"h":60,"color":"blue","labelColor":"black","fill":"semi","dash":"draw","size":"m","font":"draw","text":"🚀 HARNESS EXECUTION TRACE GRAPH","align":"middle","verticalAlign":"middle","growY":0}}}}"#
     ));
     
     for (i, trace) in traces.iter().enumerate() {
-        let y_pos = 140 + (i * 120);
+        let y_pos = 120 + (i * 110);
         let summary = trace.task_summary.replace('"', "\\\"").replace('\n', "\\n");
         let outcome = trace.outcome.as_deref().unwrap_or("unknown");
         let color = match outcome {
-            "pass" => "green",
-            "fail" => "red",
+            "completed" | "pass" => "green",
+            "failed" | "fail" => "red",
             _ => "yellow",
         };
         
+        let label = format!("Trace #{}: {}\nOutcome: {}", trace.id, summary, outcome);
+        let escaped_label = label.replace('"', "\\\"").replace('\n', "\\n");
+        
         records.push(format!(
-            r#"{{"id":"shape:trace_{}","typeName":"shape","type":"geo","parentId":"page:page","x":100,"y":{},"props":{{"geo":"rectangle","w":500,"h":90,"color":"{}","richText":{{"type":"doc","content":[{{"type":"paragraph","content":[{{"type":"text","text":"Trace #{}: {}"}}]}},{{"type":"paragraph","content":[{{"type":"text","text":"Outcome: {}"}}]}}]}}}}}}"#,
-            trace.id, y_pos, color, trace.id, summary, outcome
+            r#"{{"id":"shape:trace_{}","typeName":"shape","type":"geo","parentId":"page:page","index":"a{}","x":100,"y":{},"props":{{"geo":"rectangle","w":650,"h":90,"color":"{}","labelColor":"black","fill":"semi","dash":"draw","size":"s","font":"draw","text":"{}","align":"start","verticalAlign":"middle","growY":0}}}}"#,
+            trace.id, i + 2, y_pos, color, escaped_label
         ));
     }
     
