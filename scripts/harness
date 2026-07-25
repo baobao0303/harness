@@ -3,11 +3,19 @@
 # Redirects all arguments to the compiled Rust binary.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CLI_BIN="$SCRIPT_DIR/bin/harness-cli"
+
+# Auto-load local .env file if it exists
+if [ -f "$REPO_ROOT/.env" ]; then
+    set -a
+    source "$REPO_ROOT/.env"
+    set +a
+fi
 
 # Ensure database path is default if not set
 if [ -z "$HARNESS_DB" ]; then
-    export HARNESS_DB="$(cd "$SCRIPT_DIR/.." && pwd)/harness.db"
+    export HARNESS_DB="$REPO_ROOT/harness.db"
 fi
 
 if [ ! -f "$CLI_BIN" ]; then
