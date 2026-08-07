@@ -1,296 +1,449 @@
-# Harness 🚀 — Autonomous AI Agent Operating Framework & Loop Engine
+# Harness 🚀 — Modular Rust CLI & Software Development Lifecycle Operating Framework
 
-> **Turn any codebase into an autonomous, sub-agent-driven workspace powered by Loop Engineering & Chief of Staff Orchestration.**
+> **Modular Rust CLI engine (`harness-cli`), SQLite durable layer (`harness.db`), and Company Software Development & Release Operating Framework.**
 
-`harness` is a repository-level operating framework for **Claude Code, Antigravity, Cursor, Windsurf, GitHub Copilot, Codex**, and custom AI Agents. It provides a durable layer (`harness.db`), sub-agent topology allocation, Git worktree isolation, dynamic skill resolution, and live `tldraw` visual telemetry.
+`harness` is a repository-level operating framework for autonomous AI agents, sub-agent orchestration, and software development lifecycle management compliant with **Company Standards (SM-QT-01..04, SM-QĐi-01, SM-QĐ-002, DDD-COMPANY-2026)** and **ISO/IEC 27001:2022**.
 
 ---
 
-## 🌟 Architectural Highlights
+## 🏗️ 1. Modular Rust CLI Architecture (`crates/harness-cli/src/`)
 
-### 1. 👑 Chief of Staff (Mina) & Sub-Agent Ecosystem
-Rather than relying on a single monolithic LLM prompt, Harness splits execution across **6 specialized sub-agents**:
+The `harness-cli` crate is refactored into a clean, modular, domain-driven architecture following Hexagonal / Layered Architecture principles. Code resides under `crates/harness-cli/src/`:
 
-| Sub-Agent Role | Model Tier | Responsibility | Working Environment |
+```text
+crates/harness-cli/src/
+├── main.rs                 # Binary entry point parsing CLI arguments via clap
+├── lib.rs                  # Module declarations (domain, application, infrastructure, interface)
+├── domain/                 # Core domain logic, entities, types, errors, and validation rules
+│   ├── mod.rs
+│   ├── types.rs            # Core domain enums (WorkItemType, WorkItemState, Priority, Severity, etc.)
+│   ├── entities.rs         # Domain entities (WorkItem, Story, Intake, Decision, BacklogItem, Trace, Tool)
+│   ├── validation.rs       # State machine transitions, Title syntax formatting, & Description rules
+│   ├── errors.rs           # Domain-specific error types (StateMachineError, SyntaxValidationError)
+│   ├── registry.rs         # Pre-defined tool responsibilities and definitions
+│   └── scoring.rs          # Trace quality tier scoring and entropy calculations
+├── application/            # Use cases, DTOs, and application services
+│   ├── mod.rs
+│   ├── service.rs          # Service methods orchestrating domain rules with persistence
+│   ├── dto.rs              # Data Transfer Objects for command/query operations
+│   └── errors.rs           # Application service error handling
+├── infrastructure/         # I/O, SQLite database access, processes, and brownfield import
+│   ├── mod.rs
+│   ├── db/
+│   │   ├── mod.rs          # Database connection pool and schema migration runner
+│   │   ├── queries.rs      # SQL queries and CRUD operations
+│   │   └── schema.rs       # Embedded migration scripts runner
+│   ├── process.rs          # External process verification execution & Git worktree helpers
+│   ├── brownfield.rs       # Legacy markdown parsing (TEST_MATRIX.md, ADRs, Backlog)
+│   └── errors.rs           # Database and I/O error mappings
+└── interface/              # User interface layer & CLI subcommands using clap
+    ├── mod.rs              # Top-level CLI command router and execution handler
+    ├── args.rs             # Clap CLI structs, enums, subcommands, and flags
+    ├── handlers.rs         # Subcommand execution handlers bridging CLI to application services
+    ├── formatters.rs       # Output formatters (Tables, JSON, plain text)
+    ├── stubs.rs            # Worktree and Subagent CLI command handlers
+    └── errors.rs           # Command line interface error representations
+```
+
+### Module Responsibilities:
+- **`lib.rs` & `main.rs`**: `lib.rs` exports the core modules (`domain`, `application`, `infrastructure`, `interface`). `main.rs` parses arguments with `harness_cli::interface::Cli::parse()` and calls `interface::run(cli)`.
+- **`domain/`**: Contains pure business logic without I/O dependencies. Defines data enums, domain entities, validation logic (state machine transition rules, title syntax checks, description formatting checks), and error types.
+- **`application/`**: Implements application use cases (`HarnessService`). Receives DTOs, applies domain rules, and coordinates database operations.
+- **`infrastructure/`**: Handles external side effects. Manages SQLite database connection (`harness.db`), WAL journal mode, migration execution (`001-init.sql` to `006-work-item.sql`), process invocation for story/decision verification, and brownfield markdown imports.
+- **`interface/`**: Implements the command-line adapter using `clap`. Parses flags, converts command input into application service calls, and formats terminal output.
+
+---
+
+## 🗄️ 2. SQLite Database Schema & Migration `006-work-item.sql`
+
+Harness uses SQLite (`harness.db`) as its durable operational data layer configured with `PRAGMA journal_mode = WAL;` and `PRAGMA foreign_keys = ON;`.
+
+### Migration History (`scripts/schema/`):
+- **`001-init.sql`**: Initialized `schema_version`, `intake`, `story`, `decision`, `backlog`, and `trace` tables.
+- **`002-story-verify.sql`**: Added `verify_command`, `last_verified_at`, `last_verified_result` columns to `story`.
+- **`003-tool-registry.sql`**: Created machine-readable `tool` registry table.
+- **`004-intervention.sql`**: Added `intervention` table for tracking human, reviewer, CI, or agent interventions.
+- **`005-priority.sql`**: Added `priority` classification (`P0`, `P1`, `P2`, `P3`) to `story` and `backlog`.
+- **`006-work-item.sql`**: Created the unified `work_item` table supporting Company Portfolio Work Item hierarchy.
+
+### Unified `work_item` Table Schema (`006-work-item.sql`):
+
+```sql
+CREATE TABLE IF NOT EXISTS work_item (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    type                 TEXT    NOT NULL
+                         CHECK(type IN (
+                             'Epic', 'Feature', 'User Story', 'Technical Story', 'Task', 'Bug', 'Testcase'
+                         )),
+    title                TEXT    NOT NULL,
+    description          TEXT,
+    state                TEXT    NOT NULL DEFAULT 'New'
+                         CHECK(state IN (
+                             'New', 'Accepted', 'Active', 'Resolved', 'Closed', 'Blocked', 'Removed'
+                         )),
+    assigned_to          TEXT,
+    story_points         INTEGER CHECK(story_points IS NULL OR story_points >= 0),
+    remaining_work       REAL    CHECK(remaining_work IS NULL OR remaining_work >= 0),
+    priority             TEXT    NOT NULL DEFAULT 'P2'
+                         CHECK(priority IN ('P0', 'P1', 'P2', 'P3')),
+    severity             TEXT    CHECK(severity IS NULL OR severity IN ('Low', 'Medium', 'High', 'Critical')),
+    parent_id            INTEGER REFERENCES work_item(id) ON DELETE SET NULL,
+    area_path            TEXT,
+    iteration_path       TEXT,
+    tags                 TEXT,
+    acceptance_criteria  TEXT,
+    repro_steps          TEXT,
+    actual_result        TEXT,
+    expected_result      TEXT,
+    steps                TEXT,
+    created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at           TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_work_item_type ON work_item(type);
+CREATE INDEX IF NOT EXISTS idx_work_item_state ON work_item(state);
+CREATE INDEX IF NOT EXISTS idx_work_item_parent ON work_item(parent_id);
+CREATE INDEX IF NOT EXISTS idx_work_item_assigned ON work_item(assigned_to);
+```
+
+---
+
+## 🏷️ 3. Company Portfolio Work Item Types
+
+Harness implements Company's multi-tiered Portfolio Backlog hierarchy (`spec_new.md` Section 5.2 / 6.3):
+
+```text
+                               ┌───────────────────────────┐
+                               │           EPIC            │ (Created by CPO)
+                               └─────────────┬─────────────┘
+                                             │
+                               ┌─────────────▼─────────────┐
+                               │          FEATURE          │ (Created by BA)
+                               └─────────────┬─────────────┘
+                                             │
+            ┌────────────────────────────────┴────────────────────────────────┐
+            ▼                                                                 ▼
+ ┌────────────────────┐ (Created by BA)                            ┌────────────────────┐ (Created by Dev/Team)
+ │     USER STORY     │                                            │  TECHNICAL STORY   │
+ └──────┬──────┬──────┘                                            └──────┬──────┬──────┘
+        │      │      ┌───────────────────────────────────────────────────┘      │
+        │      └──────┼──────────────────────────┐                               │
+        ▼             ▼                          ▼                               ▼
+ ┌────────────┐┌────────────┐             ┌────────────┐                  ┌────────────┐
+ │    TASK    ││    BUG     │             │  TESTCASE  │                  │    TASK    │
+ └────────────┘└────────────┘             └────────────┘                  └────────────┘
+```
+
+1. **`Epic`**: Strategic high-level business goal spanning multiple Sprints. Created and managed by CPO. Contains User Stories and Technical Stories.
+2. **`Feature`**: Specific product capability within an Epic. Created by BA. Contains User Stories.
+3. **`User Story`**: Functional requirement from the end-user perspective. Created by BA. Contains Tasks, Bugs, and Testcases.
+4. **`Technical Story`**: Non-functional or infrastructure engineering work (e.g. test epics, release plans, database migrations, refactoring). Created by Dev/Team. Positioned at the **same hierarchy level as User Story**. Contains Tasks and Bugs.
+5. **`Task`**: Granular technical execution unit (coding, code review, setup) assigned to a Developer or Tester.
+6. **`Bug`**: Defect or error discovered during testing or operation. Created by Tester (QA). Resolved by Dev.
+7. **`Testcase`**: Structured verification script with execution steps and expected outcomes. Created by Tester.
+
+---
+
+## 🔄 4. State Machine Lifecycle Transitions
+
+Harness enforces strict state transition matrices for each work item type per Section 5.4 & 6.4 of `spec_new.md`:
+
+### 1. User Story Lifecycle Matrix
+- **`New`** ➔ `Accepted`, `Removed` *(BA completes documentation & UI design)*
+- **`Accepted`** ➔ `Active`, `Removed` *(Dev pulls into Sprint; requires at least 1 Active Task)*
+- **`Active`** ➔ `Resolved`, `Blocked`, `Removed` *(Dev completes AC, 2 code reviews pass, Tasks/Bugs Closed, Unit/Integration tests pass, merged to Test environment)*
+- **`Blocked`** ➔ `Active` *(Unblocked)*
+- **`Resolved`** ➔ `Closed` *(CPO/SM/PM confirms AC during Sprint Review)*
+- **`Resolved`** ➔ `Accepted` *(If Sprint Review evaluates story as not meeting AC, returned to Accepted for next Sprint)*
+- **`Closed`** / **`Removed`** *(Terminal states)*
+
+### 2. Task Lifecycle Matrix
+- **`New`** ➔ `Active`, `Removed` *(Dev starts work)*
+- **`Active`** ➔ `Resolved`, `Blocked`, `Removed` *(Dev completes work & opens Pull Request)*
+- **`Blocked`** ➔ `Active` *(Unblocked)*
+- **`Resolved`** ➔ `Closed` *(PR reviewed & approved)*
+- **`Resolved`** ➔ `Active` *(If code review requests changes)*
+- **`Closed`** / **`Removed`** *(Terminal states)*
+
+### 3. Bug Lifecycle Matrix
+- **`New`** ➔ `Active`, `Removed` *(Dev starts investigation/fix)*
+- **`Active`** ➔ `Resolved`, `Removed` *(Dev fixes bug, merges code to Test environment)*
+- **`Resolved`** ➔ `Closed` *(Tester verifies fix succeeds)*
+- **`Resolved`** ➔ `New` *(If Tester verification fails, returned to New)*
+- **`Closed`** / **`Removed`** *(Terminal states)*
+
+### 4. Epic Lifecycle Matrix
+- **`New`** ➔ `Active` *(Automatically activated when first child User Story becomes Active)*
+- **`Active`** ➔ `Resolved`, `Blocked` *(Tester transitions when all child User Stories & Technical Stories are Closed and pass Dev testing)*
+- **`Blocked`** ➔ `Active` *(Unblocked)*
+- **`Resolved`** ➔ `Closed` *(CPO/SM/PM transitions after Production release)*
+- **`Closed`** *(Terminal state)*
+
+### 5. Feature Lifecycle Matrix
+- **`New`** ➔ `Active`
+- **`Active`** ➔ `Resolved`, `Blocked`, `Removed`
+- **`Blocked`** ➔ `Active`
+- **`Resolved`** ➔ `Closed`
+- **`Closed`** / **`Removed`** *(Terminal states)*
+
+### 6. Technical Story Lifecycle Matrix
+- **`New`** ➔ `Active` *(Dev pulls into Sprint; at least 1 Task active)*
+- **`Active`** ➔ `Resolved`, `Blocked` *(All child Tasks and Bugs are Closed)*
+- **`Blocked`** ➔ `Active` *(Unblocked)*
+- **`Resolved`** ➔ `Closed` *(Confirmed in Sprint Review)*
+- **`Closed`** *(Terminal state)*
+
+### 7. Testcase Lifecycle Matrix
+- **`New`** ➔ `Active`
+- **`Active`** ➔ `Resolved`
+- **`Resolved`** ➔ `Closed`
+- **`Closed`** *(Terminal state)*
+
+---
+
+## ✍️ 5. Title Syntax Formatting & Description Rules
+
+Per Section 5.5 of `spec_new.md`, all work item creation and updates must satisfy strict title syntax formatting and description structure rules enforced in `domain/validation.rs`:
+
+| Work Item Type | Title Syntax Format Rule | Example Title | Mandatory Description Format |
 | :--- | :--- | :--- | :--- |
-| **👑 Chief of Staff (Mina)** | `pro` | Strategic vision, task decomposition, progressive disclosure memory. | Main Workspace |
-| **💻 Implementer (Coder)** | `pro` | Code writing, bug fixes, feature implementation. | `.worktrees/task-<id>` |
-| **🧪 Verifier (QA)** | `flash` | Running build/test verification, packaging error tracebacks. | `.worktrees/task-<id>` |
-| **🔍 Explorer (Navigator)** | `flash` | Codebase exploration, symbol discovery, context window compression. | Read-Only Subagent |
-| **📈 Triage Monitor** | `flash_lite` | Background task monitoring, recurring health checks. | Background Cron |
-| **🛡️ Skill Auditor** | `pro` | Skill verification, pulling skills from Remote Skill Server. | Global Registry |
+| **`Epic`** | Must contain dash separator (`-`, `–`, `—`) in format:<br>`[Giá trị nghiệp vụ] – [Tác động chính]` | `Tăng hiệu suất bán hàng – Hỗ trợ nhân viên CSKH` | High-level strategic goal overview |
+| **`Feature`** | Must contain dash separator in format:<br>`[Khả năng cụ thể] – [Module/Tính năng]` | `Tìm kiếm khách hàng nâng cao – Module CRM` | Feature capability description |
+| **`User Story`** | Must contain dash separator and keyword `có thể` / `co the` / `can` in format:<br>`[Module] – [Vai trò] có thể [hành động]` | `[Dashboard] – Quản lý có thể xem báo cáo doanh thu theo tháng` | **Bắt buộc (Mandatory):**<br>`As a [User Role],`<br>`I want [Action / Goal],`<br>`So that [Business Value].` |
+| **`Task`** / **`Technical Story`** | Must contain dash separator in format:<br>`[Module/Tính năng] - [Động từ + hành động]` | `Login UI - Tạo giao diện đăng nhập` | Technical execution notes |
+| **`Testcase`** | Must start with `[`, contain `]`, `:`, and keyword `when` / `khi` in format:<br>`[Module]: [Expected result] when [condition]` | `[Auth]: Hiển thị thông báo lỗi khi nhập sai mật khẩu 3 lần` | Step-by-step execution steps |
+| **`Bug`** | Must start with `[`, contain `]`, `:`, and keyword `when` / `khi` in format:<br>`[Module]: [Error message] when [reason]` | `[Payment]: Lỗi 500 Internal Server khi ấn thanh toán với giỏ hàng > 100 sản phẩm` | Repro Steps, Actual Result, Expected Result, Severity |
 
 ---
 
-### 2. 🔁 5 Loop Engineering Building Blocks
+## 💻 6. CLI Command Usage Examples
 
-1. **System & Prompt Infrastructure**: Structured `AGENTS.md` shim and progressive disclosure docs in `docs/`.
-2. **Model Selection & Topology**: Cost/speed balancing by routing deep tasks to `pro` tier and quick lookups to `flash` tier.
-3. **Context Window Management**: Compressed context indices avoiding token bloat.
-4. **Tools & Execution Engine**: Headless Rust CLI (`harness-cli`), Herdr PTY Terminal Multiplexer, and Git Worktree isolation.
-5. **Verification, Evaluation & Governance**: Automated verification commands (`harness story verify`), circuit breaker retries, and SQLite telemetry (`harness.db`).
+All CLI subcommands are available via `harness-cli` (or wrapped by `./scripts/harness`):
 
----
+### 1. `harness work-item add`
+Create new portfolio work items:
+```bash
+# Add a User Story (validates title syntax and As a... I want... So that... description format)
+./scripts/harness work-item add \
+  --type "User Story" \
+  --title "[Checkout] – Khách hàng có thể thanh toán qua QR VNPay" \
+  --description "As a Khách hàng, I want thanh toán qua QR VNPay, So that giao dịch nhanh chóng và an toàn." \
+  --priority p1 \
+  --story-points 5 \
+  --area-path "Payment" \
+  --iteration-path "Sprint 12" \
+  --tags "Payment,QR,FE" \
+  --acceptance-criteria "1. Mã QR hiển thị trong 3s. 2. Xử lý IPN callback thành công."
 
-### 3. 🎨 Visual Telemetry & Live `tldraw` Diagramming
+# Add a Bug
+./scripts/harness work-item add \
+  --type "Bug" \
+  --title "[Payment]: Lỗi 500 Internal Server khi quét mã QR với giỏ hàng trống" \
+  --priority p0 \
+  --severity "Critical" \
+  --parent-id 1 \
+  --repro-steps "1. Mở giỏ hàng. 2. Xóa hết SP. 3. Quét QR." \
+  --actual-result "Internal server error 500." \
+  --expected-result "Hiển thị thông báo giỏ hàng trống."
 
-Harness integrates directly with the **tldraw Desktop App** (via local HTTP API at `http://localhost:7236`) and [offline.tldraw.com](https://offline.tldraw.com):
-- **Live Diagram Rendering**: Agents programmatically draw multi-agent topology boxes, arrows, and status badges on your active tldraw canvas.
-- **Trace Export**: Convert SQLite execution traces into `.tldr` JSON file snapshots with `./scripts/harness export-trace --format tldraw --out trace.tldr`.
+# Add a Task
+./scripts/harness work-item add \
+  --type "Task" \
+  --title "Payment Backend - Tích hợp VNPay SDK API" \
+  --assigned-to "dev_lead" \
+  --remaining-work 8.5 \
+  --parent-id 1
+```
 
----
+### 2. `harness work-item update`
+Update work item status and attributes:
+```bash
+# Transition User Story from New -> Accepted (by BA)
+./scripts/harness work-item update --id 1 --state Accepted
 
-## 🚀 Quickstart & Setup Guide
+# Transition User Story from Accepted -> Active (by Dev)
+./scripts/harness work-item update --id 1 --state Active --assigned-to "john_doe"
 
-### 1. Environment Configuration
+# Transition User Story from Active -> Resolved (after PR & test merge)
+./scripts/harness work-item update --id 1 --state Resolved
 
-Copy the `.env.example` template to `.env` to configure your environment variables:
+# Transition User Story from Resolved -> Closed (after Sprint Review approval)
+./scripts/harness work-item update --id 1 --state Closed
+```
+
+### 3. `harness work-item list` & `show`
+Query and inspect work items:
+```bash
+# List all work items
+./scripts/harness work-item list
+
+# Filter work items by type and state
+./scripts/harness work-item list --type "User Story" --state Active
+
+# Show detailed fields of a specific work item by ID
+./scripts/harness work-item show --id 1
+```
+
+### 4. `harness query matrix` / `tools` / `stats`
+Query operational data tables:
+```bash
+# Query story test matrix and validation proof status
+./scripts/harness query matrix
+./scripts/harness query matrix --numeric
+
+# Query registered machine-readable external tools
+./scripts/harness query tools
+./scripts/harness query tools --json
+./scripts/harness query tools --responsibility "test_execution"
+
+# Query database record statistics across all tables
+./scripts/harness query stats
+```
+
+### 5. `harness tool register` & `remove`
+Manage custom tools in the machine-readable registry:
+```bash
+# Register a custom tool
+./scripts/harness tool register \
+  --name "cargo-test-runner" \
+  --command "cargo test -- --nocapture" \
+  --description "Executes Rust unit and integration test suite" \
+  --responsibility "test_execution" \
+  --args "target:string:optional:Target test binary or package"
+
+# Remove a registered tool
+./scripts/harness tool remove --name "cargo-test-runner"
+```
+
+### 6. `harness migrate` & `init`
+Database initialization and schema migration runner:
+```bash
+# Create SQLite database file if it does not already exist
+./scripts/harness init
+
+# Execute pending database migrations (001-init.sql through 006-work-item.sql)
+./scripts/harness migrate
+```
+
+## 📥 6.1. Step-by-Step Installation Guide for Linux (Từng bước cài đặt trên Linux)
+
+### 🔹 Phương án 1: Cài đặt tự động bằng Script (Khuyên dùng)
+
+#### **Bước 1: Kiểm tra các công cụ tiền đề (Prerequisites)**
+Đảm bảo hệ thống Linux của bạn đã có `curl`, `bash`, và `git`:
+```bash
+sudo apt update && sudo apt install -y curl bash git sqlite3
+```
+
+#### **Bước 2: Tải và chạy script cài đặt tự động**
+Chạy lệnh bên dưới để tải và tích hợp Harness CLI vào dự án hiện tại:
+```bash
+# Cài đặt trực tiếp vào thư mục dự án hiện tại:
+curl -fsSL https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh | bash -s -- --yes
+
+# Hoặc nếu dự án đã có sẵn code, dùng cờ --merge để không đè file cũ:
+curl -fsSL https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh | bash -s -- --merge --yes
+```
+
+#### **Bước 3: Thiết lập biến môi trường (.env)**
+Tạo file cấu hình môi trường từ mẫu:
 ```bash
 cp .env.example .env
 ```
+*(Chỉnh sửa `.env` để cấu hình `HARNESS_MODEL` và `HARNESS_DB` nếu cần)*
 
-Default `.env` settings:
-```env
-HARNESS_SKILL_SERVER="https://skills-hub.yourdomain.com/api/v1"
-HARNESS_SKILL_SERVER_TOKEN=""
-HARNESS_MODEL="gemini-3.6-flash"
-HARNESS_DB="./harness.db"
-```
-
-> [!IMPORTANT]
-> Never commit `.env` to Git. `.env` is listed in `.gitignore`.
-
----
-
-### 2. Compile & Initialize Harness
-
-Build the fast release binary into `scripts/bin/harness-cli` and initialize the SQLite database:
-
+#### **Bước 4: Khởi tạo Cơ sở dữ liệu SQLite**
+Khởi tạo file cơ sở dữ liệu `harness.db` và chạy các file Migration schema (001 -> 006):
 ```bash
-# Compile standalone release binary
-mkdir -p scripts/bin && cargo build --release --bin harness-cli && cp target/release/harness-cli scripts/bin/harness-cli
-
-# Initialize database schema
 ./scripts/harness init
+./scripts/harness migrate
 ```
 
-Verify that the CLI is operating instantaneously:
+#### **Bước 5: Kiểm tra cài đặt thành công**
+Chạy lệnh kiểm tra thống kê cơ sở dữ liệu và danh sách công việc:
 ```bash
-./scripts/harness audit
+./scripts/harness query stats
+./scripts/harness work-item list
 ```
-*(Expected output: Entropy score `0/100`)*
 
 ---
 
-## 🛠️ Complete CLI Command Reference
+### 🔹 Phương án 2: Biên dịch từ mã nguồn (Build from Source bằng Rust)
 
-All commands are executed via `./scripts/harness` (which wraps `scripts/bin/harness-cli`):
-
-### 🔍 Database & Query Commands (`harness query`)
-
-Dùng để tra cứu toàn bộ trạng thái hoạt động lưu trong SQLite `harness.db`:
-
-| Lệnh Query | Chức năng / Mô tả |
-| :--- | :--- |
-| `./scripts/harness query stats` | Hiển thị tóm tắt tổng số lượng records của tất cả các bảng. |
-| `./scripts/harness query matrix` | Tra cứu ma trận kiểm chứng (Test Matrix) & danh sách Stories. |
-| `./scripts/harness query backlog` | Xem danh sách các đề xuất cải tiến Backlog (Harness Backlog). |
-| `./scripts/harness query decisions` | Tra cứu danh sách các Quyết định Kiến trúc (ADRs / Decisions). |
-| `./scripts/harness query intakes` | Tra cứu các yêu cầu công việc mới đã phân loại rủi ro (Intakes). |
-| `./scripts/harness query traces` | Tra cứu nhật ký dấu vết hoạt động thực thi (Execution Traces) của Agent. |
-| `./scripts/harness query friction` | Hiển thị danh sách các trace gặp khó khăn/ma sát trong quá trình chạy. |
-| `./scripts/harness query tools` | Hiển thị danh sách công cụ machine-readable đã đăng ký. |
-| `./scripts/harness query interventions` | Xem lịch sử can thiệp của Human / CI / Reviewer. |
-| `./scripts/harness query sql "<SQL>"` | Chạy truy vấn SQL trực tiếp tùy chỉnh trên SQLite `harness.db`. |
-
-#### Truy vấn trực tiếp bằng `sqlite3`:
+#### **Bước 1: Cài đặt Rust toolchain và các thư viện cần thiết**
 ```bash
-# Xem danh sách các bảng trong database
-sqlite3 harness.db ".tables"
+# Cài đặt Rust & Cargo
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source "$HOME/.cargo/env"
 
-# Xem danh sách tất cả các stories trong Test Matrix
-sqlite3 harness.db "SELECT id, title, risk_lane, status FROM story;"
-
-# Xem lịch sử trace công việc
-sqlite3 harness.db "SELECT id, task_summary, agent, outcome FROM trace;"
+# Cài đặt build tool
+sudo apt update && sudo apt install -y build-essential pkg-config libsqlite3-dev
 ```
 
----
-
-### 👑 Sub-Agent & Skill Orchestration
+#### **Bước 2: Clone repository về máy**
 ```bash
-# List active sub-agent topologies
-./scripts/harness subagent list
-
-# Spawn a sub-agent with role, model tier, and prompt
-./scripts/harness subagent spawn --role "Implementer" --model "pro" --prompt "Build feature X"
-
-# List all available skills
-./scripts/harness skill list
-
-# Find best matching skill for an intent
-./scripts/harness skill find "generate e2e tests"
-
-# Sync skills from Remote Skill Server
-./scripts/harness skill sync
+git clone https://github.com/baobao0303/harness.git
+cd harness
 ```
 
----
-
-### 🌳 Git Worktree Isolation
+#### **Bước 3: Biên dịch binary `harness-cli` ở chế độ Release**
 ```bash
-# Spawn isolated environment for task-101
-./scripts/harness worktree spawn --task 101
-
-# Remove worktree after completion
-./scripts/harness worktree remove --task 101
+cargo build --release
 ```
 
----
-
-### 🎨 Visual Telemetry & Trace Export
+#### **Bước 4: Copy binary biên dịch vào thư mục thi hành `scripts/bin/`**
 ```bash
-# Export traces to tldraw JSON snapshot
-./scripts/harness export-trace --format tldraw --out diagram.tldr
-
-# Export traces to Mermaid flowchart
-./scripts/harness export-trace --format mermaid
+mkdir -p scripts/bin
+cp target/release/harness-cli scripts/bin/harness-cli
+chmod +x scripts/bin/harness-cli
 ```
 
----
-
-### ⚙️ Governance, Audit & Work Registration
+#### **Bước 5: Tạo file `.env` và Khởi tạo Cơ sở dữ liệu**
 ```bash
-# Run codebase drift audit and entropy score
-./scripts/harness audit
-
-# View harness configuration
-./scripts/harness config list
-
-# Register new feature intake
-./scripts/harness intake --type new_spec --summary "Feature description" --lane normal
-
-# Add new story packet
-./scripts/harness story add --id US-101 --title "User Login" --lane normal
-
-# Update story status & evidence
-./scripts/harness story update --id US-101 --status implemented --evidence "Cargo test passed"
+cp .env.example .env
+./scripts/harness init
+./scripts/harness migrate
 ```
 
----
-
-## 🧠 Thư viện Kỹ năng (Skills Library) & Tích hợp IDE
-
-Harness đi kèm hệ thống **Skills** chuẩn hóa cho AI Agent. Mỗi skill định nghĩa quy trình chi tiết giúp Agent thực hiện tác vụ chính xác.
-
-### Danh sách Skill theo giai đoạn
-
-| Giai đoạn | Skill | Mô tả |
-| :--- | :--- | :--- |
-| **Khởi đầu** | `harness-help` | Phân tích trạng thái và gợi ý skill tiếp theo |
-| | `harness-document-project` | Tạo tài liệu dự án cho AI context |
-| | `harness-generate-project-context` | Tạo `project-context.md` |
-| **Yêu cầu** | `harness-prd` | Tạo, sửa, hoặc validate PRD |
-| | `harness-product-brief` | Tạo product brief |
-| | `harness-advanced-elicitation` | Phê bình sâu (socratic, red team, pre-mortem) |
-| | `harness-brainstorming` | Brainstorm ý tưởng |
-| **Kiến trúc** | `harness-create-architecture` | Thiết kế kiến trúc hệ thống |
-| | `harness-technical-research` | Nghiên cứu kỹ thuật |
-| **Lập kế hoạch** | `harness-create-epics-and-stories` | Chia nhỏ requirements thành epics/stories |
-| | `harness-create-story` | Tạo story file chi tiết |
-| **Thiết kế** | `harness-create-ux-design` | Thiết kế UX/UI |
-| **Triển khai** | `harness-check-implementation-readiness` | Kiểm tra sẵn sàng implement |
-| | `harness-correct-course` | Điều chỉnh sprint khi có thay đổi |
-| **Kiểm thử** | `harness-qa-generate-e2e-tests` | Tạo E2E tests tự động |
-| **Review** | `harness-retrospective` | Retrospective sau epic |
-| | `harness-checkpoint-preview` | Human-in-the-loop review |
-| **Tài liệu** | `harness-index-docs` | Tạo index cho thư mục docs |
-| | `harness-shard-doc` | Chia nhỏ tài liệu lớn |
-| | `harness-distillator` | Nén tài liệu cho LLM |
-| **Đặc biệt** | `harness-party-mode` | Multi-agent roundtable discussion |
-| | `harness-investigate` | Điều tra bug forensic |
-| | `harness-customize` | Tùy chỉnh skill behavior |
-
-### Cách gọi Skill từ các IDE
-
-Tất cả IDE đều phát hiện các skill thông qua tệp discovery tương ứng trong dự án:
-
-| IDE | Cách kích hoạt | Discovery Format |
-| :--- | :--- | :--- |
-| **Kiro** | Gõ `#` trong ô Chat → Chọn skill | `.kiro/steering/*.md` |
-| **Cursor** | Gõ `@` hoặc xem bảng Rules | `.cursor/rules/*.mdc` |
-| **Windsurf** | Agent tự động phát hiện | `.windsurfrules` |
-| **Claude Code** | Nhắc tên skill trong prompt | `AGENTS.md` |
-| **GitHub Copilot** | Nhắc tên skill trong prompt | `AGENTS.md` |
-| **CLI** | `harness skill list` / `harness skill find` | Terminal |
-
-### Khởi tạo Skill Discovery Files cho IDE
-
-Chạy script sau để tự động sinh file discovery cho toàn bộ IDE trong dự án:
-
+#### **Bước 6: Xác nhận hoạt động**
 ```bash
-scripts/install-ide-skills.sh
+./scripts/harness --help
+./scripts/harness query stats
 ```
 
 ---
 
-## 📥 Tùy chọn cài đặt & Cập nhật Harness
+## 🛠️ 7. Build and Test Execution Instructions
 
-### 1. Cài đặt vào Dự án (Local Installation)
-
-Tích hợp Harness trực tiếp vào codebase dự án hiện tại của bạn:
-
+### Compilation Commands:
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --yes
+# 1. Build debug binary
+cargo build
+
+# 2. Build optimized release binary
+cargo build --release
+
+# 3. Copy binary to scripts/bin/ wrapper path
+mkdir -p scripts/bin && cp target/release/harness-cli scripts/bin/harness-cli
 ```
 
-#### Các tùy chọn cập nhật:
-- **Cập nhật bảo toàn (`--merge`)**: Tải bổ sung file mới mà không ghi đè tài liệu hiện có.
-  ```bash
-  curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --merge --yes
-  ```
-- **Ghi đè hoàn toàn (`--override`)**: Sao lưu thư mục cũ và cài mới hoàn toàn.
-  ```bash
-  curl -fsSL "https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh?$(date +%s)" | bash -s -- --override --yes
-  ```
-- **Refresh Agent Shim (`--refresh-agent-shim`)**: Cập nhật tệp `AGENTS.md` theo chuẩn shim mới nhất.
+### Test Suite Commands:
+```bash
+# 1. Execute Rust unit and integration tests (25+ tests)
+cargo test
+
+# 2. Execute runner input validation test suite
+python3 tests/test_runner_inputs.py
+
+# 3. Execute End-to-End (E2E) test runner suite
+python3 tests/e2e/run_tests.py
+```
 
 ---
 
-## 📊 End-to-End Task Execution Flow
+## 📄 Compliance Index
 
-```text
-               👤 Human Strategic Goal
-                         │
-                         ▼
-             👑 Chief of Staff (Mina)
-             (Decomposes to Stories & Specs)
-                         │
-         ┌───────────────┼───────────────┐
-         ▼               ▼               ▼
-   💻 Implementer   🧪 Verifier     🔍 Explorer
-   (.worktrees/)   (Cargo Test)   (Read-Only Search)
-         │               │               │
-         └───────────────┼───────────────┘
-                         ▼
-             🗄️ Durable Layer (harness.db)
-                         │
-                         ▼
-          🎨 Live tldraw Telemetry Canvas
-```
-
-1. **Intake**: Human submits task ➔ Chief of Staff classifies risk lane (`tiny`, `normal`, `high_risk`) via `./scripts/harness intake`.
-2. **Isolation**: Chief of Staff spawns Implementer sub-agent inside an isolated Git worktree: `./scripts/harness worktree spawn --task <id>`.
-3. **Execution**: Implementer writes code; Explorer navigates symbols.
-4. **Verification**: Verifier runs `./scripts/harness story verify --id <id>`. If tests fail, stderr traceback is automatically packaged into auto-feedback prompt for self-correction.
-5. **Telemetry**: Traces are recorded into `harness.db` and rendered on **tldraw Desktop canvas** via `./scripts/harness export-trace --format tldraw`.
-
----
-
-## 📄 Documentation Index
-
-- [spec.md](file:///Users/bao312/Desktop/harness/spec.md) — Full System Architecture Manual & Technical Specification.
-- [AGENTS.md](file:///Users/bao312/Desktop/harness/AGENTS.md) — Agent Instructions & Shim.
-- [docs/HARNESS.md](file:///Users/bao312/Desktop/harness/docs/HARNESS.md) — Human-AI Collaboration Guide.
-- [docs/FEATURE_INTAKE.md](file:///Users/bao312/Desktop/harness/docs/FEATURE_INTAKE.md) — Feature Intake & Risk Lanes.
-- [docs/ARCHITECTURE.md](file:///Users/bao312/Desktop/harness/docs/ARCHITECTURE.md) — Architecture & Boundary Rules.
+- **`spec_new.md`**: Full Software Development & Release Specification Manual (SM-QT-01..04, SM-QĐi-01, SM-QĐ-002, DDD-COMPANY-2026).
+- **`AGENTS.md`**: Repository Agent Instructions & Harness Integration Shim.
+- **`docs/HARNESS.md`**: Operating Rules & Framework Conventions.
+- **`scripts/schema/006-work-item.sql`**: Unified Work Item Database Migration.

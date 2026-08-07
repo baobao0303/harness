@@ -26,3 +26,9 @@ projects/
 !projects/.gitkeep
 
 
+
+# Harness durable layer
+harness.db
+harness.db-wal
+harness.db-shm
+scripts/bin/harness

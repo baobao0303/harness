@@ -4,6 +4,7 @@ import sys
 import json
 import re
 import subprocess
+from pathlib import Path
 
 def parse_frontmatter(content):
     lines = content.splitlines()
@@ -97,22 +98,15 @@ def find_cli_path(repo_root):
     return "harness-cli"
 
 def main():
-    repo_root = os.environ.get("HARNESS_REPO_ROOT")
-    if not repo_root:
-        cur = os.path.abspath(os.path.dirname(__file__))
-        while cur and os.path.basename(cur) != "BrewCompany":
-            parent = os.path.dirname(cur)
-            if parent == cur:
-                break
-            cur = parent
-        repo_root = os.path.join(cur, "harness") if os.path.isdir(os.path.join(cur, "harness")) else cur
+    repo_root = os.environ.get(
+        "HARNESS_REPO_ROOT",
+        str(Path(__file__).resolve().parent.parent)
+    )
     
     pm_skills_dir = os.environ.get("PM_SKILLS_DIR")
     if not pm_skills_dir:
         parent_dir = os.path.dirname(repo_root)
         pm_skills_dir = os.path.join(parent_dir, "pm-skills")
-        if not os.path.isdir(pm_skills_dir):
-            pm_skills_dir = "/Users/bao312/Desktop/BrewCompany/pm-skills"
 
     cli_path = find_cli_path(repo_root)
     print(f"Using CLI path: {cli_path}")
