@@ -199,7 +199,7 @@ dependencies = [
 
 [[package]]
 name = "harness-cli"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "clap",
  "rusqlite",

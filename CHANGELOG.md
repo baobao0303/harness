@@ -1,5 +1,72 @@
 # Changelog
 
+## 2026-08-07 - PR #9
+
+- Feature/refactor 20260806 (@baobao0303)
+- Merge commit: `42199733ea40864a805509bbab2a2dca6ea4be1c`
+- Harness CLI release: `harness-cli-v0.1.11`
+- Changed files:
+  - `.env.example`
+  - `.gitignore`
+  - `AGENTS.md`
+  - `Cargo.lock`
+  - `PROJECT.md`
+  - `README.md`
+  - `crates/harness-cli/Cargo.toml`
+  - `crates/harness-cli/src/application/dto.rs`
+  - `crates/harness-cli/src/application/mod.rs`
+  - `crates/harness-cli/src/application/service.rs`
+  - `crates/harness-cli/src/domain.rs`
+  - `crates/harness-cli/src/domain/entities.rs`
+  - `crates/harness-cli/src/domain/errors.rs`
+  - `crates/harness-cli/src/domain/mod.rs`
+  - `crates/harness-cli/src/domain/registry.rs`
+  - `crates/harness-cli/src/domain/scoring.rs`
+  - `crates/harness-cli/src/domain/types.rs`
+  - `crates/harness-cli/src/domain/validation.rs`
+  - `crates/harness-cli/src/infrastructure.rs`
+  - `crates/harness-cli/src/infrastructure/brownfield.rs`
+  - `crates/harness-cli/src/infrastructure/db/mod.rs`
+  - `crates/harness-cli/src/infrastructure/db/queries.rs`
+  - `crates/harness-cli/src/infrastructure/db/schema.rs`
+  - `crates/harness-cli/src/infrastructure/errors.rs`
+  - `crates/harness-cli/src/infrastructure/mod.rs`
+  - `crates/harness-cli/src/infrastructure/process.rs`
+  - `crates/harness-cli/src/interface.rs`
+  - `crates/harness-cli/src/interface/args.rs`
+  - `crates/harness-cli/src/interface/errors.rs`
+  - `crates/harness-cli/src/interface/formatters.rs`
+  - `crates/harness-cli/src/interface/handlers.rs`
+  - `crates/harness-cli/src/interface/mod.rs`
+  - `crates/harness-cli/src/interface/stubs.rs`
+  - `crates/harness-cli/src/lib.rs`
+  - `crates/harness-cli/src/main.rs`
+  - `docs/ARCHITECTURE_UML.md`
+  - `docs/HARNESS_BACKLOG.md`
+  - `docs/README.md`
+  - `docs/TASK_FLOW.md`
+  - `docs/TEST_INFRA.md`
+  - `docs/UML_GUIDE.md`
+  - `docs/review-fixes-1d30bf62-to-main.md`
+  - `scripts/__pycache__/pm-skills-runnercpython-314.pyc`
+  - `scripts/__pycache__/sync-pm-skills.cpython-314.pyc`
+  - `scripts/pm-skills-runner`
+  - `scripts/schema/006-work-item.sql`
+  - `scripts/sync-pm-skills.py`
+  - `spec.md`
+  - `spec_new.md`
+  - `tests/__pycache__/test_runner_inputs.cpython-314.pyc`
+  - `tests/__pycache__/test_spaces_in_paths.cpython-314.pyc`
+  - `tests/e2e/__pycache__/test_suite.cpython-314.pyc`
+  - `tests/e2e/test_suite.py`
+  - `tests/runner_inputs_report.md`
+  - `tests/spaces_in_paths_report.md`
+  - `tests/stress_test_results.md`
+  - `tests/stress_test_sync.py`
+  - `tests/test_runner_inputs.py`
+  - `tests/test_spaces_in_paths.py`
+  - `yt_transcript_vi.txt`
+
 ## 2026-06-12 - PR #8
 
 - Cleanup/remove agents and ide files (@baobao0303)
