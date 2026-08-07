@@ -41,7 +41,7 @@ crates/harness-cli/src/
     ├── args.rs             # Clap CLI structs, enums, subcommands, and flags
     ├── handlers.rs         # Subcommand execution handlers bridging CLI to application services
     ├── formatters.rs       # Output formatters (Tables, JSON, plain text)
-    ├── stubs.rs            # Worktree, Subagent, and Skill CLI command handlers
+    ├── stubs.rs            # Worktree and Subagent CLI command handlers
     └── errors.rs           # Command line interface error representations
 ```
 
@@ -323,6 +323,92 @@ Database initialization and schema migration runner:
 
 # Execute pending database migrations (001-init.sql through 006-work-item.sql)
 ./scripts/harness migrate
+```
+
+## 📥 6.1. Step-by-Step Installation Guide for Linux (Từng bước cài đặt trên Linux)
+
+### 🔹 Phương án 1: Cài đặt tự động bằng Script (Khuyên dùng)
+
+#### **Bước 1: Kiểm tra các công cụ tiền đề (Prerequisites)**
+Đảm bảo hệ thống Linux của bạn đã có `curl`, `bash`, và `git`:
+```bash
+sudo apt update && sudo apt install -y curl bash git sqlite3
+```
+
+#### **Bước 2: Tải và chạy script cài đặt tự động**
+Chạy lệnh bên dưới để tải và tích hợp Harness CLI vào dự án hiện tại:
+```bash
+# Cài đặt trực tiếp vào thư mục dự án hiện tại:
+curl -fsSL https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh | bash -s -- --yes
+
+# Hoặc nếu dự án đã có sẵn code, dùng cờ --merge để không đè file cũ:
+curl -fsSL https://raw.githubusercontent.com/baobao0303/harness/main/scripts/install-harness.sh | bash -s -- --merge --yes
+```
+
+#### **Bước 3: Thiết lập biến môi trường (.env)**
+Tạo file cấu hình môi trường từ mẫu:
+```bash
+cp .env.example .env
+```
+*(Chỉnh sửa `.env` để cấu hình `HARNESS_MODEL` và `HARNESS_DB` nếu cần)*
+
+#### **Bước 4: Khởi tạo Cơ sở dữ liệu SQLite**
+Khởi tạo file cơ sở dữ liệu `harness.db` và chạy các file Migration schema (001 -> 006):
+```bash
+./scripts/harness init
+./scripts/harness migrate
+```
+
+#### **Bước 5: Kiểm tra cài đặt thành công**
+Chạy lệnh kiểm tra thống kê cơ sở dữ liệu và danh sách công việc:
+```bash
+./scripts/harness query stats
+./scripts/harness work-item list
+```
+
+---
+
+### 🔹 Phương án 2: Biên dịch từ mã nguồn (Build from Source bằng Rust)
+
+#### **Bước 1: Cài đặt Rust toolchain và các thư viện cần thiết**
+```bash
+# Cài đặt Rust & Cargo
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source "$HOME/.cargo/env"
+
+# Cài đặt build tool
+sudo apt update && sudo apt install -y build-essential pkg-config libsqlite3-dev
+```
+
+#### **Bước 2: Clone repository về máy**
+```bash
+git clone https://github.com/baobao0303/harness.git
+cd harness
+```
+
+#### **Bước 3: Biên dịch binary `harness-cli` ở chế độ Release**
+```bash
+cargo build --release
+```
+
+#### **Bước 4: Copy binary biên dịch vào thư mục thi hành `scripts/bin/`**
+```bash
+mkdir -p scripts/bin
+cp target/release/harness-cli scripts/bin/harness-cli
+chmod +x scripts/bin/harness-cli
+```
+
+#### **Bước 5: Tạo file `.env` và Khởi tạo Cơ sở dữ liệu**
+```bash
+cp .env.example .env
+./scripts/harness init
+./scripts/harness migrate
+```
+
+#### **Bước 6: Xác nhận hoạt động**
+```bash
+./scripts/harness --help
+./scripts/harness query stats
 ```
 
 ---

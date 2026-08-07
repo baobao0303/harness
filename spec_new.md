@@ -19,7 +19,7 @@
 2. [QUY TRÌNH 2: THỰC HIỆN PHÁT TRIỂN PHẦN MỀM THEO SCRUM FRAMEWORK (SM-QT-02)](#2-quy-trình-2-thực-hiện-phát-triển-phần-mềm-theo-scrum-framework-sm-qt-02)
    - 2.1 [Mục Đích & Phạm Vi Áp Dụng](#21-mục-đích--phạm-vi-áp-dụng)
    - 2.2 [Trách Nhiệm Của Các Vai Trò Trong Scrum](#22-trách-nhiệm-của-các-vai-trò-trong-scrum)
-   - 2.3 [Thuật Ngữ & Định Nghĩa Cốt Lõi](#23-thuật-ngữ--định-nghĩa-cốt-lõi)
+   - 2.3 [Thuật Ngữ & Định Nghĩa Cốt Lõi (Bao gồm DoR & Estimation)](#23-thuật-ngữ--định-nghĩa-cốt-lõi)
    - 2.4 [Sơ Đồ & Chi Tiết Các Sự Kiện Sprint (Sprint Events)](#24-sơ-đồ--chi-tiết-các-sự-kiện-sprint-sprint-events)
    - 2.5 [Danh Mục Hồ Sơ Lưu Trữ (SM-QT-02)](#25-danh-mục-hồ-sơ-lưu-trữ-sm-qt-02)
 3. [QUY TRÌNH 3: PHÁT HÀNH SẢN PHẨM PHẦN MỀM - RELEASE (SM-QT-03)](#3-quy-trình-3-phát-hành-sản-phẩm-phần-mềm---release-sm-qt-03)
@@ -43,12 +43,12 @@
    - 5.4 [Luồng Trạng Thái (State Machine) Của Từng Work Item](#54-luồng-trạng-thái-state-machine-của-từng-work-item)
    - 5.5 [Quy Ước Chuẩn Viết Nội Dung Cho Epic, Feature, User Story, Task, Bug, Testcase](#55-quy-ước-chuẩn-viết-nội-dung-cho-epic-feature-user-story-task-bug-testcase)
    - 5.6 [Danh Mục Hồ Sơ Lưu Trữ (SM-QĐi-01)](#56-danh-mục-hồ-sơ-lưu-trữ-sm-qđi-01)
-6. [QUY ĐỊNH 6: QUẢN LÝ WORK ITEM TRÊN TFS (SM-QĐ-002 - HIỆU LỰC 26/06/2026)](#6-quy-định-6-quản-lý-work-item-trên-tfs-sm-qđ-002---hiệu-lực-26062026)
+6. [QUY ĐỊNH 6: QUẢN LÝ WORK ITEM TRÊN TFS, CHIẾN LƯỢC GIT BRANCH & CI/CD (SM-QĐ-002 - HIỆU LỰC 26/06/2026)](#6-quy-định-6-quản-lý-work-item-trên-tfs-sm-qđ-002---hiệu-lực-26062026)
    - 6.1 [Mục Đích & Phạm Vi Áp Dụng](#61-mục-đích--phạm-vi-áp-dụng-1)
    - 6.2 [Trách Nhiệm Theo Vai Trò (CPO, BA, Dev, Tester, SM/PM)](#62-trách-nhiệm-theo-vai-trò-cpo-ba-dev-tester-smpm)
    - 6.3 [Định Nghĩa Các Loại Work Item & Technical Story](#63-định-nghĩa-các-loại-work-item--technical-story)
    - 6.4 [Ma Trận Trạng Thái & Người Chuyển Trạng Thái](#64-ma-trận-trạng-thái--người-chuyển-trạng-thái)
-   - 6.5 [Phân Định Môi Trường Phát Triển & Flow Deploy Code](#65-phân-định-môi-trường-phát-triển--flow-deploy-code)
+   - 6.5 [Phân Định Môi Trường, Flow Deploy Code, Branching & CI/CD Pipeline](#65-phân-định-môi-trường-phát-triển--flow-deploy-code)
    - 6.6 [Workflow Chi Tiết Từng Loại Work Item](#66-workflow-chi-tiết-từng-loại-work-item)
 7. [KIẾN TRÚC & THIẾT KẾ DOMAIN-DRIVEN DESIGN (DDD) VÀ THIẾT LẬP MÔ HÌNH TEAM OWNERSHIP TẠI COMPANY](#7-kiến-trúc--thiết-kế-domain-driven-design-ddd-và-thiết-lập-mô-hình-team-ownership-tại-company)
    - 7.1 [Tổng Quan Kiến Trúc Microservices tại Company](#71-tổng-quan-kiến-trúc-microservices-tại-company)
@@ -65,6 +65,26 @@
    - 7.12 [Ma Trận Phân Công Công Việc Tích Hợp Thực Tế (Ví dụ: TPOS tích hợp Loyalty)](#712-ma-trận-phân-công-công-việc-tích-hợp-thực-tế-ví-dụ-tpos-tích-hợp-loyalty)
    - 7.13 [Các Nguyên Tắc Vàng (Golden Rules) Trong Kiến Trúc Company](#713-các-nguyên-tắc-vàng-golden-rules-trong-kiến-trúc-company)
 8. [TỔNG HỢP DANH MỤC HỒ SƠ & TIÊU CHUẨN LƯU TRỮ TUÂN THỦ ISO/IEC 27001:2022](#8-tổng-hợp-danh-mục-hồ-sơ--tiêu-chuẩn-lưu-trữ-tuân-thủ-isoiec-270012022)
+9. [QUY TRÌNH QUẢN LÝ SỰ CỐ HỆ THỐNG VÀ BẢO ĐẢM HOẠT ĐỘNG LIÊN TỤC (INCIDENT MANAGEMENT & DISASTER RECOVERY - ISO/IEC 27001:2022 A.5.24-A.5.29, A.8.13)](#9-quy-trình-quản-lý-sự-cố-hệ-thống-và-bảo-đảm-hoạt-động-liên-tục-incident-management--disaster-recovery---isoiec-270012022-a524-a529-a813)
+   - 9.1 [Ma Trận Mức Độ Nghiêm Trọng (Severity Matrix P1-P4) & Cam Kết SLA](#91-ma-trận-mức-độ-nghiêm-trọng-severity-matrix-p1-p4--cam-kết-sla)
+   - 9.2 [Kênh Cảnh Báo (Alerting Channels) & Quy Trình Trực On-Call 24/7](#92-kênh-cảnh-báo-alerting-channels--quy-trình-trực-on-call-247)
+   - 9.3 [Quy Trình Phân Tích Nguyên Nhân Gốc Rễ (RCA) & Blameless Postmortem (48h)](#93-quy-trình-phân-tích-nguyên-nhân-gốc-rễ-rca--blameless-postmortem-48h)
+   - 9.4 [Giám Sát Sau Release (Post-Release Monitoring) & Ngăn Ngừa Sự Cố Giới Hạn Tài Nguyên](#94-giám-sát-sau-release-post-release-monitoring--ngăn-ngừa-sự-cố-giới-hạn-tài-nguyên)
+   - 9.5 [Kế Hoạch Khôi Phục Sau Thảm Họa (Disaster Recovery - DR) & BCP (ISO A.8.13, A.5.29)](#95-kế-hoạch-khôi-phục-sau-thảm-họa-disaster-recovery---dr--bcp-iso-a813-a529)
+10. [QUY ĐỊNH BẢO MẬT HỆ THỐNG VÀ DEVSECOPS (ISO/IEC 27001:2022 A.8 & NGHỊ ĐỊNH PDPD 13/2023/NĐ-CP)](#10-quy-định-bảo-mật-hệ-thống-và-devsecops-isoiec-270012022-a8--nghị-định-pdpd-132023nđ-cp)
+    - 10.1 [Ma Trận Phân Quyền Truy Cập (Access Control Matrix - ISO A.8.2, A.8.3, A.8.4)](#101-ma-trận-phân-quyền-truy-cập-access-control-matrix---iso-a82-a83-a84)
+    - 10.2 [Quy Trình Quản Lý Bí Mật (Secrets Management & Vault Governance - ISO A.8.24)](#102-quy-trình-quản-lý-bí-mật-secrets-management--vault-governance---iso-a824)
+    - 10.3 [Cổng Kiểm Soát Bảo Mật Tự Động Trong CI/CD (Security Gates - ISO A.8.25, A.8.28)](#103-cổng-kiểm-soát-bảo-mật-tự-động-trong-cicd-security-gates---iso-a825-a828)
+    - 10.4 [Tuân Thủ Quy Định Bảo Vệ Dữ Liệu Cá Nhân Theo Nghị Định 13/2023/NĐ-CP (PDPD Vietnam)](#104-tuân-thủ-quy-định-bảo-vệ-dữ-liệu-cá-nhân-theo-nghị-định-132023nđ-cp-pdpd-vietnam)
+11. [BỘ CHỈ SỐ DORA METRICS VÀ ĐO LƯỜNG NĂNG LỰC SẢN XUẤT (AGILE & ENGINEERING DASHBOARD)](#11-bộ-chỉ-số-dora-metrics-và-đo-lường-năng-lực-sản-xuất-agile--engineering-dashboard)
+    - 11.1 [Bộ Chỉ Số DORA Metrics Bắt Buộc](#111-bộ-chỉ-số-dora-metrics-bắt-buộc)
+    - 11.2 [Chỉ Số KPIs Chất Lượng Kỹ Thuật & Hiệu Suất Agile (Engineering Quality KPIs)](#112-chỉ-số-kpis-chất-lượng-kỹ-thuật--hiệu-suất-agile-engineering-quality-kpis)
+    - 11.3 [Báo Cáo Tự Động Từ Harness Database (Sprint & Release Report Automation)](#113-báo-cáo-tự-động-từ-harness-database-sprint--release-report-automation)
+12. [QUẢN TRỊ PHÁT TRIỂN PHẦN MỀM CÓ HỖ TRỢ TRÍ TUỆ NHÂN TẠO (AI-ASSISTED DEVELOPMENT GOVERNANCE & LLM POLICY)](#12-quản-trị-phát-triển-phần-mềm-có-hỗ-trợ-trí-tuệ-nhân-tạo-ai-assisted-development-governance--llm-policy)
+    - 12.1 [Quy Định Quản Trị Mã Nguồn Do AI Tạo (Human-in-the-Loop & Tagging `[AI]`)](#121-quy-định-quản-trị-mã-nguồn-do-ai-tạo-human-in-the-loop--tagging-ai)
+    - 12.2 [Bảo Mật Thông Tin & Quy Định Dữ Liệu Khi Sử Dụng LLM (Data Privacy & Secret Prohibition)](#122-bảo-mật-thông-tin--quy-định-dữ-liệu-khi-sử-dụng-llm-data-privacy--secret-prohibition)
+    - 12.3 [Cổng Phê Duyệt Tự Động & Giới Hạn Quyền AI Agent (Approval Gates & Restricted Permissions)](#123-cổng-phê-duyệt-tự-động--giới-hạn-quyền-ai-agent-approval-gates--restricted-permissions)
+    - 12.4 [Audit Logging & Observability Cho AI Agent (Harness Observability Audit Trail)](#124-audit-logging--observability-cho-ai-agent-harness-observability-audit-trail)
 
 ---
 
@@ -204,15 +224,34 @@
   - Tham gia họp Sprint Review cuối mỗi Sprint.
   - Đánh giá, góp ý trên các Increment thực tế được demo.
 
-### 2.3 Thuật Ngữ & Định Nghĩa Cốt Lõi
+### 2.3 Thuật Ngữ & Định Nghĩa Cốt Lõi (Bao gồm DoR & Estimation)
 | Thuật ngữ | Giải thích định nghĩa |
 | :--- | :--- |
+| **DoR (Definition of Ready)** | Định nghĩa sẵn sàng - Tiêu chuẩn bắt buộc cho một User Story trước khi được phép kéo vào Sprint Planning. |
 | **DoD (Definition of Done)** | Định nghĩa hoàn thành - Tiêu chuẩn chất lượng bắt buộc bắt buộc phải đạt được trước khi một hạng mục công việc được coi là hoàn tất. |
+| **Story Points** | Đơn vị đo lường tương đối nỗ lực, độ phức tạp và rủi ro của User Story (tuân thủ dãy Fibonacci). |
 | **Timebox** | Khoảng thời gian giới hạn tối đa cho phép ở mỗi sự kiện họp. |
 | **Product Backlog** | Danh sách sắp xếp theo ưu tiên chứa toàn bộ các hạng mục cần thực hiện cho sản phẩm. |
 | **Sprint Backlog** | Danh sách các hạng mục công việc được chọn để thực hiện trong Sprint hiện tại kèm kế hoạch triển khai. |
 | **Increment** | Phần tăng trưởng sản phẩm hoàn chỉnh, kiểm thử đạt DoD mà người dùng có thể thao tác sử dụng được ngay. |
 | **Value increase opportunities** | Cơ hội gia tăng giá trị sản phẩm qua việc thay đổi thứ tự ưu tiên hoặc cải tiến User Story. |
+
+#### 2.3.1 Definition of Ready (DoR) - Tiêu chuẩn sẵn sàng cho User Story
+Một User Story **CHỈ ĐƯỢC PHÉP KÉO VÀO SPRINT** khi đáp ứng đủ 6 tiêu chí DoR bắt buộc sau:
+1. **Clear Business Value & Context**: Mô tả rõ ràng vai trò người dùng (As a), hành động (I want), giá trị mang lại (So that).
+2. **Detailed Acceptance Criteria (AC)**: Có danh sách tiêu chí nghiệm thu rõ ràng, không mập mờ (viết theo dạng Given-When-Then hoặc Checklist chi tiết).
+3. **UI/UX Design Sign-off**: Đã có đầy đủ Mockup/Prototype giao diện được BA và UI/UX duyệt (đối với User Story có giao diện).
+4. **Technical & Dependency Identification**: Đã xác định rõ các API contract, data fields, schema DB và không còn dependency bị nghẽn bởi team khác.
+5. **Story Points Estimated**: Đã được toàn bộ Dev Team đồng thuận ước lượng điểm nỗ lực theo Fibonacci trong buổi Grooming/Refinement.
+6. **Testability**: Tester đã rà soát và xác nhận User Story có thể viết được Testcase kiểm thử độc lập.
+
+#### 2.3.2 Kỹ thuật Ước lượng Effort theo Dãy Fibonacci & Planning Poker
+- **Dãy Fibonacci chuẩn áp dụng**: `1, 2, 3, 5, 8, 13` Story Points.
+- **Nguyên tắc phân rã**: Nếu một User Story được ước lượng **> 8 Story Points (ví dụ 13 hoặc lớn hơn)**, User Story đó **BẮT BUỘC phải được phân rã thành các User Story nhỏ hơn** (≤ 8 Story Points) trước khi đưa vào Sprint.
+- **Phương pháp Planning Poker**:
+  - BA trình bày User Story và giải đáp thắc mắc.
+  - Mỗi thành viên Dev Team chọn ẩn 1 con số trong dãy Fibonacci thể hiện độ phức tạp/nỗ lực.
+  - Đồng thời mở bài: Nếu có sự chênh lệch lớn (ví dụ 2 điểm vs 8 điểm), hai thành viên chọn điểm thấp nhất và cao nhất cùng giải thích lý do để team thảo luận chốt điểm đồng thuận.
 
 ### 2.4 Sơ Đồ & Chi Tiết Các Sự Kiện Sprint (Sprint Events)
 
@@ -716,7 +755,7 @@ Mẫu ORF tiêu chuẩn gồm các mục bắt buộc:
 
 > ⚠️ **Lưu ý đặc biệt**: Nếu Tester verify thấy bug vẫn còn, chuyển Bug từ **`Resolved` ➔ `New`**; Dev kéo lại về `Active` để fix tiếp.
 
-### 6.5 Phân Định Môi Trường Phát Triển & Flow Deploy Code
+### 6.5 Phân Định Môi Trường, Flow Deploy Code, Branching & CI/CD Pipeline
 
 | STT | Môi trường | Tên gọi mã | Mô tả chức năng |
 | :---: | :--- | :--- | :--- |
@@ -734,6 +773,57 @@ Mẫu ORF tiêu chuẩn gồm các mục bắt buộc:
 └─────────┘    └───────────┘    └──────────────┘    └────────────┘
 Flow deploy chuẩn: Code Local ──► Development (Dev/Test) ──► Staging (UAT) ──► Production
 ```
+
+#### 6.5.1 Chiến Lược Quản Lý Branch (Trunk-Based Development + Feature Branches)
+Company áp dụng mô hình **Trunk-Based Development kết hợp Short-Lived Feature Branches** để tối ưu hóa tốc độ tích hợp và giảm rủi ro merge conflicts:
+- **Trunk Branch (`main`)**: Branch duy nhất đại diện cho trạng thái sẵn sàng phát hành của sản phẩm. Code trên `main` luôn ở trạng thái buildable và có thể deploy.
+- **Feature Branch (`feat/<ticket-id>-<short-description>`)**: Tạo ra từ `main` để thực hiện một Task/User Story cụ thể.
+  - *Thời gian tồn tại (Lifespan)*: Rất ngắn (**< 2 ngày làm việc**).
+  - *Quy tắc Merge*: Phải tạo Pull Request (PR), pass 100% CI Pipeline (build, unit test, SAST) và có **ít nhất 2 người review (Peer Review)** phê duyệt trước khi merge về `main`.
+- **Hotfix Branch (`fix/<ticket-id>-<short-description>`)**: Tạo ra từ `main` khi có sự cố khẩn cấp trên Production. Sửa lỗi, test nhanh trên Staging và merge lại về `main` sau khi phê duyệt.
+
+#### 6.5.2 Quy Ước Commit Chuẩn (Conventional Commits Standard)
+Toàn bộ commit message bắt buộc tuân thủ chuẩn **Conventional Commits 1.0.0**:
+- **Cú pháp chuẩn**: `<type>(<scope>): <description> [Ticket-ID]`
+- **Danh sách Types bắt buộc**:
+  - `feat`: Tính năng mới cho người dùng.
+  - `fix`: Sửa lỗi (bug fix).
+  - `docs`: Thay đổi tài liệu, comment.
+  - `style`: Thay đổi format, khoảng trắng, không ảnh hưởng logic code.
+  - `refactor`: Tái cấu trúc code (không thêm feat, không fix bug).
+  - `perf`: Cải thiện hiệu năng (performance optimization).
+  - `test`: Thêm hoặc bổ sung unit/integration tests.
+  - `build`: Thay đổi hệ thống build, dependencies (cargo, npm,...).
+  - `ci`: Thay đổi file cấu hình CI/CD (GitHub Actions, GitLab CI,...).
+  - `chore`: Công việc phụ trợ không thuộc các loại trên.
+- *Ví dụ chuẩn*: `feat(loyalty): add API endpoint to redeem reward points [US-204]`
+- *Ví dụ chuẩn*: `fix(auth): fix token expiration issue on refresh [BUG-109]`
+
+#### 6.5.3 Quy Chuẩn Đánh Phiên Bản (SemVer 2.0.0) & Quản Lý Artifact Registry
+- **Semantic Versioning (SemVer 2.0.0)**: Định dạng phiên bản `MAJOR.MINOR.PATCH` (Ví dụ: `v2.4.1`).
+  - `MAJOR`: Thay đổi phá vỡ tương thích (Breaking API Changes).
+  - `MINOR`: Bổ sung tính năng mới nhưng vẫn tương thích ngược (Backward-compatible feature).
+  - `PATCH`: Sửa lỗi tương thích ngược (Backward-compatible bug fixes).
+- **Artifact Registry Governance**:
+  - Mọi bản build thành công từ CI Pipeline đều được gắn tag SemVer và lưu trữ tự động trên **Private Artifact Registry** (Container Registry / Cargo Registry).
+  - Tuyệt đối cấm sử dụng tag `latest` trên môi trường Production; Production bắt buộc deploy đích danh theo Immutable Image Tag (ví dụ: `registry.company.com/loyalty-service:v2.4.1`).
+
+#### 6.5.4 Quy Trình Pipeline CI/CD Tự Động (Automated Pipeline Stages)
+Mỗi Pull Request hoặc Commit push lên repository sẽ tự động kích hoạt pipeline 5 giai đoạn:
+
+```text
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ Stage 1:     │───►│ Stage 2:     │───►│ Stage 3:     │───►│ Stage 4:     │───►│ Stage 5:     │
+│ Build & Lint │    │ Unit Test &  │    │ Static Security│  │ Staging      │    │ Production   │
+│ Formatting   │    │ Coverage     │    │ & Dep Scan   │    │ Deploy & DAST│    │ Approval Gate│
+└──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
+```
+
+1. **Stage 1 (Build & Lint)**: Kiểm tra cú pháp, format code và compile dự án.
+2. **Stage 2 (Unit Testing & Coverage)**: Thực thi 100% unit tests. Tự động reject nếu Coverage < 80% đối với Business Core layer.
+3. **Stage 3 (Static Security & Dependency Scan)**: Chạy SAST (SonarQube/Semgrep) và quét CVE dependencies (Trivy/Cargo audit). Chặn pipeline nếu phát hiện lỗi bảo mật Critical/High.
+4. **Stage 4 (Staging Deploy & Integration Tests)**: Tự động deploy lên môi trường Staging và chạy Integration tests / DAST smoke tests.
+5. **Stage 5 (Production Deploy with Approval Gate)**: Deploy bản build đã verify ở Staging lên Production. Bắt buộc có nút ấn xác nhận phê duyệt (Approval Gate) từ CPO / Tech Lead / DevOps.
 
 ### 6.6 Workflow Chi Tiết Từng Loại Work Item
 
@@ -1121,3 +1211,186 @@ Bảng tổng hợp toàn bộ hồ sơ vận hành phần mềm bắt buộc ph
 | **16**| Danh sách Testcase | SM-QĐi-01 | Tester | **1 năm** |
 | **17**| Domain Knowledge (Glossary, Models, Rules, Event Catalog) | DDD-COMPANY-2026 | Domain Team Owner | **Lưu trữ vĩnh viễn trên Outline Wiki (`#Domain`)** |
 | **18**| Tài liệu mô tả tính năng & hướng dẫn sử dụng | SM-QT-03 / SM-QT-04 | Tester | **Lưu đến khi tài liệu không còn chính xác với thực tế sản phẩm** |
+| **19**| Báo cáo phân tích sự cố & Blameless Postmortem (RCA Report) | SM-QT-05 / ISO A.5.26 | Dev / DevOps / Tech Lead | **3 năm** |
+| **20**| Nhật ký trực On-call & Lịch sử Incident Alerts | SM-QT-05 / ISO A.5.24 | Tech Lead / Operations | **3 năm** |
+| **21**| Báo cáo kiểm tra bảo mật (SAST/DAST & Dependency Scan Audit) | SM-QT-06 / ISO A.8.25 | Security Lead / DevOps | **3 năm** |
+| **22**| Hồ sơ đánh giá tác động dữ liệu cá nhân (DPIA PDPD 13/2023) | SM-QT-06 / PDPD-13 | Compliance Officer / DPO | **5 năm** |
+| **23**| Biên bản kiểm thử diễn tập khôi phục thảm họa (DR Restore Test Log) | SM-QT-05 / ISO A.8.13 | Infrastructure Lead / DevOps | **3 năm** |
+| **24**| Báo cáo đo lường DORA Metrics & Engineering Performance | SM-QT-07 | Engineering Director / SM | **3 năm (Tự động từ Harness DB)** |
+| **25**| Nhật ký giám sát & Audit Log thao tác của AI Agent | SM-QT-08 | System Architect / Lead Dev | **3 năm (Harness Observability)** |
+
+---
+
+## 9. QUY TRÌNH QUẢN LÝ SỰ CỐ HỆ THỐNG VÀ BẢO ĐẢM HOẠT ĐỘNG LIÊN TỤC (INCIDENT MANAGEMENT & DISASTER RECOVERY - ISO/IEC 27001:2022 A.5.24 - A.5.29, A.8.13)
+
+### 9.1 Ma Trận Mức Độ Nghiêm Trọng (Severity Matrix P1-P4) & Cam Kết SLA
+Mọi sự cố vận hành trên môi trường Production phải được phân loại ngay lập tức theo ma trận Severity và tuân thủ SLA phản hồi/xử lý:
+
+| Mức độ (Severity) | Định nghĩa & Dấu hiệu nhận biết | SLA Phản hồi (Response SLA) | SLA Xử lý / Tạm thời (Resolution SLA) | Người chủ trì (Incident Commander) |
+| :---: | :--- | :---: | :---: | :---: |
+| **P1 - Critical** | **Sự cố thảm họa**: Hệ thống ngừng hoạt động hoàn toàn, sập server (OverRAM, OOM Kill, High CPU 100%), mất dữ liệu, hoặc tính năng thanh toán/đăng nhập bị ngắt toàn bộ. | **≤ 15 phút** | **≤ 2 giờ** | CTO / Lead DevOps |
+| **P2 - High** | **Sự cố nghiêm trọng**: Tính năng cốt lõi bị gián đoạn (VD: không tạo được đơn hàng), ảnh hưởng > 20% lượng người dùng nhưng có phương án tạm thời (Workaround). | **≤ 30 phút** | **≤ 4 giờ** | Tech Lead / Domain Owner |
+| **P3 - Medium** | **Sự cố trung bình**: Lỗi tính năng phụ, ảnh hưởng < 5% người dùng, có workaround, hệ thống cốt lõi vẫn vận hành bình thường. | **≤ 2 giờ** | **≤ 24 giờ** | Senior Developer / QA Lead |
+| **P4 - Low** | **Sự cố nhỏ / Cải tiến**: Lỗi hiển thị UI nhỏ, sai chính tả, chậm không đáng kể, gợi ý tối ưu. | **≤ 8 giờ** | Đưa vào Sprint Backlog kế tiếp | Developer assigned |
+
+### 9.2 Kênh Cảnh Báo (Alerting Channels) & Quy Trình Trực On-Call 24/7
+- **Tự động hóa cảnh báo**: Hệ thống giám sát (Prometheus/Grafana/PagerDuty) tự động quét chỉ số hệ thống theo thời gian thực (5s/lần). Khi vượt ngưỡng threshold (RAM > 85%, CPU > 90%, HTTP 5xx Rate > 2%), hệ thống tự động đẩy alert trực tiếp vào kênh chuyên dụng `#incident-alerts` (Slack/Teams/Telegram) và gọi điện tự động (PagerDuty/Opsgenie) tới Kỹ sư On-call.
+- **Lịch trực On-call 24/7**: Bộ phận Infrastructure & DevOps thiết lập lịch trực luân phiên 24/7.
+- **Quy trình Escalate (Leo thang)**:
+  - Nếu sự cố P1/P2 không được Kỹ sư On-call ấn xác nhận (Acknowledge) trong vòng **10 phút** ➔ Cảnh báo tự động đẩy lên Tech Lead.
+  - Nếu sau **15 phút** chưa có phản hồi ➔ Cảnh báo tự động gọi điện trực tiếp tới CTO.
+
+### 9.3 Quy Trình Phân Tích Nguyên Nhân Gốc Rễ (RCA) & Blameless Postmortem Trong 48 Giờ
+- **Nguyên tắc Blameless (Không đổ lỗi)**: Buổi họp Postmortem tập trung vào việc tìm lỗi của quy trình, công cụ, hạ tầng và giải pháp ngăn ngừa, tuyệt đối không quy trách nhiệm cá nhân.
+- **Thời hạn tổ chức**: Bắt buộc tổ chức cuộc họp Blameless Postmortem trong vòng **48 giờ làm việc** sau khi sự cố P1 hoặc P2 được khắc phục hoàn toàn.
+- **Nội dung Báo cáo RCA (Root Cause Analysis Report)**:
+  1. **Timeline sự cố**: Chi tiết từng mốc thời gian từ khi phát sinh lỗi ➔ nhận alert ➔ khoanh vùng ➔ phát hành bản vá/roll back.
+  2. **Nguyên nhân gốc rễ (5 Whys)**: Áp dụng phương pháp hỏi 5 lần "Tại sao" để tìm ra nguyên nhân sâu xa (ví dụ: *RAM tràn ➔ do Memory Leak trong loop ➔ do thiếu bounds check ➔ do PR review bỏ qua ➔ do thiếu load test trước release*).
+  3. **Action Items khắc phục lâu dài**: Ghi nhận các Task cải tiến (thêm alert, refactor code, thêm integration test) kèm deadline và người chịu trách nhiệm, đưa trực tiếp vào Sprint Backlog ưu tiên cao nhất.
+
+### 9.4 Giám Sát Sau Release (Post-Release Monitoring) & Ngăn Ngừa Sự Cố Giới Hạn Tài Nguyên
+- **Khung thời gian giám sát trọng điểm**: 48 giờ làm việc liên tục sau mỗi đợt Release Production là giai đoạn "Cảnh báo cao độ" (High Vigilance Window).
+- **Chỉ số bắt buộc theo dõi (Golden Signals)**:
+  1. **Latency**: Thời gian phản hồi trung bình và p99.
+  2. **Traffic**: Số lượng request/giây (RPS).
+  3. **Errors**: Tỷ lệ lỗi HTTP 5xx và Unhandled Exceptions.
+  4. **Saturation**: Mức độ tiêu tốn tài nguyên (RAM, CPU, Disk I/O, DB Connection Pool).
+- **Ngăn ngừa sự cố quá tải RAM / Memory Leak (OOM Prevention)**:
+  - Bắt buộc thiết lập `Memory Limits` & `CPU Requests/Limits` chuẩn trên từng Container / Kubernetes Pod.
+  - Cấu hình tự động `Auto-kill` & `Self-healing Restart` khi Heap Memory chạm ngưỡng 90%.
+  - Tự động kích hoạt **Rollback tự động (Automated Canary Rollback)** về phiên bản ổn định trước đó nếu Tỷ lệ Lỗi vượt quá 2% trong 10 phút đầu sau Release.
+
+### 9.5 Kế Hoạch Khôi Phục Sau Thảm Họa (Disaster Recovery - DR) & BCP (ISO A.8.13, A.5.29)
+- **Mục tiêu RPO & RTO theo phân tầng dịch vụ**:
+
+| Phân tầng Dịch vụ | Phạm vi ứng dụng | RPO (Recovery Point Objective - Mất dữ liệu tối đa) | RTO (Recovery Time Objective - Thời gian gián đoạn tối đa) |
+| :--- | :--- | :---: | :---: |
+| **Tier 1 - Critical Core** | Auth, Identity, Payment, Database Prod chính | **≤ 15 phút** | **≤ 1 giờ** |
+| **Tier 2 - High Core** | Order, Inventory, Loyalty, Promotion | **≤ 1 giờ** | **≤ 4 giờ** |
+| **Tier 3 - Standard** | Analytics, Reporting, Logging, Dev/Staging | **≤ 24 giờ** | **≤ 24 giờ** |
+
+- **Lịch Backup & Diễn tập Khôi phục (Backup & Restore Test Schedule)**:
+  - **Full Backup DB**: Thực hiện tự động hằng ngày vào lúc 00:00 UTC, lưu trữ mã hóa AES-256 trên Multi-Region Cloud Storage.
+  - **Transaction Log / WAL Backup**: Thực hiện tự động mỗi 15 phút cho Tier 1.
+  - **Kiểm thử khôi phục (Restore Drill)**: Định kỳ **1 tháng / 1 lần**, đội ngũ Infrastructure phải diễn tập khôi phục dữ liệu từ bản backup lên môi trường Sandbox độc lập để đo lường RTO thực tế và kiểm tra tính toàn vẹn dữ liệu. Kết quả lưu vào *Biên bản Restore Test Log*.
+- **Kế hoạch duy trì hoạt động kinh doanh (BCP - Business Continuity Plan)**:
+  - Cấu hình hạ tầng Multi-AZ / Multi-Region Failover tự động đối với Database và API Gateway.
+  - Khi xảy ra sự cố sập Datacenter/Region Cloud chính, hệ thống tự động chuyển hướng Traffic (DNS Failover) sang Region dự phòng trong vòng 15 phút.
+
+---
+
+## 10. QUY ĐỊNH BẢO MẬT HỆ THỐNG VÀ DEVSECOPS (ISO/IEC 27001:2022 A.8 & NGHỊ ĐỊNH PDPD 13/2023/NĐ-CP)
+
+### 10.1 Ma Trận Phân Quyền Truy Cập (Access Control Matrix - ISO A.8.2, A.8.3, A.8.4)
+Áp dụng nghiêm ngặt nguyên tắc **Quyền tối thiểu (Least Privilege)** và **Phân tách trách nhiệm (Separation of Duties)**:
+
+| Vai trò (Role) | Source Code (Git) | Môi trường Dev/Test | Môi trường Staging | Môi trường Production | Cơ sở dữ liệu Prod |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Developer** | Read / Push (Feature branch) | Full Access | Read / Deploy Test | No Access | No Access (Chỉ xem Anonymized Log) |
+| **Tester (QA)** | Read | Full Access | Full Test Access | Read Only (No Deploy) | No Access |
+| **Tech Lead / Domain Owner** | Read / Approve PR Merge | Full Access | Full Access | Read / Approve Release | Read Only (Via VPN + Bastion + MFA) |
+| **DevOps / Infra Lead** | Full Admin | Full Access | Full Access | Full Admin Access | Emergency Access (Log Audit 100%) |
+| **BA / CPO** | Read (Docs only) | User Access | UAT Access | User Access | No Access |
+
+### 10.2 Quy Trình Quản Lý Bí Mật (Secrets Management & Vault Governance - ISO A.8.24)
+- **Tuyệt đối cấm Commit Secrets**: CẤM BẮT BUỘC mọi hành vi hardcode hoặc commit file `.env`, Passwords, API Keys, Private Keys, Database Tokens vào Git Repository (kể cả private repository).
+- **Hệ thống Quản lý Secret tập trung**: Sử dụng **HashiCorp Vault** (hoặc AWS Secrets Manager / SOPS) để lưu trữ bí mật. Ứng dụng lấy secret runtime thông qua Environment Variables được inject tự động từ Vault.
+- **Tự động quét Secret (Automated Secret Scanning)**: Kích hoạt công cụ TruffleHog / GitGuardian chặn từ bước `git commit` (Pre-commit hook) và trong CI Pipeline. Nếu phát hiện Secret lọt vào commit, pipeline lập tức hủy bỏ và vô hiệu hóa (revoke) secret đó ngay lập tức.
+
+### 10.3 Cổng Kiểm Soát Bảo Mật Tự Động Trong CI/CD (Security Gates - ISO A.8.25, A.8.28)
+Tích hợp bảo mật tự động vào quy trình phát triển (Shift-Left Security):
+
+```text
+┌─────────────────────────┐    ┌─────────────────────────┐    ┌─────────────────────────┐
+│ SAST (SonarQube/Semgrep)│───►│ Dependency Scan (Trivy) │───►│ Container Image Scan    │
+│ Quét mã nguồn tĩnh      │    │ Quét lỗ hổng thư viện   │    │ Quét Docker Layer CVEs  │
+└─────────────────────────┘    └─────────────────────────┘    └─────────────────────────┘
+```
+
+1. **SAST (Static Application Security Testing)**: Quét lỗi bảo mật mã nguồn (OWASP Top 10, SQL Injection, XSS, Buffer Overflow). Chặn build nếu có lỗi `High` hoặc `Critical`.
+2. **Dependency Vulnerability Scan**: Tự động quét các gói thư viện phụ thuộc (`cargo audit`, `npm audit`, Snyk). Tự động block PR nếu phát hiện CVE mức độ Critical chưa có bản vá.
+3. **Container Image Scan**: Quét các Docker layer bằng Trivy trước khi push vào Registry. Loại bỏ các base image chứa lỗ hổng hệ điều hành chưa được patch.
+4. **DAST (Dynamic Application Security Testing)**: Tự động chạy OWASP ZAP scan trên môi trường Staging định kỳ trước đợt phát hành lớn.
+
+### 10.4 Tuân Thủ Quy Định Bảo Vệ Dữ Liệu Cá Nhân Theo Nghị Định 13/2023/NĐ-CP (PDPD Vietnam)
+Toàn bộ sản phẩm phần mềm của Company vận hành tại Việt Nam bắt buộc phải tuân thủ Nghị định 13/2023/NĐ-CP về Bảo vệ dữ liệu cá nhân (Personal Data Protection Decree - PDPD):
+
+#### A. Phân loại Dữ liệu Cá nhân (Data Classification)
+- **Dữ liệu cá nhân cơ bản**: Họ tên, Ngày sinh, Giới tính, SĐT, Email, Địa chỉ, Hình ảnh cá nhân.
+- **Dữ liệu cá nhân nhạy cảm**: Tài khoản ngân hàng, Thông tin thanh toán, Dữ liệu vị trí địa lý, Lịch sử giao dịch tài chính, Dữ liệu sinh trắc học.
+
+#### B. Nguyên tắc Bảo vệ & Mã hóa (Encryption & Storage)
+- **Mã hóa dữ liệu**: Bắt buộc mã hóa AES-256 đối với dữ liệu nhạy cảm lưu trữ trong Database (Encryption at Rest) và mã hóa TLS 1.3 cho toàn bộ dữ liệu truyền tải trên mạng (Encryption in Transit).
+- **Phân tách DB Dữ liệu cá nhân**: Lưu trữ dữ liệu định danh khách hàng tại Database riêng biệt, áp dụng Pseudonymization (giả danh hóa) hoặc Anonymization (ẩn danh hóa) khi trích xuất làm dữ liệu kiểm thử hoặc phân tích data.
+
+#### C. Vòng đời Dữ liệu & Quyền người dùng (Data Retention & Right to be Forgotten)
+- **Data Retention Policy**: Dữ liệu cá nhân chỉ được lưu trữ trong thời gian khách hàng sử dụng dịch vụ hoặc theo thời hạn pháp luật quy định. Hết thời hạn, hệ thống tự động chạy job xóa sạch (Purge).
+- **Quyền Xóa & Rút lại đồng ý (Right to Erasure & Consent Revocation)**: Xây dựng API chuẩn cho phép người dùng gửi yêu cầu xóa dữ liệu cá nhân. Khi nhận yêu cầu, hệ thống phải thực hiện xóa hoàn toàn thông tin cá nhân khỏi Database chính và bản backup trong vòng **72 giờ**, đồng thời lưu vết vào nhật ký tuân thủ.
+- **Hồ sơ DPIA (Data Protection Impact Assessment)**: BA và Compliance Officer bắt buộc lập Hồ sơ Đánh giá tác động xử lý dữ liệu cá nhân (Biểu mẫu DPIA) cho mọi tính năng mới có thu thập thông tin người dùng.
+
+---
+
+## 11. BỘ CHỈ SỐ DORA METRICS VÀ ĐO LƯỜNG NĂNG LỰC SẢN XUẤT (AGILE & ENGINEERING DASHBOARD)
+
+### 11.1 Bộ Chỉ Số DORA Metrics Bắt Buộc
+Công ty áp dụng chuẩn 4 chỉ số DORA (DevOps Research and Assessment) để đo lường và tối ưu hóa hiệu suất phát triển phần mềm:
+
+| Chỉ số DORA | Ý nghĩa & Cấu trúc đo lường | Mục tiêu chuẩn Công ty (Target) | Cấp độ Đạt được |
+| :--- | :--- | :---: | :---: |
+| **Deployment Frequency (DF)** | Tần suất triển khai thành công code lên môi trường Production. | **≥ 1 lần / tuần** (Tiến tới daily deploy) | High / Elite Performer |
+| **Lead Time for Changes (LTC)** | Thời gian từ khi commit code đầu tiên đến khi code chạy chính thức trên Production. | **< 3 ngày làm việc** | High Performer |
+| **Change Failure Rate (CFR)** | Tỷ lệ phần trăm đợt release gây ra sự cố Prod (P1/P2) phải Hotfix hoặc Rollback. | **< 5%** | Elite Performer |
+| **Mean Time to Restore (MTTR)** | Thời gian trung bình để khôi phục dịch vụ khi xảy ra sự cố trên Production. | **< 1 giờ** | Elite Performer |
+
+### 11.2 Chỉ Số KPIs Chất Lượng Kỹ Thuật & Hiệu Suất Agile (Engineering Quality KPIs)
+Bên cạnh DORA, các nhóm phát triển được đánh giá qua bộ chỉ số kỹ thuật định kỳ trong Sprint:
+
+1. **Sprint Velocity**: Tổng số Story Points hoàn thành đạt DoD trong một Sprint (dùng để tính toán Team Capacity cho Sprint kế tiếp).
+2. **Cycle Time**: Thời gian trung bình một Work Item chuyển từ trạng thái `Active` ➔ `Closed`.
+3. **Defect Escape Rate**: Tỷ lệ Bug lọt lên Production so với tổng số Bug phát hiện ở giai đoạn Staging/Dev (`Defect Escape Rate = (Prod Bugs / Total Bugs) * 100%`). Mục tiêu: **< 3%**.
+4. **Code Coverage Percentage**: Tỷ lệ dòng code được kiểm thử bởi Unit Test tự động. Mục tiêu: **≥ 80%** cho Business Core layer và **≥ 90%** cho Domain Core logic.
+
+### 11.3 Báo Cáo Tự Động Từ Harness Database (Sprint & Release Report Automation)
+Loại bỏ hoàn toàn việc làm báo cáo thủ công bằng Excel. Toàn bộ dữ liệu phát triển phần mềm được ghi nhận tự động vào **Harness Database** thông qua CLI và Observability Engine:
+
+- **Báo cáo Sprint Report tự động**: Kết thúc Sprint, Harness CLI tự động truy xuất dữ liệu từ TFS/Jira & Git log để tạo file Markdown Sprint Report chứa: (1) Velocity actual vs plan, (2) Burndown chart data, (3) Danh sách Work Items completed vs carried over, (4) Thống kê Code Coverage.
+- **Báo cáo Release Report tự động**: Khi thực hiện Release, Harness CLI tự động quét toàn bộ Git Commits và Pull Requests đã merge để tạo **Release Notes & Audit Log** gửi Stakeholders, bao gồm: Danh sách User Story, Bug fixes, Commits hash, Author, và SHA256 checksum của bản build.
+
+---
+
+## 12. QUẢN TRỊ PHÁT TRIỂN PHẦN MỀM CÓ HỖ TRỢ TRÍ TUỆ NHÂN TẠO (AI-ASSISTED DEVELOPMENT GOVERNANCE & LLM POLICY)
+
+### 12.1 Quy Định Quản Trị Mã Nguồn Do AI Tạo (Human-in-the-Loop & Tagging `[AI]`)
+Nhằm khai thác tối đa sức mạnh của AI Assistants (Antigravity, GitHub Copilot, Harness AI) mà vẫn bảo đảm tuyệt đối chất lượng và an toàn mã nguồn:
+
+- **Nguyên tắc Con người Kiểm soát (Human-in-the-Loop)**: AI Agent/Assistant chỉ đóng vai trò hỗ trợ lập trình (Pair Programmer). **100% mã nguồn do AI gợi ý hoặc khởi tạo BẮT BUỘC phải được Lập trình viên (Human Dev) rà soát, kiểm thử và chịu trách nhiệm pháp lý/kỹ thuật cuối cùng**.
+- **Quy định Gắn Nhãn `[AI]` (AI Code Tagging)**:
+  - Tất cả các Pull Request chứa mã nguồn do AI khởi tạo > 30% nội dung bắt buộc phải gắn tag nhãn `[AI-Assisted]` trong Title hoặc Description.
+  - Các hàm hoặc module quan trọng do AI viết phải có comment header ghi rõ: `// Generated with AI assistance - Verified by: <Developer Name>`.
+
+### 12.2 Bảo Mật Thông Tin & Quy Định Dữ Liệu Khi Sử Dụng LLM (Data Privacy & Secret Prohibition)
+- **Nghiêm cấm gửi Secret & PII vào LLM**: TUYỆT ĐỐI CẤM người dùng và AI Agent đưa các dữ liệu sau vào prompt gửi lên các hệ thống LLM thương mại công cộng (Public LLM):
+  1. Passwords, API Keys, Private Keys, Database Connection Strings.
+  2. Dữ liệu cá nhân khách hàng (PII - Họ tên, SĐT, Email, Ngân hàng, CCCD).
+  3. Mã nguồn thuật toán độc quyền cốt lõi của Công ty chưa được công khai.
+- **Sử dụng Enterprise / Self-Hosted LLM**: Tất cả công cụ AI phục vụ phát triển phần mềm tại Công ty phải sử dụng tài khoản Enterprise (cam kết Zero Data Retention - không dùng dữ liệu khách hàng để train model) hoặc các mô hình Self-Hosted LLM chạy trong hạ tầng VPC nội bộ.
+
+### 12.3 Cổng Phê Duyệt Tự Động & Giới Hạn Quyền AI Agent (Approval Gates & Restricted Permissions)
+Định rõ ranh giới quyền hạn tự động của các AI Agent (Harness Agent / Autonomous Coding Subagents):
+
+```text
+┌────────────────────────────────────────┐    ┌────────────────────────────────────────┐
+│ HÀNH ĐỘNG AI AGENT ĐƯỢC PHÉP TỰ ĐỘNG   │    │ HÀNH ĐỘNG AI AGENT BỊ CẤM HOÀN TOÀN    │
+├────────────────────────────────────────┤    ├────────────────────────────────────────┤
+│ • Viết Unit Test & Refactor code local │    │ ❌ Tự động Merge PR vào branch `main`  │
+│ • Tạo Pull Request (Draft PR)          │    │ ❌ Tự động Deploy lên Production       │
+│ • Phân tích Log lỗi & Gợi ý bản vá     │    │ ❌ Tự động Thay đổi Schema DB Prod     │
+│ • Sinh tài liệu API Docs / Draft Spec  │    │ ❌ Tự động Xóa dữ liệu hoặc Repositories│
+└────────────────────────────────────────┘    └────────────────────────────────────────┘
+```
+
+- **Bắt buộc Human Approval Gate**: Mọi thao tác Merge code vào branch chính (`main`), Phát hành Release, hoặc Thay đổi cấu hình Production của AI Agent **bắt buộc phải đi qua cổng duyệt thủ công (Human Approval Gate)** của Tech Lead hoặc DevOps.
+
+### 12.4 Audit Logging & Observability Cho AI Agent (Harness Observability Audit Trail)
+- **Ghi vết 100% thao tác của Agent**: Toàn bộ hoạt động của AI Agent (Prompt, Tool Call, Executed Commands, Created/Modified Files, Git Commits) phải được tự động ghi vết và lưu trữ tập trung trên **Harness Observability DB**.
+- **Truy xuất Nguồn gốc (Traceability)**: Nhật ký AI Audit Log phải được bảo tồn tối thiểu **3 năm** để phục vụ công tác rà soát an ninh mạng, kiểm toán tuân thủ ISO/IEC 27001:2022 và đánh giá hiệu quả ứng dụng AI trong doanh nghiệp.
