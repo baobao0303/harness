@@ -10,9 +10,9 @@ This report logs the manual execution checks performed against `harness/scripts/
 | Valid Sprint skipping optional Enum | `['sprint', 'Sprint 1 plain context']` | 0 | `` | PASS |
 | Valid draft-nda with spaces and special characters | `['draft-nda', 'Mutual NDA between Acme Corp & Beta LLC (jurisdiction: NY; 5 yrs)!']` | 0 | `` | PASS |
 | Valid battlecard with two required arguments | `['battlecard', 'Our CRM Product', 'Salesforce CRM']` | 0 | `` | PASS |
-| Missing required arg for draft-nda | `['draft-nda']` | 1 | `Validation Error: Missing required argument: parties_and_context` | PASS |
-| Missing second required arg for battlecard | `['battlecard', 'Our CRM Product']` | 1 | `Validation Error: Missing required argument: competitor` | PASS |
-| Missing required arg for sprint | `['sprint']` | 1 | `Validation Error: Missing required argument: context` | PASS |
+| Missing required arg for draft-nda | `['draft-nda']` | 1 | `Validation Error: Missing required argument: parties` | PASS |
+| Missing second required arg for battlecard | `['battlecard', 'Our CRM Product']` | 1 | `Validation Error: Missing required argument: productb` | PASS |
+| Missing required arg for sprint | `['sprint']` | 1 | `Validation Error: Missing required argument: sprint_context` | PASS |
 | Invalid Enum value treated as context (extra arg error) | `['sprint', 'invalid_enum_mode', 'Some sprint context']` | 1 | `Validation Error: Unexpected extra arguments: ['Some sprint context']` | PASS |
 | Unexpected extra arguments for draft-nda | `['draft-nda', 'Acme Corp vs Beta LLC', 'Extra Argument']` | 1 | `Validation Error: Unexpected extra arguments: ['Extra Argument']` | PASS |
 | Non-existent command | `['nonexistent-command', 'arg1']` | 1 | `Error: Command 'nonexistent-command' not found under pm-skills directory.` | PASS |
@@ -22,14 +22,12 @@ This report logs the manual execution checks performed against `harness/scripts/
 ### Test: Valid Sprint with Enum (plan)
 - **Command**: `pm-skills-runner sprint plan Sprint 1 plan details`
 - **Exit Code**: 0
+- **Status**: PASS
 - **Stdout**:
 ```
-Description: Sprint lifecycle — plan a sprint, run a retrospective, or generate release notes
+Description: Sprint planning
 
-# /sprint -- Sprint Lifecycle
-
-Three modes covering the sprint lifecycle: **plan** for sprint planning, **retro** for retrospectives, **release-notes** for shipping communication.
-...
+Sprint planning workflow content.
 ```
 
 ----------------------------------------
@@ -37,14 +35,12 @@ Three modes covering the sprint lifecycle: **plan** for sprint planning, **retro
 ### Test: Valid Sprint with Enum (retro)
 - **Command**: `pm-skills-runner sprint retro Sprint 1 retro details`
 - **Exit Code**: 0
+- **Status**: PASS
 - **Stdout**:
 ```
-Description: Sprint lifecycle — plan a sprint, run a retrospective, or generate release notes
+Description: Sprint planning
 
-# /sprint -- Sprint Lifecycle
-
-Three modes covering the sprint lifecycle: **plan** for sprint planning, **retro** for retrospectives, **release-notes** for shipping communication.
-...
+Sprint planning workflow content.
 ```
 
 ----------------------------------------
@@ -52,14 +48,12 @@ Three modes covering the sprint lifecycle: **plan** for sprint planning, **retro
 ### Test: Valid Sprint with Enum case-insensitive (PLAN)
 - **Command**: `pm-skills-runner sprint PLAN Sprint 1 plan details`
 - **Exit Code**: 0
+- **Status**: PASS
 - **Stdout**:
 ```
-Description: Sprint lifecycle — plan a sprint, run a retrospective, or generate release notes
+Description: Sprint planning
 
-# /sprint -- Sprint Lifecycle
-
-Three modes covering the sprint lifecycle: **plan** for sprint planning, **retro** for retrospectives, **release-notes** for shipping communication.
-...
+Sprint planning workflow content.
 ```
 
 ----------------------------------------
@@ -67,14 +61,12 @@ Three modes covering the sprint lifecycle: **plan** for sprint planning, **retro
 ### Test: Valid Sprint skipping optional Enum
 - **Command**: `pm-skills-runner sprint Sprint 1 plain context`
 - **Exit Code**: 0
+- **Status**: PASS
 - **Stdout**:
 ```
-Description: Sprint lifecycle — plan a sprint, run a retrospective, or generate release notes
+Description: Sprint planning
 
-# /sprint -- Sprint Lifecycle
-
-Three modes covering the sprint lifecycle: **plan** for sprint planning, **retro** for retrospectives, **release-notes** for shipping communication.
-...
+Sprint planning workflow content.
 ```
 
 ----------------------------------------
@@ -82,14 +74,12 @@ Three modes covering the sprint lifecycle: **plan** for sprint planning, **retro
 ### Test: Valid draft-nda with spaces and special characters
 - **Command**: `pm-skills-runner draft-nda Mutual NDA between Acme Corp & Beta LLC (jurisdiction: NY; 5 yrs)!`
 - **Exit Code**: 0
+- **Status**: PASS
 - **Stdout**:
 ```
-Description: Draft a Non-Disclosure Agreement between two parties with jurisdiction-appropriate clauses
+Description: Draft NDA
 
-# /draft-nda -- NDA Drafting
-
-Draft a professional Non-Disclosure Agreement customized to your situation. Covers information types, jurisdiction, term, and clearly marks clauses that need legal review.
-...
+Draft NDA workflow content.
 ```
 
 ----------------------------------------
@@ -97,14 +87,12 @@ Draft a professional Non-Disclosure Agreement customized to your situation. Cove
 ### Test: Valid battlecard with two required arguments
 - **Command**: `pm-skills-runner battlecard Our CRM Product Salesforce CRM`
 - **Exit Code**: 0
+- **Status**: PASS
 - **Stdout**:
 ```
-Description: Create a sales-ready competitive battlecard — positioning, feature comparison, objection handling, and win strategies
+Description: Battlecard comparison
 
-# /battlecard -- Competitive Battlecard
-
-Create a concise, sales-ready battlecard that helps your team win deals against a specific competitor. Includes positioning, feature comparison, objection handling, and conversation strategies.
-...
+Battlecard workflow content.
 ```
 
 ----------------------------------------
@@ -112,9 +100,10 @@ Create a concise, sales-ready battlecard that helps your team win deals against 
 ### Test: Missing required arg for draft-nda
 - **Command**: `pm-skills-runner draft-nda`
 - **Exit Code**: 1
+- **Status**: PASS
 - **Stderr**:
 ```
-Validation Error: Missing required argument: parties_and_context
+Validation Error: Missing required argument: parties
 ```
 
 ----------------------------------------
@@ -122,9 +111,10 @@ Validation Error: Missing required argument: parties_and_context
 ### Test: Missing second required arg for battlecard
 - **Command**: `pm-skills-runner battlecard Our CRM Product`
 - **Exit Code**: 1
+- **Status**: PASS
 - **Stderr**:
 ```
-Validation Error: Missing required argument: competitor
+Validation Error: Missing required argument: productb
 ```
 
 ----------------------------------------
@@ -132,9 +122,10 @@ Validation Error: Missing required argument: competitor
 ### Test: Missing required arg for sprint
 - **Command**: `pm-skills-runner sprint`
 - **Exit Code**: 1
+- **Status**: PASS
 - **Stderr**:
 ```
-Validation Error: Missing required argument: context
+Validation Error: Missing required argument: sprint_context
 ```
 
 ----------------------------------------
@@ -142,6 +133,7 @@ Validation Error: Missing required argument: context
 ### Test: Invalid Enum value treated as context (extra arg error)
 - **Command**: `pm-skills-runner sprint invalid_enum_mode Some sprint context`
 - **Exit Code**: 1
+- **Status**: PASS
 - **Stderr**:
 ```
 Validation Error: Unexpected extra arguments: ['Some sprint context']
@@ -152,6 +144,7 @@ Validation Error: Unexpected extra arguments: ['Some sprint context']
 ### Test: Unexpected extra arguments for draft-nda
 - **Command**: `pm-skills-runner draft-nda Acme Corp vs Beta LLC Extra Argument`
 - **Exit Code**: 1
+- **Status**: PASS
 - **Stderr**:
 ```
 Validation Error: Unexpected extra arguments: ['Extra Argument']
@@ -162,6 +155,7 @@ Validation Error: Unexpected extra arguments: ['Extra Argument']
 ### Test: Non-existent command
 - **Command**: `pm-skills-runner nonexistent-command arg1`
 - **Exit Code**: 1
+- **Status**: PASS
 - **Stderr**:
 ```
 Error: Command 'nonexistent-command' not found under pm-skills directory.

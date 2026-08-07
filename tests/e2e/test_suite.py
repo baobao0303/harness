@@ -5,15 +5,21 @@ import tempfile
 import shutil
 import subprocess
 import unittest
+from pathlib import Path
 
 class PMskillsE2ETestSuite(unittest.TestCase):
     def setUp(self):
+        self.temp_dirs_to_clean = []
+
         # Setup temp database path
         self.db_fd, self.db_path = tempfile.mkstemp(suffix=".db")
         os.close(self.db_fd)
         
         # Base directories and script paths
-        self.repo_root = "/Users/bao312/Desktop/BrewCompany/harness"
+        self.repo_root = os.environ.get(
+            "HARNESS_REPO_ROOT",
+            str(Path(__file__).resolve().parent.parent.parent)
+        )
         self.cli_path = os.path.join(self.repo_root, "scripts/bin/harness-cli")
         self.sync_script = os.path.join(self.repo_root, "scripts/sync-pm-skills.py")
         self.runner_wrapper = os.path.join(self.repo_root, "scripts/pm-skills-runner")
@@ -23,11 +29,110 @@ class PMskillsE2ETestSuite(unittest.TestCase):
         self.env["HARNESS_DB"] = self.db_path
         self.env["HARNESS_REPO_ROOT"] = self.repo_root
         
+        pm_skills_dir = self.env.get("PM_SKILLS_DIR")
+        if not pm_skills_dir:
+            parent_dir = os.path.dirname(self.repo_root)
+            pm_skills_dir = os.path.join(parent_dir, "pm-skills")
+        
+        if not os.path.isdir(pm_skills_dir):
+            default_mock_dir = self.create_full_default_mock_pm_skills()
+            self.env["PM_SKILLS_DIR"] = default_mock_dir
+
         # Initialize and migrate DB
         subprocess.run([self.cli_path, "init"], env=self.env, capture_output=True, check=True)
         subprocess.run([self.cli_path, "migrate"], env=self.env, capture_output=True, check=True)
-        
-        self.temp_dirs_to_clean = []
+
+    def create_full_default_mock_pm_skills(self):
+        full_data = {
+            "pm-product-discovery": {
+                "manifest": {"name": "pm-product-discovery", "version": "1.0.0", "description": "Mock plugin pm-product-discovery"},
+                "commands": {
+                    "brainstorm": "---\ndescription: Brainstorm product ideas\nargument-hint: \"[ideas|features|solutions] [new|existing] <product description>\"\n---\n## Workflow\nStep 1: Determine Mode\n\nGenerate creative product ideas, features, and solutions for the given product description.",
+                    "discovery-cmd1": "---\ndescription: Product discovery command 1\n---\nBody content for discovery command 1.",
+                    "discovery-cmd2": "---\ndescription: Product discovery command 2\n---\nBody content for discovery command 2.",
+                    "discovery-cmd3": "---\ndescription: Product discovery command 3\n---\nBody content for discovery command 3.",
+                    "discovery-cmd4": "---\ndescription: Product discovery command 4\n---\nBody content for discovery command 4."
+                }
+            },
+            "pm-product-strategy": {
+                "manifest": {"name": "pm-product-strategy", "version": "1.0.0", "description": "Mock plugin pm-product-strategy"},
+                "commands": {
+                    "battlecard": "---\ndescription: Battlecard\nargument-hint: \"<ProductA> <ProductB>\"\n---\nBody content for battlecard comparison between ProductA and ProductB.",
+                    "strategy-cmd1": "---\ndescription: Product strategy command 1\n---\nBody content for strategy command 1.",
+                    "strategy-cmd2": "---\ndescription: Product strategy command 2\n---\nBody content for strategy command 2.",
+                    "strategy-cmd3": "---\ndescription: Product strategy command 3\n---\nBody content for strategy command 3.",
+                    "strategy-cmd4": "---\ndescription: Product strategy command 4\n---\nBody content for strategy command 4."
+                }
+            },
+            "pm-execution": {
+                "manifest": {"name": "pm-execution", "version": "1.0.0", "description": "Mock plugin pm-execution"},
+                "commands": {
+                    "sprint": "---\ndescription: Sprint planning\nargument-hint: \"<plan|review> <Sprint Name>\"\n---\nBody content for sprint planning and review workflow that is long enough to pass test checks.",
+                    "exec-cmd1": "---\ndescription: Execution command 1\n---\nBody content for execution command 1.",
+                    "exec-cmd2": "---\ndescription: Execution command 2\n---\nBody content for execution command 2.",
+                    "exec-cmd3": "---\ndescription: Execution command 3\n---\nBody content for execution command 3.",
+                    "exec-cmd4": "---\ndescription: Execution command 4\n---\nBody content for execution command 4."
+                }
+            },
+            "pm-data-analytics": {
+                "manifest": {"name": "pm-data-analytics", "version": "1.0.0", "description": "Mock plugin pm-data-analytics"},
+                "commands": {
+                    "analyze-cohorts": "---\ndescription: Analyze cohorts\nargument-hint: \"<filename>\"\n---\nBody content for cohort analysis.",
+                    "analytics-cmd1": "---\ndescription: Data analytics command 1\n---\nBody content for analytics command 1.",
+                    "analytics-cmd2": "---\ndescription: Data analytics command 2\n---\nBody content for analytics command 2.",
+                    "analytics-cmd3": "---\ndescription: Data analytics command 3\n---\nBody content for analytics command 3.",
+                    "analytics-cmd4": "---\ndescription: Data analytics command 4\n---\nBody content for analytics command 4."
+                }
+            },
+            "pm-market-research": {
+                "manifest": {"name": "pm-market-research", "version": "1.0.0", "description": "Mock plugin pm-market-research"},
+                "commands": {
+                    "market-survey": "---\ndescription: Market survey\n---\nBody content for market survey.",
+                    "market-cmd1": "---\ndescription: Market research command 1\n---\nBody content for market command 1.",
+                    "market-cmd2": "---\ndescription: Market research command 2\n---\nBody content for market command 2.",
+                    "market-cmd3": "---\ndescription: Market research command 3\n---\nBody content for market command 3."
+                }
+            },
+            "pm-marketing-growth": {
+                "manifest": {"name": "pm-marketing-growth", "version": "1.0.0", "description": "Mock plugin pm-marketing-growth"},
+                "commands": {
+                    "growth-hack": "---\ndescription: Growth hack\n---\nBody content for growth hack.",
+                    "growth-cmd1": "---\ndescription: Marketing growth command 1\n---\nBody content for growth command 1.",
+                    "growth-cmd2": "---\ndescription: Marketing growth command 2\n---\nBody content for growth command 2.",
+                    "growth-cmd3": "---\ndescription: Marketing growth command 3\n---\nBody content for growth command 3."
+                }
+            },
+            "pm-go-to-market": {
+                "manifest": {"name": "pm-go-to-market", "version": "1.0.0", "description": "Mock plugin pm-go-to-market"},
+                "commands": {
+                    "gtm-plan": "---\ndescription: GTM Plan\n---\nBody content for GTM plan.",
+                    "gtm-cmd1": "---\ndescription: Go to market command 1\n---\nBody content for GTM command 1.",
+                    "gtm-cmd2": "---\ndescription: Go to market command 2\n---\nBody content for GTM command 2.",
+                    "gtm-cmd3": "---\ndescription: Go to market command 3\n---\nBody content for GTM command 3."
+                }
+            },
+            "pm-toolkit": {
+                "manifest": {"name": "pm-toolkit", "version": "1.0.0", "description": "Mock plugin pm-toolkit"},
+                "commands": {
+                    "draft-nda": "---\ndescription: Draft NDA\nargument-hint: \"<parties>\"\n---\nBody content for drafting NDA.",
+                    "toolkit-cmd1": "---\ndescription: PM toolkit command 1\n---\nBody content for toolkit command 1.",
+                    "toolkit-cmd2": "---\ndescription: PM toolkit command 2\n---\nBody content for toolkit command 2.",
+                    "toolkit-cmd3": "---\ndescription: PM toolkit command 3\n---\nBody content for toolkit command 3.",
+                    "toolkit-cmd4": "---\ndescription: PM toolkit command 4\n---\nBody content for toolkit command 4."
+                }
+            },
+            "pm-ai-shipping": {
+                "manifest": {"name": "pm-ai-shipping", "version": "1.0.0", "description": "Mock plugin pm-ai-shipping"},
+                "commands": {
+                    "ship-check": "---\ndescription: Ship check\nargument-hint: \"<target_path>\"\n---\nBody content for ship check.",
+                    "shipping-cmd1": "---\ndescription: AI shipping command 1\n---\nBody content for shipping command 1.",
+                    "shipping-cmd2": "---\ndescription: AI shipping command 2\n---\nBody content for shipping command 2.",
+                    "shipping-cmd3": "---\ndescription: AI shipping command 3\n---\nBody content for shipping command 3.",
+                    "shipping-cmd4": "---\ndescription: AI shipping command 4\n---\nBody content for shipping command 4."
+                }
+            }
+        }
+        return self.create_mock_pm_skills(full_data)
 
     def tearDown(self):
         if os.path.exists(self.db_path):
@@ -828,7 +933,7 @@ class PMskillsE2ETestSuite(unittest.TestCase):
 
     def test_t3_cross_command_runner_with_default_arguments(self):
         # Test command runner with help/default description arguments
-        res = self.run_wrapper("ship-check", ["/Users/bao312/Desktop"])
+        res = self.run_wrapper("ship-check", [str(Path(self.repo_root).parent)])
         self.assertEqual(res.returncode, 0)
 
 

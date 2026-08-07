@@ -1,13 +1,8 @@
-mod application;
-mod domain;
-mod infrastructure;
-mod interface;
-
 use clap::Parser;
 
 fn main() {
-    let cli = interface::Cli::parse();
-    if let Err(error) = interface::run(cli) {
+    let cli = harness_cli::interface::Cli::parse();
+    if let Err(error) = harness_cli::interface::run(cli) {
         eprintln!("error: {error}");
         std::process::exit(1);
     }

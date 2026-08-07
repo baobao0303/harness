@@ -1,10 +1,12 @@
 import os
 import sys
+import json
 import time
 import shutil
 import tempfile
 import subprocess
 import statistics
+from pathlib import Path
 
 def run_command(cmd, env):
     t0 = time.time()
@@ -13,7 +15,10 @@ def run_command(cmd, env):
     return res, t1 - t0
 
 def main():
-    repo_root = "/Users/bao312/Desktop/BrewCompany/harness"
+    repo_root = os.environ.get(
+        "HARNESS_REPO_ROOT",
+        str(Path(__file__).resolve().parent.parent)
+    )
     cli_path = os.path.join(repo_root, "scripts/bin/harness-cli")
     sync_script = os.path.join(repo_root, "scripts/sync-pm-skills.py")
     results_path = os.path.join(repo_root, "tests/stress_test_results.md")
@@ -30,15 +35,28 @@ def main():
     subprocess.run([cli_path, "migrate"], env=env, check=True)
     
     # 2. Setup temporary pm-skills directory
-    original_pm_skills = "/Users/bao312/Desktop/BrewCompany/pm-skills"
+    original_pm_skills = os.environ.get(
+        "PM_SKILLS_DIR",
+        str(Path(repo_root).parent / "pm-skills")
+    )
     temp_pm_skills = tempfile.mkdtemp()
     env["PM_SKILLS_DIR"] = temp_pm_skills
     
     # Copy all original plugins to temp_pm_skills
-    for item in os.listdir(original_pm_skills):
-        src_path = os.path.join(original_pm_skills, item)
-        if os.path.isdir(src_path) and not item.startswith('.'):
-            shutil.copytree(src_path, os.path.join(temp_pm_skills, item))
+    if os.path.exists(original_pm_skills):
+        for item in os.listdir(original_pm_skills):
+            src_path = os.path.join(original_pm_skills, item)
+            if os.path.isdir(src_path) and not item.startswith('.'):
+                shutil.copytree(src_path, os.path.join(temp_pm_skills, item))
+    else:
+        dest_plugin = os.path.join(temp_pm_skills, "pm-toolkit")
+        os.makedirs(os.path.join(dest_plugin, ".claude-plugin"), exist_ok=True)
+        with open(os.path.join(dest_plugin, ".claude-plugin", "plugin.json"), "w") as f:
+            json.dump({"name": "pm-toolkit", "version": "1.0.0", "description": "PM Toolkit"}, f)
+        cmd_dir = os.path.join(dest_plugin, "commands")
+        os.makedirs(cmd_dir, exist_ok=True)
+        with open(os.path.join(cmd_dir, "draft-nda.md"), "w") as f:
+            f.write("---\ndescription: Draft NDA\nargument-hint: '[parties]'\n---\nDrafting NDA...")
             
     markdown_report = []
     markdown_report.append("# Stress Test Results: `sync-pm-skills.py` performance\n")

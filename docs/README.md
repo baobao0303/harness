@@ -37,11 +37,11 @@ The documentation files in `docs/` are dynamically driven and maintained by the 
 ### Role Steering Personas (`.agents/personas/`)
 
 We provide ready-to-use role guidelines to steer AI Agent behavior during task execution:
-- [PM Persona](file:///Users/bao312/Desktop/BrewCompany/harness/.agents/personas/pm.md): For feature intake, PRDs, and story decomposition.
-- [BA Persona](file:///Users/bao312/Desktop/BrewCompany/harness/.agents/personas/ba.md): For functional specification and acceptance criteria.
-- [FE Persona](file:///Users/bao312/Desktop/BrewCompany/harness/.agents/personas/fe.md): For styling system, responsiveness, and frontend UI components.
-- [BE Persona](file:///Users/bao312/Desktop/BrewCompany/harness/.agents/personas/be.md): For API design, database migrations, security, and performance.
-- [QA Persona](file:///Users/bao312/Desktop/BrewCompany/harness/.agents/personas/qa.md): For test scenarios, verification, and regression matrices.
+- [PM Persona](.agents/personas/pm.md): For feature intake, PRDs, and story decomposition.
+- [BA Persona](.agents/personas/ba.md): For functional specification and acceptance criteria.
+- [FE Persona](.agents/personas/fe.md): For styling system, responsiveness, and frontend UI components.
+- [BE Persona](.agents/personas/be.md): For API design, database migrations, security, and performance.
+- [QA Persona](.agents/personas/qa.md): For test scenarios, verification, and regression matrices.
 
 ## Current State
 

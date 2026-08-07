@@ -2,6 +2,7 @@
 import os
 import sys
 import re
+from pathlib import Path
 
 def parse_frontmatter(content):
     lines = content.splitlines()
@@ -113,31 +114,23 @@ def main():
     # Resolve pm-skills folder
     pm_skills_dir = os.environ.get("PM_SKILLS_DIR")
     if not pm_skills_dir:
-        # Resolve via repository root or hardcoded fallback
-        repo_root = os.environ.get("HARNESS_REPO_ROOT")
-        if not repo_root:
-            cur = os.path.abspath(os.path.dirname(__file__))
-            while cur and os.path.basename(cur) != "BrewCompany":
-                parent = os.path.dirname(cur)
-                if parent == cur:
-                    break
-                cur = parent
-            repo_root = os.path.join(cur, "harness") if os.path.isdir(os.path.join(cur, "harness")) else cur
-        
+        repo_root = os.environ.get(
+            "HARNESS_REPO_ROOT",
+            str(Path(__file__).resolve().parent.parent)
+        )
         parent_dir = os.path.dirname(repo_root)
         pm_skills_dir = os.path.join(parent_dir, "pm-skills")
-        if not os.path.isdir(pm_skills_dir):
-            pm_skills_dir = "/Users/bao312/Desktop/BrewCompany/pm-skills"
 
     # Search for command markdown file
     command_file_path = None
-    for plugin in os.listdir(pm_skills_dir):
-        plugin_path = os.path.join(pm_skills_dir, plugin)
-        if os.path.isdir(plugin_path):
-            candidate = os.path.join(plugin_path, "commands", f"{command_name}.md")
-            if os.path.isfile(candidate):
-                command_file_path = candidate
-                break
+    if os.path.isdir(pm_skills_dir):
+        for plugin in os.listdir(pm_skills_dir):
+            plugin_path = os.path.join(pm_skills_dir, plugin)
+            if os.path.isdir(plugin_path):
+                candidate = os.path.join(plugin_path, "commands", f"{command_name}.md")
+                if os.path.isfile(candidate):
+                    command_file_path = candidate
+                    break
 
     if not command_file_path:
         print(f"Error: Command '{command_name}' not found under pm-skills directory.", file=sys.stderr)

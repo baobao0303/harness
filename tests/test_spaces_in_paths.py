@@ -1,11 +1,16 @@
 import os
 import sys
+import json
 import shutil
 import tempfile
 import subprocess
+from pathlib import Path
 
 def main():
-    repo_root = "/Users/bao312/Desktop/BrewCompany/harness"
+    repo_root = os.environ.get(
+        "HARNESS_REPO_ROOT",
+        str(Path(__file__).resolve().parent.parent)
+    )
     cli_path = os.path.join(repo_root, "scripts/bin/harness-cli")
     sync_script = os.path.join(repo_root, "scripts/sync-pm-skills.py")
     runner_path = os.path.join(repo_root, "scripts/pm-skills-runner")
@@ -20,9 +25,22 @@ def main():
     os.makedirs(spaced_dir)
     
     # Copy pm-toolkit to the spaced directory
-    src_plugin = "/Users/bao312/Desktop/BrewCompany/pm-skills/pm-toolkit"
+    pm_skills_base = os.environ.get(
+        "PM_SKILLS_DIR",
+        str(Path(repo_root).parent / "pm-skills")
+    )
+    src_plugin = os.path.join(pm_skills_base, "pm-toolkit")
     dest_plugin = os.path.join(spaced_dir, "pm-toolkit")
-    shutil.copytree(src_plugin, dest_plugin)
+    if os.path.exists(src_plugin):
+        shutil.copytree(src_plugin, dest_plugin)
+    else:
+        os.makedirs(os.path.join(dest_plugin, ".claude-plugin"), exist_ok=True)
+        with open(os.path.join(dest_plugin, ".claude-plugin", "plugin.json"), "w") as f:
+            json.dump({"name": "pm-toolkit", "version": "1.0.0", "description": "PM Toolkit"}, f)
+        cmd_dir = os.path.join(dest_plugin, "commands")
+        os.makedirs(cmd_dir, exist_ok=True)
+        with open(os.path.join(cmd_dir, "draft-nda.md"), "w") as f:
+            f.write("---\ndescription: Draft NDA\nargument-hint: '[parties]'\n---\nDrafting NDA...")
     
     env = os.environ.copy()
     env["HARNESS_DB"] = db_path
