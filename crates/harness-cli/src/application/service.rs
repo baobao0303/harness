@@ -69,7 +69,6 @@ impl HarnessService {
     }
 
     pub fn record_intake(&self, input: IntakeInput) -> crate::infrastructure::Result<i64> {
-
         self.repository.record_intake(input)
     }
 

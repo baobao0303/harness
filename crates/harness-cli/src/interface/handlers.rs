@@ -121,14 +121,13 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
                 print_work_items(&items);
             }
             WorkItemAction::Show { id } => {
-                let item = service
-                    .get_work_item(id)?
-                    .ok_or(crate::infrastructure::HarnessInfraError::WorkItemNotFound(id))?;
+                let item = service.get_work_item(id)?.ok_or(
+                    crate::infrastructure::HarnessInfraError::WorkItemNotFound(id),
+                )?;
                 print_work_item_detail(&item);
             }
         },
         Command::Story(args) => match args.action {
-
             StoryAction::Add(args) => {
                 service.add_story(StoryAddInput {
                     id: args.id.clone(),

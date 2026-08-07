@@ -106,14 +106,12 @@ pub fn import_matrix(repo_root: &Path, connection: &Connection) -> Result<usize>
             title = id.clone();
         }
 
-        let status =
-            normalize_story_status(&field_at(&fields, columns.status).unwrap_or_default());
+        let status = normalize_story_status(&field_at(&fields, columns.status).unwrap_or_default());
         let unit = proof_from_cell(&field_at(&fields, columns.unit).unwrap_or_default());
         let integration =
             proof_from_cell(&field_at(&fields, columns.integration).unwrap_or_default());
         let e2e = proof_from_cell(&field_at(&fields, columns.e2e).unwrap_or_default());
-        let platform =
-            proof_from_cell(&field_at(&fields, columns.platform).unwrap_or_default());
+        let platform = proof_from_cell(&field_at(&fields, columns.platform).unwrap_or_default());
         let evidence = columns
             .evidence
             .and_then(|index| evidence_from_fields(&fields, index));
@@ -194,8 +192,7 @@ pub fn import_decisions(repo_root: &Path, connection: &Connection) -> Result<usi
             .filter(|value| !value.is_empty())
             .unwrap_or(&stem)
             .to_owned();
-        let status =
-            normalize_decision_status(&markdown_section_first_value(&content, "Status"));
+        let status = normalize_decision_status(&markdown_section_first_value(&content, "Status"));
         let doc_path = format!(
             "docs/decisions/{}",
             path.file_name()

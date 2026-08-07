@@ -3,13 +3,11 @@ use std::str::FromStr;
 use rusqlite::{types::ValueRef, Connection};
 
 use crate::domain::{
-    escape_json_string, normalize_token, parse_tags_string, AuditFinding, Priority,
-    Severity, ToolArgSpec, TraceScoreSource, WorkItem, WorkItemState, WorkItemType,
+    escape_json_string, normalize_token, parse_tags_string, AuditFinding, Priority, Severity,
+    ToolArgSpec, TraceScoreSource, WorkItem, WorkItemState, WorkItemType,
 };
 
 use crate::infrastructure::errors::{HarnessInfraError, Result};
-
-
 
 pub fn work_item_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<WorkItem> {
     let type_str: String = row.get(1)?;
@@ -61,7 +59,6 @@ pub fn work_item_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<WorkItem>
         updated_at: row.get(20)?,
     })
 }
-
 
 pub fn collect_rows<T>(
     rows: rusqlite::MappedRows<'_, impl FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>>,

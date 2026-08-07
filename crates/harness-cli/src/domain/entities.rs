@@ -25,7 +25,6 @@ pub struct WorkItem {
     pub updated_at: String,
 }
 
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ToolArgSpec {
     pub name: String,

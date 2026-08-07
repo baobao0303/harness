@@ -153,7 +153,6 @@ impl fmt::Display for Severity {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InputType {
     NewSpec,
@@ -249,7 +248,6 @@ impl fmt::Display for Priority {
         f.write_str(self.as_db_value())
     }
 }
-
 
 impl FromStr for Priority {
     type Err = ParseHarnessValueError;

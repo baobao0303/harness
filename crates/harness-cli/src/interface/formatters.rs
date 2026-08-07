@@ -1,6 +1,4 @@
-use crate::application::{
-    BrownfieldImportResult, InitResult, MigrateResult, QueryTable,
-};
+use crate::application::{BrownfieldImportResult, InitResult, MigrateResult, QueryTable};
 use crate::domain::{
     escape_json_string, proof_display, AuditFinding, AuditResult, BacklogRecord,
     ContextScoreResult, DecisionRecord, FrictionRecord, HarnessStats, ImprovementProposal,
@@ -8,17 +6,19 @@ use crate::domain::{
     TraceQualityTier, TraceRecord, TraceScoreResult, WorkItem,
 };
 
-
 pub fn export_trace_tldraw(traces: &[TraceRecord]) -> String {
     let mut records = Vec::new();
 
-    records.push(r#"{"id":"document:document","typeName":"document","title":"Harness Trace Diagram"}"#.to_owned());
+    records.push(
+        r#"{"id":"document:document","typeName":"document","title":"Harness Trace Diagram"}"#
+            .to_owned(),
+    );
     records.push(r#"{"id":"page:page","typeName":"page","name":"Page 1","index":"a1"}"#.to_owned());
-    
+
     records.push(format!(
         r#"{{"id":"shape:title","typeName":"shape","type":"geo","parentId":"page:page","index":"a1","x":100,"y":40,"props":{{"geo":"rectangle","w":650,"h":60,"color":"blue","labelColor":"black","fill":"semi","dash":"draw","size":"m","font":"draw","text":"🚀 HARNESS EXECUTION TRACE GRAPH","align":"middle","verticalAlign":"middle","growY":0}}}}"#
     ));
-    
+
     for (i, trace) in traces.iter().enumerate() {
         let y_pos = 120 + (i * 110);
         let summary = trace.task_summary.replace('"', "\\\"").replace('\n', "\\n");
@@ -28,16 +28,16 @@ pub fn export_trace_tldraw(traces: &[TraceRecord]) -> String {
             "failed" | "fail" => "red",
             _ => "yellow",
         };
-        
+
         let label = format!("Trace #{}: {}\nOutcome: {}", trace.id, summary, outcome);
         let escaped_label = label.replace('"', "\\\"").replace('\n', "\\n");
-        
+
         records.push(format!(
             r#"{{"id":"shape:trace_{}","typeName":"shape","type":"geo","parentId":"page:page","index":"a{}","x":100,"y":{},"props":{{"geo":"rectangle","w":650,"h":90,"color":"{}","labelColor":"black","fill":"semi","dash":"draw","size":"s","font":"draw","text":"{}","align":"start","verticalAlign":"middle","growY":0}}}}"#,
             trace.id, i + 2, y_pos, color, escaped_label
         ));
     }
-    
+
     format!(
         r#"{{"tldrawFileFormatVersion":1,"schema":{{"schemaVersion":2,"sequences":{{"com.tldraw.store":4,"com.tldraw.asset":1,"com.tldraw.camera":1,"com.tldraw.document":2,"com.tldraw.instance":25,"com.tldraw.instance_page_state":5,"com.tldraw.page":1,"com.tldraw.pointer":1,"com.tldraw.shape":4,"com.tldraw.shape.geo":9}}}},"records":[{}]}}"#,
         records.join(",")
@@ -49,11 +49,14 @@ pub fn export_trace_mermaid(traces: &[TraceRecord]) -> String {
     lines.push("```mermaid".to_owned());
     lines.push("graph TD;".to_owned());
     lines.push("    Title[\"🚀 HARNESS EXECUTION TRACE\"]".to_owned());
-    
+
     for (i, trace) in traces.iter().enumerate() {
         let summary = trace.task_summary.replace('"', "'");
         let node_id = format!("T{}", trace.id);
-        lines.push(format!("    {node_id}[\"Trace #{}: {}\"]", trace.id, summary));
+        lines.push(format!(
+            "    {node_id}[\"Trace #{}: {}\"]",
+            trace.id, summary
+        ));
         if i == 0 {
             lines.push(format!("    Title --> {node_id}"));
         } else {
@@ -61,7 +64,7 @@ pub fn export_trace_mermaid(traces: &[TraceRecord]) -> String {
             lines.push(format!("    {prev_id} --> {node_id}"));
         }
     }
-    
+
     lines.push("```".to_owned());
     lines.join("\n")
 }
@@ -457,9 +460,15 @@ pub fn print_tools_json(records: &[ToolEntry]) {
     for (index, record) in records.iter().enumerate() {
         let comma = if index + 1 == records.len() { "" } else { "," };
         println!("  {{");
-        println!("    \"provider\": \"{}\",", escape_json_string(&record.provider));
+        println!(
+            "    \"provider\": \"{}\",",
+            escape_json_string(&record.provider)
+        );
         println!("    \"name\": \"{}\",", escape_json_string(&record.name));
-        println!("    \"command\": \"{}\",", escape_json_string(&record.command));
+        println!(
+            "    \"command\": \"{}\",",
+            escape_json_string(&record.command)
+        );
         println!(
             "    \"description\": \"{}\",",
             escape_json_string(&record.description)
@@ -485,7 +494,10 @@ pub fn print_tools_json(records: &[ToolEntry]) {
             "    \"responsibility\": \"{}\",",
             escape_json_string(&record.responsibility)
         );
-        println!("    \"source\": \"{}\",", escape_json_string(&record.source));
+        println!(
+            "    \"source\": \"{}\",",
+            escape_json_string(&record.source)
+        );
         println!("    \"since\": \"{}\"", escape_json_string(&record.since));
         println!("  }}{comma}");
     }

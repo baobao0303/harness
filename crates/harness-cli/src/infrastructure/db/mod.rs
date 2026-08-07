@@ -20,12 +20,10 @@ use crate::domain::{
     validate_state_transition, validate_tool_description, validate_work_item_description,
     validate_work_item_title, AuditFinding, AuditResult, BacklogFilter, BacklogRecord,
     ContextScoreResult, ContextScoreSource, DecisionRecord, FrictionRecord, HarnessStats,
-    ImprovementProposal, IntakeRecord, InterventionRecord, StoryMatrixRecord,
-    StoryVerifyAllItem, StoryVerifyAllResult, StoryVerifyStatus, ToolEntry, TraceRecord,
-    TraceScoreResult, WorkItem, WorkItemState, WorkItemType,
+    ImprovementProposal, IntakeRecord, InterventionRecord, StoryMatrixRecord, StoryVerifyAllItem,
+    StoryVerifyAllResult, StoryVerifyStatus, ToolEntry, TraceRecord, TraceScoreResult, WorkItem,
+    WorkItemState, WorkItemType,
 };
-
-
 
 use crate::infrastructure::brownfield::{import_backlog, import_decisions, import_matrix};
 use crate::infrastructure::errors::{HarnessInfraError, Result};
@@ -1167,7 +1165,8 @@ mod tests {
         InterventionFilter, StoryAddInput, StoryUpdateInput, ToolRegisterInput, TraceInput,
     };
     use crate::domain::{
-        BacklogFilter, BoolFlag, CsvList, InputType, Priority, RiskLane, ToolArgSpec, TraceQualityTier,
+        BacklogFilter, BoolFlag, CsvList, InputType, Priority, RiskLane, ToolArgSpec,
+        TraceQualityTier,
     };
 
     fn test_repository() -> (TempDir, SqliteHarnessRepository) {
@@ -1210,7 +1209,6 @@ mod tests {
         assert!(story_columns.contains(&"last_verified_result".to_owned()));
         assert!(story_columns.contains(&"priority".to_owned()));
     }
-
 
     #[test]
     fn records_intake_and_queries_it_back() {
@@ -1342,7 +1340,8 @@ mod tests {
             .register_tool(ToolRegisterInput {
                 name: "test-tool".to_owned(),
                 command: "cargo check".to_owned(),
-                description: "Run cargo check for local package compilation verification.".to_owned(),
+                description: "Run cargo check for local package compilation verification."
+                    .to_owned(),
                 responsibility: "Verification".to_owned(),
                 args: vec![ToolArgSpec {
                     name: "package".to_owned(),
@@ -1354,7 +1353,9 @@ mod tests {
             })
             .unwrap();
 
-        let tools = repository.query_tools(Some("verification".to_owned())).unwrap();
+        let tools = repository
+            .query_tools(Some("verification".to_owned()))
+            .unwrap();
         assert!(tools.iter().any(|tool| tool.name == "test-tool"));
         let tool = tools.iter().find(|tool| tool.name == "test-tool").unwrap();
         assert_eq!(tool.source, "registered");
@@ -1391,9 +1392,15 @@ mod tests {
                 friction: Some("minor schema alignment retry".to_owned()),
                 notes: None,
                 actions: CsvList::from_optional(Some("read,patched,tested".to_owned())),
-                files_read: CsvList::from_optional(Some("crates/harness-cli/src/domain.rs".to_owned())),
-                files_changed: CsvList::from_optional(Some("crates/harness-cli/src/domain.rs".to_owned())),
-                decisions: CsvList::from_optional(Some("kept scoring inside domain module".to_owned())),
+                files_read: CsvList::from_optional(Some(
+                    "crates/harness-cli/src/domain.rs".to_owned(),
+                )),
+                files_changed: CsvList::from_optional(Some(
+                    "crates/harness-cli/src/domain.rs".to_owned(),
+                )),
+                decisions: CsvList::from_optional(Some(
+                    "kept scoring inside domain module".to_owned(),
+                )),
                 errors: CsvList::from_optional(Some("none".to_owned())),
             })
             .unwrap();
@@ -1420,10 +1427,7 @@ mod tests {
 
         let friction = repository.query_friction().unwrap();
         assert_eq!(friction.len(), 1);
-        assert_eq!(
-            friction[0].harness_friction,
-            "minor schema alignment retry"
-        );
+        assert_eq!(friction[0].harness_friction, "minor schema alignment retry");
 
         let interventions = repository
             .query_interventions(InterventionFilter {
@@ -1481,7 +1485,9 @@ mod tests {
             .add_work_item(WorkItemAddInput {
                 work_type: WorkItemType::UserStory,
                 title: "CRM - Khach hang co the tao don hang".to_owned(),
-                description: Some("As a customer, I want to create orders, So that I get items.".to_owned()),
+                description: Some(
+                    "As a customer, I want to create orders, So that I get items.".to_owned(),
+                ),
                 assigned_to: Some("alice".to_owned()),
                 story_points: Some(5),
                 remaining_work: None,
@@ -1555,10 +1561,13 @@ mod tests {
         });
         assert!(err.is_err());
 
-        let list = repository.query_work_items(Some(WorkItemType::UserStory), None).unwrap();
+        let list = repository
+            .query_work_items(Some(WorkItemType::UserStory), None)
+            .unwrap();
         assert_eq!(list.len(), 1);
-        let empty_list = repository.query_work_items(Some(WorkItemType::Bug), None).unwrap();
+        let empty_list = repository
+            .query_work_items(Some(WorkItemType::Bug), None)
+            .unwrap();
         assert_eq!(empty_list.len(), 0);
     }
 }
-

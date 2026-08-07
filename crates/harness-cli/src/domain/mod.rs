@@ -157,26 +157,59 @@ mod tests {
     #[test]
     fn parses_work_item_type_aliases() {
         assert_eq!("epic".parse::<WorkItemType>().unwrap(), WorkItemType::Epic);
-        assert_eq!("feature".parse::<WorkItemType>().unwrap(), WorkItemType::Feature);
-        assert_eq!("story".parse::<WorkItemType>().unwrap(), WorkItemType::UserStory);
-        assert_eq!("user_story".parse::<WorkItemType>().unwrap(), WorkItemType::UserStory);
-        assert_eq!("tech story".parse::<WorkItemType>().unwrap(), WorkItemType::TechnicalStory);
+        assert_eq!(
+            "feature".parse::<WorkItemType>().unwrap(),
+            WorkItemType::Feature
+        );
+        assert_eq!(
+            "story".parse::<WorkItemType>().unwrap(),
+            WorkItemType::UserStory
+        );
+        assert_eq!(
+            "user_story".parse::<WorkItemType>().unwrap(),
+            WorkItemType::UserStory
+        );
+        assert_eq!(
+            "tech story".parse::<WorkItemType>().unwrap(),
+            WorkItemType::TechnicalStory
+        );
         assert_eq!("task".parse::<WorkItemType>().unwrap(), WorkItemType::Task);
         assert_eq!("bug".parse::<WorkItemType>().unwrap(), WorkItemType::Bug);
         assert_eq!("defect".parse::<WorkItemType>().unwrap(), WorkItemType::Bug);
-        assert_eq!("tc".parse::<WorkItemType>().unwrap(), WorkItemType::Testcase);
+        assert_eq!(
+            "tc".parse::<WorkItemType>().unwrap(),
+            WorkItemType::Testcase
+        );
         assert!("invalid".parse::<WorkItemType>().is_err());
     }
 
     #[test]
     fn parses_work_item_state_aliases() {
         assert_eq!("new".parse::<WorkItemState>().unwrap(), WorkItemState::New);
-        assert_eq!("accepted".parse::<WorkItemState>().unwrap(), WorkItemState::Accepted);
-        assert_eq!("in progress".parse::<WorkItemState>().unwrap(), WorkItemState::Active);
-        assert_eq!("resolved".parse::<WorkItemState>().unwrap(), WorkItemState::Resolved);
-        assert_eq!("done".parse::<WorkItemState>().unwrap(), WorkItemState::Closed);
-        assert_eq!("blocked".parse::<WorkItemState>().unwrap(), WorkItemState::Blocked);
-        assert_eq!("cancelled".parse::<WorkItemState>().unwrap(), WorkItemState::Removed);
+        assert_eq!(
+            "accepted".parse::<WorkItemState>().unwrap(),
+            WorkItemState::Accepted
+        );
+        assert_eq!(
+            "in progress".parse::<WorkItemState>().unwrap(),
+            WorkItemState::Active
+        );
+        assert_eq!(
+            "resolved".parse::<WorkItemState>().unwrap(),
+            WorkItemState::Resolved
+        );
+        assert_eq!(
+            "done".parse::<WorkItemState>().unwrap(),
+            WorkItemState::Closed
+        );
+        assert_eq!(
+            "blocked".parse::<WorkItemState>().unwrap(),
+            WorkItemState::Blocked
+        );
+        assert_eq!(
+            "cancelled".parse::<WorkItemState>().unwrap(),
+            WorkItemState::Removed
+        );
         assert!("invalid".parse::<WorkItemState>().is_err());
     }
 
@@ -191,26 +224,63 @@ mod tests {
 
     #[test]
     fn validates_work_item_titles() {
-        assert!(validate_work_item_title(WorkItemType::Epic, "Company CRM - Tang doanh thu").is_ok());
+        assert!(
+            validate_work_item_title(WorkItemType::Epic, "Company CRM - Tang doanh thu").is_ok()
+        );
         assert!(validate_work_item_title(WorkItemType::Epic, "Company CRM").is_err());
 
-        assert!(validate_work_item_title(WorkItemType::Feature, "Quan ly don hang - Sales").is_ok());
+        assert!(
+            validate_work_item_title(WorkItemType::Feature, "Quan ly don hang - Sales").is_ok()
+        );
         assert!(validate_work_item_title(WorkItemType::Feature, "Quan ly don hang").is_err());
 
-        assert!(validate_work_item_title(WorkItemType::UserStory, "CRM - Khach hang co the tao don hang").is_ok());
-        assert!(validate_work_item_title(WorkItemType::UserStory, "CRM - Sales user can create invoice").is_ok());
-        assert!(validate_work_item_title(WorkItemType::UserStory, "CRM - Khach hang tao don hang").is_err());
+        assert!(validate_work_item_title(
+            WorkItemType::UserStory,
+            "CRM - Khach hang co the tao don hang"
+        )
+        .is_ok());
+        assert!(validate_work_item_title(
+            WorkItemType::UserStory,
+            "CRM - Sales user can create invoice"
+        )
+        .is_ok());
+        assert!(
+            validate_work_item_title(WorkItemType::UserStory, "CRM - Khach hang tao don hang")
+                .is_err()
+        );
 
         assert!(validate_work_item_title(WorkItemType::Task, "DB - Migration schema").is_ok());
         assert!(validate_work_item_title(WorkItemType::Task, "Migration schema").is_err());
 
-        assert!(validate_work_item_title(WorkItemType::Testcase, "[Auth]: Login successfully when correct credentials").is_ok());
-        assert!(validate_work_item_title(WorkItemType::Testcase, "[Auth]: Login successfully khi dung mat khau").is_ok());
-        assert!(validate_work_item_title(WorkItemType::Testcase, "Login successfully when correct credentials").is_err());
+        assert!(validate_work_item_title(
+            WorkItemType::Testcase,
+            "[Auth]: Login successfully when correct credentials"
+        )
+        .is_ok());
+        assert!(validate_work_item_title(
+            WorkItemType::Testcase,
+            "[Auth]: Login successfully khi dung mat khau"
+        )
+        .is_ok());
+        assert!(validate_work_item_title(
+            WorkItemType::Testcase,
+            "Login successfully when correct credentials"
+        )
+        .is_err());
 
-        assert!(validate_work_item_title(WorkItemType::Bug, "[API]: 500 Server Error when fetching user list").is_ok());
-        assert!(validate_work_item_title(WorkItemType::Bug, "[API]: 500 Server Error khi lay danh sach").is_ok());
-        assert!(validate_work_item_title(WorkItemType::Bug, "500 Server Error when fetching").is_err());
+        assert!(validate_work_item_title(
+            WorkItemType::Bug,
+            "[API]: 500 Server Error when fetching user list"
+        )
+        .is_ok());
+        assert!(validate_work_item_title(
+            WorkItemType::Bug,
+            "[API]: 500 Server Error khi lay danh sach"
+        )
+        .is_ok());
+        assert!(
+            validate_work_item_title(WorkItemType::Bug, "500 Server Error when fetching").is_err()
+        );
     }
 
     #[test]
@@ -219,7 +289,9 @@ mod tests {
         assert!(validate_work_item_description(WorkItemType::UserStory, Some(valid_desc)).is_ok());
 
         let invalid_desc = "Just a general description without scrum formula";
-        assert!(validate_work_item_description(WorkItemType::UserStory, Some(invalid_desc)).is_err());
+        assert!(
+            validate_work_item_description(WorkItemType::UserStory, Some(invalid_desc)).is_err()
+        );
         assert!(validate_work_item_description(WorkItemType::UserStory, None).is_err());
 
         assert!(validate_work_item_description(WorkItemType::Task, None).is_ok());
@@ -227,15 +299,54 @@ mod tests {
 
     #[test]
     fn validates_state_machine_transitions() {
-        assert!(validate_state_transition(WorkItemType::UserStory, WorkItemState::New, WorkItemState::Accepted).is_ok());
-        assert!(validate_state_transition(WorkItemType::UserStory, WorkItemState::Accepted, WorkItemState::Active).is_ok());
-        assert!(validate_state_transition(WorkItemType::UserStory, WorkItemState::Active, WorkItemState::Resolved).is_ok());
-        assert!(validate_state_transition(WorkItemType::UserStory, WorkItemState::Resolved, WorkItemState::Closed).is_ok());
-        assert!(validate_state_transition(WorkItemType::UserStory, WorkItemState::Resolved, WorkItemState::Accepted).is_ok());
-        assert!(validate_state_transition(WorkItemType::UserStory, WorkItemState::New, WorkItemState::Closed).is_err());
+        assert!(validate_state_transition(
+            WorkItemType::UserStory,
+            WorkItemState::New,
+            WorkItemState::Accepted
+        )
+        .is_ok());
+        assert!(validate_state_transition(
+            WorkItemType::UserStory,
+            WorkItemState::Accepted,
+            WorkItemState::Active
+        )
+        .is_ok());
+        assert!(validate_state_transition(
+            WorkItemType::UserStory,
+            WorkItemState::Active,
+            WorkItemState::Resolved
+        )
+        .is_ok());
+        assert!(validate_state_transition(
+            WorkItemType::UserStory,
+            WorkItemState::Resolved,
+            WorkItemState::Closed
+        )
+        .is_ok());
+        assert!(validate_state_transition(
+            WorkItemType::UserStory,
+            WorkItemState::Resolved,
+            WorkItemState::Accepted
+        )
+        .is_ok());
+        assert!(validate_state_transition(
+            WorkItemType::UserStory,
+            WorkItemState::New,
+            WorkItemState::Closed
+        )
+        .is_err());
 
-        assert!(validate_state_transition(WorkItemType::Bug, WorkItemState::Resolved, WorkItemState::New).is_ok());
-        assert!(validate_state_transition(WorkItemType::Task, WorkItemState::Resolved, WorkItemState::Active).is_ok());
+        assert!(validate_state_transition(
+            WorkItemType::Bug,
+            WorkItemState::Resolved,
+            WorkItemState::New
+        )
+        .is_ok());
+        assert!(validate_state_transition(
+            WorkItemType::Task,
+            WorkItemState::Resolved,
+            WorkItemState::Active
+        )
+        .is_ok());
     }
 }
-

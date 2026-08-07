@@ -21,7 +21,6 @@ use crate::domain::{
     WorkItemState, WorkItemType,
 };
 
-
 pub trait HarnessRepository {
     fn init(&self) -> Result<InitResult>;
     fn migrate(&self) -> Result<MigrateResult>;

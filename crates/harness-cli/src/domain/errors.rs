@@ -72,4 +72,3 @@ pub enum SyntaxValidationError {
     #[error("invalid Bug title '{0}'. Expected format: '[Module]: [Error message] when [why]'")]
     InvalidBugTitle(String),
 }
-

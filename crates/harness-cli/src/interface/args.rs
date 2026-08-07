@@ -463,19 +463,13 @@ pub struct SkillArgs {
 #[derive(Subcommand, Debug)]
 pub enum SkillAction {
     /// Find best matching skill for an intent.
-    Find {
-        intent: String,
-    },
+    Find { intent: String },
     /// Search skills by query.
-    Search {
-        query: String,
-    },
+    Search { query: String },
     /// Sync skills from Remote Skill Server.
     Sync,
     /// Pull a specific skill from Remote Skill Server.
-    Pull {
-        name: String,
-    },
+    Pull { name: String },
 }
 
 #[derive(Args, Debug)]
@@ -487,14 +481,9 @@ pub struct ConfigArgs {
 #[derive(Subcommand, Debug)]
 pub enum ConfigAction {
     /// Get a configuration value.
-    Get {
-        key: String,
-    },
+    Get { key: String },
     /// Set a configuration value.
-    Set {
-        key: String,
-        value: String,
-    },
+    Set { key: String, value: String },
     /// List configuration settings.
     List,
 }
@@ -606,4 +595,3 @@ pub struct WorkItemListArgs {
     #[arg(long)]
     pub state: Option<String>,
 }
-

@@ -19,4 +19,3 @@ pub enum InterfaceError {
     #[error("query sql requires a SQL statement")]
     EmptySql,
 }
-

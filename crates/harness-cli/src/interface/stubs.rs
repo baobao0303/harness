@@ -33,8 +33,14 @@ pub fn handle_subagent_subcommand(args: SubagentArgs) {
             println!("Sub-Agent Spawned:");
             println!("- Role: {role}");
             println!("- Model Tier: {model}");
-            println!("- Skills: {}", skills.unwrap_or_else(|| "auto-detect".to_owned()));
-            println!("- Workdir: {}", workdir.unwrap_or_else(|| "main".to_owned()));
+            println!(
+                "- Skills: {}",
+                skills.unwrap_or_else(|| "auto-detect".to_owned())
+            );
+            println!(
+                "- Workdir: {}",
+                workdir.unwrap_or_else(|| "main".to_owned())
+            );
             println!("- Prompt: {prompt}");
         }
         SubagentAction::List => {

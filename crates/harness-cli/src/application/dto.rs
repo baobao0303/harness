@@ -48,7 +48,6 @@ pub struct WorkItemUpdateInput {
     pub steps: Option<String>,
 }
 
-
 #[derive(Clone, Debug)]
 pub struct IntakeInput {
     pub input_type: InputType,

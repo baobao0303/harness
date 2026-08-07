@@ -112,9 +112,7 @@ pub fn validate_state_transition(
 
 fn has_dash_separator(s: &str) -> bool {
     let parts: Vec<&str> = s.split(|c| c == '-' || c == '–' || c == '—').collect();
-    parts.len() >= 2
-        && !parts[0].trim().is_empty()
-        && !parts[1..].join("").trim().is_empty()
+    parts.len() >= 2 && !parts[0].trim().is_empty() && !parts[1..].join("").trim().is_empty()
 }
 
 pub fn validate_work_item_title(
@@ -126,8 +124,12 @@ pub fn validate_work_item_title(
         return Err(match work_type {
             WorkItemType::Epic => SyntaxValidationError::InvalidEpicTitle(title.to_owned()),
             WorkItemType::Feature => SyntaxValidationError::InvalidFeatureTitle(title.to_owned()),
-            WorkItemType::UserStory => SyntaxValidationError::InvalidUserStoryTitle(title.to_owned()),
-            WorkItemType::Task | WorkItemType::TechnicalStory => SyntaxValidationError::InvalidTaskTitle(title.to_owned()),
+            WorkItemType::UserStory => {
+                SyntaxValidationError::InvalidUserStoryTitle(title.to_owned())
+            }
+            WorkItemType::Task | WorkItemType::TechnicalStory => {
+                SyntaxValidationError::InvalidTaskTitle(title.to_owned())
+            }
             WorkItemType::Testcase => SyntaxValidationError::InvalidTestcaseTitle(title.to_owned()),
             WorkItemType::Bug => SyntaxValidationError::InvalidBugTitle(title.to_owned()),
         });
@@ -147,9 +149,13 @@ pub fn validate_work_item_title(
         WorkItemType::UserStory => {
             let lower = trimmed.to_lowercase();
             if !has_dash_separator(trimmed)
-                || (!lower.contains("có thể") && !lower.contains("co the") && !lower.contains("can"))
+                || (!lower.contains("có thể")
+                    && !lower.contains("co the")
+                    && !lower.contains("can"))
             {
-                return Err(SyntaxValidationError::InvalidUserStoryTitle(title.to_owned()));
+                return Err(SyntaxValidationError::InvalidUserStoryTitle(
+                    title.to_owned(),
+                ));
             }
         }
 
@@ -165,7 +171,9 @@ pub fn validate_work_item_title(
                 || !trimmed.contains(':')
                 || (!lower.contains("when") && !lower.contains("khi"))
             {
-                return Err(SyntaxValidationError::InvalidTestcaseTitle(title.to_owned()));
+                return Err(SyntaxValidationError::InvalidTestcaseTitle(
+                    title.to_owned(),
+                ));
             }
         }
         WorkItemType::Bug => {
@@ -238,8 +246,6 @@ pub fn tags_to_json(tags: &[String]) -> Option<String> {
         Some(format!("[{items}]"))
     }
 }
-
-
 
 pub fn parse_tool_args(value: Option<String>) -> Result<Vec<ToolArgSpec>, ToolValidationError> {
     let Some(value) = value else {
