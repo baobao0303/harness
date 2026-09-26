@@ -18,6 +18,11 @@ if [ -z "$HARNESS_DB" ]; then
     export HARNESS_DB="$REPO_ROOT/harness.db"
 fi
 
+# Ensure ~/.cargo/bin is in PATH
+if [ -d "$HOME/.cargo/bin" ]; then
+    export PATH="$HOME/.cargo/bin:$PATH"
+fi
+
 if [ ! -f "$CLI_BIN" ]; then
     # Fallback to cargo run if binary is not compiled
     if command -v cargo >/dev/null 2>&1; then

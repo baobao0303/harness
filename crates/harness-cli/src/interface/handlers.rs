@@ -29,16 +29,65 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
             }
         },
         Command::Intake(args) => {
-            let id = service.record_intake(IntakeInput {
-                input_type: InputType::from_str(&args.input_type)?,
-                summary: args.summary,
-                risk_lane: RiskLane::from_str(&args.lane)?,
-                risk_flags: CsvList::from_optional(args.flags),
-                affected_docs: CsvList::from_optional(args.docs),
-                story_id: args.story,
-                notes: args.notes,
-            })?;
-            println!("Intake #{id} recorded.");
+            if args.auto {
+                let spec_text = if let Some(ref path) = args.spec {
+                    std::fs::read_to_string(path).map_err(|e| {
+                        InterfaceError::Execution(format!("Failed to read spec file {}: {}", path, e))
+                    })?
+                } else if let Some(ref prompt) = args.prompt {
+                    prompt.clone()
+                } else if let Some(ref summary) = args.summary {
+                    summary.clone()
+                } else {
+                    return Err(InterfaceError::Execution(
+                        "--auto requires --spec <path>, --prompt <text>, or --summary <text>".to_string(),
+                    ));
+                };
+
+                println!("🤖 Calling JEV Decision Engine (System One)...");
+                let (id, decision) = service.auto_intake(&spec_text).map_err(|e| {
+                    InterfaceError::Execution(format!("JEV Auto-Intake failed: {}", e))
+                })?;
+
+                println!("\n=== JEV Auto Intake Result ===");
+                println!("Intake ID:      #{}", id);
+                println!("Input Type:     {}", decision.input_type.as_db_value());
+                println!("Risk Lane:      {}", decision.predicted_lane.as_db_value());
+                println!("Priority:       {}", decision.priority.as_db_value());
+                if let Some(ref item_type) = decision.work_item_type {
+                    println!("Work Item Type: {}", item_type.as_str());
+                }
+                println!("Is Urgent:      {}", decision.is_urgent);
+                println!("Confidence:     {:.2}%", decision.confidence * 100.0);
+                println!("Reason:         {}", decision.summary_reason);
+                if !decision.probabilities.is_empty() {
+                    println!("Probabilities:");
+                    for (k, v) in &decision.probabilities {
+                        println!("  - {}: {:.2}%", k, v * 100.0);
+                    }
+                }
+            } else {
+                let input_type_str = args.input_type.ok_or_else(|| {
+                    InterfaceError::Execution("Missing required flag: --type (or use --auto)".to_string())
+                })?;
+                let summary_str = args.summary.ok_or_else(|| {
+                    InterfaceError::Execution("Missing required flag: --summary (or use --auto)".to_string())
+                })?;
+                let lane_str = args.lane.ok_or_else(|| {
+                    InterfaceError::Execution("Missing required flag: --lane (or use --auto)".to_string())
+                })?;
+
+                let id = service.record_intake(IntakeInput {
+                    input_type: InputType::from_str(&input_type_str)?,
+                    summary: summary_str,
+                    risk_lane: RiskLane::from_str(&lane_str)?,
+                    risk_flags: CsvList::from_optional(args.flags),
+                    affected_docs: CsvList::from_optional(args.docs),
+                    story_id: args.story,
+                    notes: args.notes,
+                })?;
+                println!("Intake #{id} recorded.");
+            }
         }
         Command::WorkItem(args) => match args.action {
             WorkItemAction::Add(args) => {
@@ -298,7 +347,18 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
         Command::Audit => print_audit(&service.audit()?),
         Command::Propose(args) => print_proposals(&service.propose(args.commit)?),
         Command::Query(args) => match args.view {
-            QueryView::Matrix(args) => print_matrix(&service.query_matrix()?, args.numeric),
+            QueryView::Matrix(args) => {
+                let mut matrix = service.query_matrix()?;
+                if let Some(ref p) = args.prefix {
+                    let p_upper = p.to_uppercase();
+                    matrix.retain(|item| item.id.to_uppercase().starts_with(&p_upper));
+                }
+                if let Some(ref s) = args.status {
+                    let s_lower = s.to_lowercase();
+                    matrix.retain(|item| item.status.to_lowercase() == s_lower);
+                }
+                print_matrix(&matrix, args.numeric);
+            }
             QueryView::Backlog(args) => {
                 print_backlog(&service.query_backlog(backlog_filter(&args))?)
             }

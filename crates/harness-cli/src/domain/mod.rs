@@ -1,3 +1,4 @@
+pub mod decision;
 pub mod entities;
 pub mod errors;
 pub mod registry;
@@ -5,6 +6,7 @@ pub mod scoring;
 pub mod types;
 pub mod validation;
 
+pub use decision::*;
 pub use entities::*;
 pub use errors::*;
 pub use registry::*;
