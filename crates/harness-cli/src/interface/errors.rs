@@ -18,4 +18,6 @@ pub enum InterfaceError {
     CurrentDir(std::io::Error),
     #[error("query sql requires a SQL statement")]
     EmptySql,
+    #[error("{0}")]
+    Execution(String),
 }

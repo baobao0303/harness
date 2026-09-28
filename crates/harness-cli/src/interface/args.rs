@@ -62,11 +62,11 @@ pub enum Command {
 #[command(after_help = RISK_LANE_HELP)]
 pub struct IntakeArgs {
     #[arg(long = "type")]
-    pub input_type: String,
+    pub input_type: Option<String>,
     #[arg(long)]
-    pub summary: String,
+    pub summary: Option<String>,
     #[arg(long, value_name = "tiny|normal|high-risk")]
-    pub lane: String,
+    pub lane: Option<String>,
     #[arg(long)]
     pub flags: Option<String>,
     #[arg(long)]
@@ -75,6 +75,15 @@ pub struct IntakeArgs {
     pub story: Option<String>,
     #[arg(long)]
     pub notes: Option<String>,
+    /// Automatically classify and evaluate risk using JEV Decision Engine.
+    #[arg(long)]
+    pub auto: bool,
+    /// Path to approved spec file for automatic intake.
+    #[arg(long)]
+    pub spec: Option<String>,
+    /// Raw task prompt for automatic intake.
+    #[arg(long)]
+    pub prompt: Option<String>,
 }
 
 #[derive(Args, Debug)]
@@ -341,6 +350,12 @@ pub struct MatrixQueryArgs {
     /// Render proof flags as CLI input values, 1 and 0, instead of yes and no.
     #[arg(long)]
     pub numeric: bool,
+    /// Filter stories by ID prefix (e.g. ECOM, CRM, TPOS).
+    #[arg(long)]
+    pub prefix: Option<String>,
+    /// Filter stories by status (e.g. active, accepted, closed).
+    #[arg(long)]
+    pub status: Option<String>,
 }
 
 #[derive(Args, Debug)]

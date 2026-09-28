@@ -2,11 +2,14 @@ use std::path::PathBuf;
 
 use super::dto::*;
 use crate::domain::{
-    AuditResult, BacklogFilter, BacklogRecord, ContextScoreResult, DecisionRecord, FrictionRecord,
-    HarnessStats, ImprovementProposal, IntakeRecord, InterventionRecord, StoryMatrixRecord,
-    StoryVerifyAllResult, StoryVerifyStatus, ToolEntry, TraceRecord, TraceScoreResult,
+    AuditResult, BacklogFilter, BacklogRecord, ContextScoreResult, CsvList, DecisionEngine,
+    DecisionRecord, FrictionRecord, HarnessStats, ImprovementProposal, IntakeDecisionResult,
+    IntakeRecord, InterventionRecord, RiskLane, StoryMatrixRecord, StoryVerifyAllResult,
+    StoryVerifyStatus, ToolEntry, TraceRecord, TraceScoreResult,
 };
-use crate::infrastructure::{HarnessRepository, SqliteHarnessRepository};
+use crate::infrastructure::{
+    HarnessInfraError, HarnessRepository, JevClient, SqliteHarnessRepository,
+};
 
 #[derive(Debug)]
 pub struct HarnessContext {
@@ -193,5 +196,60 @@ impl HarnessService {
 
     pub fn query_sql(&self, sql: &str) -> crate::infrastructure::Result<QueryTable> {
         self.repository.query_sql(sql)
+    }
+
+    pub fn auto_intake(
+        &self,
+        spec_text: &str,
+    ) -> crate::infrastructure::Result<(i64, IntakeDecisionResult)> {
+        let jev = JevClient::from_env();
+        let mut decision = jev
+            .evaluate_intake(spec_text)
+            .map_err(|e| HarnessInfraError::Jev(e))?;
+
+        // Hard policy check: If spec explicitly touches Auth or DB migration, enforce HighRisk
+        let lower = spec_text.to_lowercase();
+        let mut flags = Vec::new();
+        if lower.contains("auth")
+            || lower.contains("login")
+            || lower.contains("jwt")
+            || lower.contains("permission")
+        {
+            flags.push("Auth / Permission".to_string());
+            decision.predicted_lane = RiskLane::HighRisk;
+        }
+        if lower.contains("migration") || lower.contains("drop table") || lower.contains("schema") {
+            flags.push("Data Model Migration".to_string());
+            decision.predicted_lane = RiskLane::HighRisk;
+        }
+
+        let summary = if spec_text.lines().count() > 0 {
+            spec_text
+                .lines()
+                .next()
+                .unwrap_or("Automated Intake")
+                .trim()
+                .chars()
+                .take(120)
+                .collect::<String>()
+        } else {
+            "Automated Intake".to_string()
+        };
+
+        let intake_id = self.record_intake(IntakeInput {
+            input_type: decision.input_type.clone(),
+            summary,
+            risk_lane: decision.predicted_lane.clone(),
+            risk_flags: CsvList::from_optional(if flags.is_empty() {
+                None
+            } else {
+                Some(flags.join(", "))
+            }),
+            affected_docs: CsvList::from_optional(None),
+            story_id: None,
+            notes: Some(decision.summary_reason.clone()),
+        })?;
+
+        Ok((intake_id, decision))
     }
 }

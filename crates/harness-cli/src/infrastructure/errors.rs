@@ -46,4 +46,8 @@ pub enum HarnessInfraError {
     Sqlite(#[from] rusqlite::Error),
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("JEV error: {0}")]
+    Jev(String),
+    #[error("{0}")]
+    Execution(String),
 }
