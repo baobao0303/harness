@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-09-28 - PR #10
+
+- feat(decision): integrate JEV/Kev system one decision engine and mult… (@baobao0303)
+- Merge commit: `0895ff926b64e48fdb2bff1dd17cec93668b19f3`
+- Harness CLI release: `harness-cli-v0.1.12`
+- Changed files:
+  - `.env.example`
+  - `Cargo.lock`
+  - `crates/harness-cli/Cargo.toml`
+  - `crates/harness-cli/src/application/service.rs`
+  - `crates/harness-cli/src/domain/decision.rs`
+  - `crates/harness-cli/src/domain/mod.rs`
+  - `crates/harness-cli/src/infrastructure/errors.rs`
+  - `crates/harness-cli/src/infrastructure/jev.rs`
+  - `crates/harness-cli/src/infrastructure/mod.rs`
+  - `crates/harness-cli/src/interface/args.rs`
+  - `crates/harness-cli/src/interface/errors.rs`
+  - `crates/harness-cli/src/interface/handlers.rs`
+  - `doc_kev.md`
+  - `scripts/harness`
+  - `spec.md`
+
 ## 2026-08-07 - PR #9
 
 - Feature/refactor 20260806 (@baobao0303)
