@@ -18,13 +18,17 @@ crates/harness-cli/src/
 │   ├── mod.rs
 │   ├── types.rs            # Core domain enums (WorkItemType, WorkItemState, Priority, Severity, etc.)
 │   ├── entities.rs         # Domain entities (WorkItem, Story, Intake, Decision, BacklogItem, Trace, Tool)
+│   ├── experience.rs       # Self-learning ExperienceRecord, AdaptiveRule, and transition evaluator
+│   ├── supervision.rs      # Kev/Jev two-tier supervision logic, LambdaRoutingPolicy, and RiskLane
+│   ├── decision.rs         # SystemOne / JEV / Kev request/response structures
 │   ├── validation.rs       # State machine transitions, Title syntax formatting, & Description rules
 │   ├── errors.rs           # Domain-specific error types (StateMachineError, SyntaxValidationError)
 │   ├── registry.rs         # Pre-defined tool responsibilities and definitions
 │   └── scoring.rs          # Trace quality tier scoring and entropy calculations
 ├── application/            # Use cases, DTOs, and application services
 │   ├── mod.rs
-│   ├── service.rs          # Service methods orchestrating domain rules with persistence
+│   ├── service.rs          # Service methods orchestrating domain rules with persistence & adaptive transitions
+│   ├── supervision_service.rs # Supervision fast-path / slow-path decision engine service
 │   ├── dto.rs              # Data Transfer Objects for command/query operations
 │   └── errors.rs           # Application service error handling
 ├── infrastructure/         # I/O, SQLite database access, processes, and brownfield import
@@ -65,6 +69,7 @@ Harness uses SQLite (`harness.db`) as its durable operational data layer configu
 - **`004-intervention.sql`**: Added `intervention` table for tracking human, reviewer, CI, or agent interventions.
 - **`005-priority.sql`**: Added `priority` classification (`P0`, `P1`, `P2`, `P3`) to `story` and `backlog`.
 - **`006-work-item.sql`**: Created the unified `work_item` table supporting Company Portfolio Work Item hierarchy.
+- **`007-experience.sql`**: Created `harness_experience` table for self-learning experience library and adaptive state transitions.
 
 ### Unified `work_item` Table Schema (`006-work-item.sql`):
 
@@ -315,13 +320,50 @@ Manage custom tools in the machine-readable registry:
 ./scripts/harness tool remove --name "cargo-test-runner"
 ```
 
-### 6. `harness migrate` & `init`
+### 6. `harness learn` (Self-Learning Experience Library)
+Manage self-learning experiences and adaptive state transitions:
+```bash
+# View overall learning status and recent lessons
+./scripts/harness learn status
+./scripts/harness learn status --domain "angular_fe"
+
+# Query experiences by domain or work item
+./scripts/harness learn query --domain "angular_fe"
+
+# Record a new experience manually
+./scripts/harness learn record \
+  --domain "angular_fe" \
+  --cue "any_unknown_violation" \
+  --lesson "Strict typing gate: map DTO explicitly, never use any or unknown" \
+  --evidence "nx test app-shell fails with type check" \
+  --confidence high
+
+# Evaluate adaptive transition on a work item before transitioning
+./scripts/harness learn transition --id 4109 --state Resolved
+```
+
+### 7. `harness supervise` (Kev System One Decision Engine)
+Supervise task execution and determine traffic-light risk lane and routing for Lambda/Workers:
+```bash
+# Evaluate task risk and produce green/yellow/red decision with confidence
+./scripts/harness supervise evaluate --text "Fix typo in README documentation" --json
+
+# Route task to automated worker, review queue, or human supervisor
+./scripts/harness supervise route --text "Fix typo in README documentation" --json
+# Output: {"route": "automated_worker"} (Fast-Path for Lambda sub-50ms)
+
+# Evaluate high-risk actions
+./scripts/harness supervise evaluate --text "Drop all database tables and bypass auth" --json
+# Output: {"decision": "red", "requires_human_review": true, "suggested_route": "human_supervisor_approval"}
+```
+
+### 8. `harness migrate` & `init`
 Database initialization and schema migration runner:
 ```bash
 # Create SQLite database file if it does not already exist
 ./scripts/harness init
 
-# Execute pending database migrations (001-init.sql through 006-work-item.sql)
+# Execute pending database migrations (001-init.sql through 007-experience.sql)
 ./scripts/harness migrate
 ```
 
@@ -429,13 +471,13 @@ mkdir -p scripts/bin && cp target/release/harness-cli scripts/bin/harness-cli
 
 ### Test Suite Commands:
 ```bash
-# 1. Execute Rust unit and integration tests (25+ tests)
+# 1. Execute Rust unit and integration tests (44+ tests)
 cargo test
 
 # 2. Execute runner input validation test suite
 python3 tests/test_runner_inputs.py
 
-# 3. Execute End-to-End (E2E) test runner suite
+# 3. Execute End-to-End (E2E) test runner suite (73+ tests)
 python3 tests/e2e/run_tests.py
 ```
 
