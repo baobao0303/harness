@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-10-22 - PR #15
+
+- feat(supervision): wire live Kev System One endpoint and track .env configuration (@baobao0303)
+- Merge commit: `1cf232d34ff73f5f4e7e3ec7f7487a1b13f30155`
+- Harness CLI release: `harness-cli-v0.1.14`
+- Changed files:
+  - `.env.example`
+  - `.github/workflows/security-scan.yml`
+  - `.gitignore`
+  - `PROJECT.md`
+  - `README.md`
+  - `crates/harness-cli/src/application/supervision_service.rs`
+  - `crates/harness-cli/src/infrastructure/jev.rs`
+  - `crates/harness-cli/src/interface/handlers.rs`
+  - `docs/doc_kev.md`
+  - `docs/spec.md`
+  - `docs/spec_new.md`
+  - `projects/.gitkeep`
+  - `scripts/check-sensitive-info.py`
+
 ## 2026-10-22 - PR #14
 
 - feat(core): implement self-learning experience store and kev supervision for lambda (#12, #13) (@baobao0303)
