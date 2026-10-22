@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-10-22 - PR #14
+
+- feat(core): implement self-learning experience store and kev supervision for lambda (#12, #13) (@baobao0303)
+- Merge commit: `a941079035602157692d47ddfd5eff2a5cbe0515`
+- Harness CLI release: `harness-cli-v0.1.13`
+- Changed files:
+  - `crates/harness-cli/src/application/dto.rs`
+  - `crates/harness-cli/src/application/mod.rs`
+  - `crates/harness-cli/src/application/service.rs`
+  - `crates/harness-cli/src/application/supervision_service.rs`
+  - `crates/harness-cli/src/domain/decision.rs`
+  - `crates/harness-cli/src/domain/experience.rs`
+  - `crates/harness-cli/src/domain/mod.rs`
+  - `crates/harness-cli/src/domain/supervision.rs`
+  - `crates/harness-cli/src/domain/types.rs`
+  - `crates/harness-cli/src/infrastructure/db/mod.rs`
+  - `crates/harness-cli/src/infrastructure/db/queries.rs`
+  - `crates/harness-cli/src/infrastructure/jev.rs`
+  - `crates/harness-cli/src/infrastructure/mod.rs`
+  - `crates/harness-cli/src/interface/args.rs`
+  - `crates/harness-cli/src/interface/formatters.rs`
+  - `crates/harness-cli/src/interface/handlers.rs`
+  - `crates/harness-cli/src/interface/mod.rs`
+  - `scripts/schema/007-experience.sql`
+
 ## 2026-09-28 - PR #10
 
 - feat(decision): integrate JEV/Kev system one decision engine and mult… (@baobao0303)
