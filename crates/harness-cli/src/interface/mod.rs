@@ -13,9 +13,9 @@ pub use stubs::*;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use clap::Parser;
     use crate::interface::args::SuperviseAction;
     use clap::CommandFactory;
+    use clap::Parser;
 
     #[test]
     fn cli_definition_is_valid() {
@@ -47,7 +47,13 @@ mod tests {
 
     #[test]
     fn parses_supervise_subcommand() {
-        let cli = Cli::parse_from(["harness", "supervise", "evaluate", "--text", "Fix typo in docs"]);
+        let cli = Cli::parse_from([
+            "harness",
+            "supervise",
+            "evaluate",
+            "--text",
+            "Fix typo in docs",
+        ]);
         match cli.command {
             Command::Supervise(args) => match args.action {
                 SuperviseAction::Evaluate(eval_args) => {

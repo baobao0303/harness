@@ -341,10 +341,7 @@ impl HarnessRepository for SqliteHarnessRepository {
              ORDER BY id DESC;",
         )?;
 
-        let rows = statement.query_map(
-            params![domain, work_item_id],
-            experience_from_row,
-        )?;
+        let rows = statement.query_map(params![domain, work_item_id], experience_from_row)?;
 
         collect_rows(rows)
     }
@@ -1672,7 +1669,9 @@ mod tests {
             .unwrap();
         assert!(exp_id > 0);
 
-        let queried = repository.query_experience(Some("accounting"), None).unwrap();
+        let queried = repository
+            .query_experience(Some("accounting"), None)
+            .unwrap();
         assert_eq!(queried.len(), 1);
         assert_eq!(queried[0].domain, "accounting");
         assert_eq!(queried[0].confidence, "high");

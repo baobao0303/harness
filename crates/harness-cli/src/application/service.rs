@@ -91,7 +91,8 @@ impl HarnessService {
         work_item_id: i64,
         target_state: crate::domain::WorkItemState,
     ) -> crate::infrastructure::Result<crate::domain::AdaptiveTransitionAdvice> {
-        self.repository.adaptive_transition(work_item_id, target_state)
+        self.repository
+            .adaptive_transition(work_item_id, target_state)
     }
 
     pub fn record_task_experience(
@@ -106,7 +107,8 @@ impl HarnessService {
         work_item_id: i64,
         target_state: crate::domain::WorkItemState,
     ) -> crate::infrastructure::Result<crate::domain::AdaptiveTransitionAdvice> {
-        self.repository.adaptive_transition(work_item_id, target_state)
+        self.repository
+            .adaptive_transition(work_item_id, target_state)
     }
 
     pub fn apply_adaptive_transition(
@@ -114,7 +116,9 @@ impl HarnessService {
         work_item_id: i64,
         target_state: crate::domain::WorkItemState,
     ) -> crate::infrastructure::Result<crate::domain::AdaptiveTransitionAdvice> {
-        let advice = self.repository.adaptive_transition(work_item_id, target_state)?;
+        let advice = self
+            .repository
+            .adaptive_transition(work_item_id, target_state)?;
         if advice.can_transition {
             self.repository.update_work_item(WorkItemUpdateInput {
                 id: work_item_id,
@@ -165,7 +169,8 @@ impl HarnessService {
         }
         let domain_counts = counts.into_iter().collect();
 
-        let recent_lessons: Vec<crate::domain::ExperienceRecord> = all_exps.into_iter().take(5).collect();
+        let recent_lessons: Vec<crate::domain::ExperienceRecord> =
+            all_exps.into_iter().take(5).collect();
         let recent_experiences = recent_lessons.clone();
 
         Ok(LearningStatus {
@@ -373,9 +378,9 @@ impl HarnessService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::{Priority, WorkItemState, WorkItemType};
     use std::path::PathBuf;
     use tempfile::TempDir;
-    use crate::domain::{Priority, WorkItemState, WorkItemType};
 
     fn test_service() -> (TempDir, HarnessService) {
         let temp_dir = tempfile::tempdir().unwrap();

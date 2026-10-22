@@ -92,7 +92,11 @@ impl LambdaRoutingPolicy {
         }
     }
 
-    pub fn new(confidence_threshold: f64, max_fast_path_latency_ms: u64, require_actionable: bool) -> Self {
+    pub fn new(
+        confidence_threshold: f64,
+        max_fast_path_latency_ms: u64,
+        require_actionable: bool,
+    ) -> Self {
         Self {
             confidence_threshold,
             max_fast_path_latency_ms,
@@ -115,7 +119,12 @@ impl LambdaRoutingPolicy {
         self
     }
 
-    pub fn evaluate(&self, risk_lane: &RiskLane, confidence: f64, is_actionable: bool) -> SupervisionDecision {
+    pub fn evaluate(
+        &self,
+        risk_lane: &RiskLane,
+        confidence: f64,
+        is_actionable: bool,
+    ) -> SupervisionDecision {
         if self.require_actionable && !is_actionable {
             return SupervisionDecision {
                 route: LambdaRoute::SlowPathEscalation,
@@ -290,7 +299,10 @@ mod tests {
         assert!(!decision.is_fast_path());
         assert!(!decision.can_execute_sub_50ms());
         assert_eq!(decision.route, LambdaRoute::SlowPathEscalation);
-        assert_eq!(decision.escalation_target, EscalationTarget::SupervisorAgent);
+        assert_eq!(
+            decision.escalation_target,
+            EscalationTarget::SupervisorAgent
+        );
         assert!(decision.requires_human_approval);
         assert!(decision.requires_qc_gate);
     }
@@ -349,7 +361,10 @@ mod tests {
 
         assert!(decision.is_escalated());
         assert_eq!(decision.route, LambdaRoute::SlowPathEscalation);
-        assert_eq!(decision.escalation_target, EscalationTarget::SupervisorAgent);
+        assert_eq!(
+            decision.escalation_target,
+            EscalationTarget::SupervisorAgent
+        );
         assert!(!decision.is_actionable);
     }
 
@@ -381,8 +396,8 @@ mod tests {
 
     #[test]
     fn test_evaluate_intake_result() {
-        use std::collections::HashMap;
         use crate::domain::types::{InputType, Priority};
+        use std::collections::HashMap;
 
         let policy = LambdaRoutingPolicy::default();
         let intake = IntakeDecisionResult {

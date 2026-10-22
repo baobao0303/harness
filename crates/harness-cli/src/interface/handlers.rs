@@ -496,13 +496,17 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
                 SuperviseAction::Evaluate(eval_args) => {
                     let content = if let Some(ref path) = eval_args.file {
                         std::fs::read_to_string(path).map_err(|e| {
-                            InterfaceError::Execution(format!("Failed to read file {}: {}", path, e))
+                            InterfaceError::Execution(format!(
+                                "Failed to read file {}: {}",
+                                path, e
+                            ))
                         })?
                     } else if let Some(ref txt) = eval_args.text {
                         txt.clone()
                     } else {
                         return Err(InterfaceError::Execution(
-                            "supervise evaluate requires either --text <str> or --file <path>".to_string(),
+                            "supervise evaluate requires either --text <str> or --file <path>"
+                                .to_string(),
                         ));
                     };
 
@@ -516,7 +520,10 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
                         })?;
                         println!("{}", json);
                     } else {
-                        println!("=== Supervision Decision: [{}] ===", eval.decision.as_str().to_uppercase());
+                        println!(
+                            "=== Supervision Decision: [{}] ===",
+                            eval.decision.as_str().to_uppercase()
+                        );
                         println!("Risk Lane:      {}", eval.risk_lane);
                         println!("Confidence:     {:.2}%", eval.confidence * 100.0);
                         println!("Human Review:   {}", eval.requires_human_review);
@@ -527,13 +534,17 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
                 SuperviseAction::Route(eval_args) => {
                     let content = if let Some(ref path) = eval_args.file {
                         std::fs::read_to_string(path).map_err(|e| {
-                            InterfaceError::Execution(format!("Failed to read file {}: {}", path, e))
+                            InterfaceError::Execution(format!(
+                                "Failed to read file {}: {}",
+                                path, e
+                            ))
                         })?
                     } else if let Some(ref txt) = eval_args.text {
                         txt.clone()
                     } else {
                         return Err(InterfaceError::Execution(
-                            "supervise route requires either --text <str> or --file <path>".to_string(),
+                            "supervise route requires either --text <str> or --file <path>"
+                                .to_string(),
                         ));
                     };
 
@@ -550,72 +561,77 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
             }
         }
         Command::Config(args) => handle_config_subcommand(args),
-        Command::Learn(args) => {
-            match args.action {
-                LearnAction::Status { domain } => {
-                    let status = service.get_learning_status(domain.as_deref())?;
-                    println!("=== Harness Experience Learning Status ===");
-                    println!("Domain:               {}", domain.as_deref().unwrap_or("all"));
-                    println!("Total Experiences:    {}", status.total_experiences);
-                    println!("High Confidence:      {}", status.high_confidence_count);
-                    if !status.domain_counts.is_empty() {
-                        println!("Domain Counts:");
-                        for (d, count) in status.domain_counts {
-                            println!("  - {}: {}", d, count);
-                        }
-                    }
-                    if !status.recent_experiences.is_empty() {
-                        println!("\nRecent Lessons:");
-                        for l in status.recent_experiences {
-                            println!("- [{}] {}: {}", l.domain, l.cue, l.lesson);
-                        }
+        Command::Learn(args) => match args.action {
+            LearnAction::Status { domain } => {
+                let status = service.get_learning_status(domain.as_deref())?;
+                println!("=== Harness Experience Learning Status ===");
+                println!(
+                    "Domain:               {}",
+                    domain.as_deref().unwrap_or("all")
+                );
+                println!("Total Experiences:    {}", status.total_experiences);
+                println!("High Confidence:      {}", status.high_confidence_count);
+                if !status.domain_counts.is_empty() {
+                    println!("Domain Counts:");
+                    for (d, count) in status.domain_counts {
+                        println!("  - {}: {}", d, count);
                     }
                 }
-                LearnAction::Query(q_args) => {
-                    let exps = service.query_experience(q_args.domain.as_deref(), q_args.work_item_id)?;
-                    println!("Found {} experience record(s).", exps.len());
-                    for e in exps {
-                        println!("- #{} [{}] ({}) Cue: {} | Lesson: {}", e.id, e.domain, e.confidence, e.cue, e.lesson);
+                if !status.recent_experiences.is_empty() {
+                    println!("\nRecent Lessons:");
+                    for l in status.recent_experiences {
+                        println!("- [{}] {}: {}", l.domain, l.cue, l.lesson);
                     }
-                }
-                LearnAction::Transition(t_args) => {
-                    let target_state = WorkItemState::from_str(&t_args.state)?;
-                    let advice = service.adaptive_transition(t_args.work_item_id, target_state)?;
-                    println!("=== Adaptive Transition Advice ===");
-                    println!("Current State:  {:?}", advice.current_state);
-                    println!("Target State:   {:?}", advice.target_state);
-                    println!("Can Transition: {}", advice.can_transition);
-                    println!("Notes:          {}", advice.transition_notes);
-                    if !advice.applicable_lessons.is_empty() {
-                        println!("Applicable Lessons:");
-                        for l in &advice.applicable_lessons {
-                            println!("  * {}", l);
-                        }
-                    }
-                    if !advice.warnings.is_empty() {
-                        println!("Warnings:");
-                        for w in &advice.warnings {
-                            println!("  ! {}", w);
-                        }
-                    }
-                }
-                LearnAction::Record(r_args) => {
-                    let id = service.record_experience(ExperienceAddInput {
-                        domain: r_args.domain,
-                        work_item_id: r_args.work_item_id,
-                        cue: r_args.cue,
-                        lesson: r_args.lesson,
-                        evidence: r_args.evidence,
-                        confidence: r_args.confidence,
-                        harness_patch: r_args.harness_patch,
-                        pattern_hash: r_args.pattern_hash,
-                        successful_harness: r_args.successful_harness,
-                        failure_trajectories: r_args.failure_trajectories,
-                    })?;
-                    println!("Experience #{} recorded.", id);
                 }
             }
-        }
+            LearnAction::Query(q_args) => {
+                let exps =
+                    service.query_experience(q_args.domain.as_deref(), q_args.work_item_id)?;
+                println!("Found {} experience record(s).", exps.len());
+                for e in exps {
+                    println!(
+                        "- #{} [{}] ({}) Cue: {} | Lesson: {}",
+                        e.id, e.domain, e.confidence, e.cue, e.lesson
+                    );
+                }
+            }
+            LearnAction::Transition(t_args) => {
+                let target_state = WorkItemState::from_str(&t_args.state)?;
+                let advice = service.adaptive_transition(t_args.work_item_id, target_state)?;
+                println!("=== Adaptive Transition Advice ===");
+                println!("Current State:  {:?}", advice.current_state);
+                println!("Target State:   {:?}", advice.target_state);
+                println!("Can Transition: {}", advice.can_transition);
+                println!("Notes:          {}", advice.transition_notes);
+                if !advice.applicable_lessons.is_empty() {
+                    println!("Applicable Lessons:");
+                    for l in &advice.applicable_lessons {
+                        println!("  * {}", l);
+                    }
+                }
+                if !advice.warnings.is_empty() {
+                    println!("Warnings:");
+                    for w in &advice.warnings {
+                        println!("  ! {}", w);
+                    }
+                }
+            }
+            LearnAction::Record(r_args) => {
+                let id = service.record_experience(ExperienceAddInput {
+                    domain: r_args.domain,
+                    work_item_id: r_args.work_item_id,
+                    cue: r_args.cue,
+                    lesson: r_args.lesson,
+                    evidence: r_args.evidence,
+                    confidence: r_args.confidence,
+                    harness_patch: r_args.harness_patch,
+                    pattern_hash: r_args.pattern_hash,
+                    successful_harness: r_args.successful_harness,
+                    failure_trajectories: r_args.failure_trajectories,
+                })?;
+                println!("Experience #{} recorded.", id);
+            }
+        },
     }
 
     Ok(())

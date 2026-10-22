@@ -719,16 +719,10 @@ pub fn print_experiences(records: &[ExperienceRecord]) {
             ]
         })
         .collect::<Vec<_>>();
-    print_table(
-        &["id", "domain", "confidence", "cue", "lesson"],
-        &rows,
-    );
+    print_table(&["id", "domain", "confidence", "cue", "lesson"], &rows);
 }
 
-pub fn print_adaptive_transition_advice(
-    advice: &AdaptiveTransitionAdvice,
-    applied: bool,
-) {
+pub fn print_adaptive_transition_advice(advice: &AdaptiveTransitionAdvice, applied: bool) {
     println!(
         "Adaptive Transition: {:?} -> {:?}",
         advice.current_state, advice.target_state
@@ -738,7 +732,10 @@ pub fn print_adaptive_transition_advice(
     println!("  Notes:               {}", advice.transition_notes);
 
     if !advice.applicable_lessons.is_empty() {
-        println!("  Applicable Lessons ({}):", advice.applicable_lessons.len());
+        println!(
+            "  Applicable Lessons ({}):",
+            advice.applicable_lessons.len()
+        );
         for lesson in &advice.applicable_lessons {
             println!("    * {lesson}");
         }

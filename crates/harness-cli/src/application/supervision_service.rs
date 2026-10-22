@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::domain::{DecisionEngine, RiskLane, SystemOneQuestion, SystemOneRequest};
 use crate::infrastructure::jev::JevClient;
@@ -73,14 +73,16 @@ impl SupervisionService {
         questions.insert(
             "supervision_decision".to_string(),
             SystemOneQuestion::Choice {
-                instructions: "What is the supervision risk tier (green, yellow, or red)?".to_string(),
+                instructions: "What is the supervision risk tier (green, yellow, or red)?"
+                    .to_string(),
                 criteria,
             },
         );
         questions.insert(
             "requires_human".to_string(),
             SystemOneQuestion::Noul {
-                instructions: "Does this task require explicit human approval before execution?".to_string(),
+                instructions: "Does this task require explicit human approval before execution?"
+                    .to_string(),
             },
         );
 
@@ -177,10 +179,7 @@ impl SupervisionService {
             || lower.contains("permission")
         {
             (SupervisionDecision::Red, true, "high_risk")
-        } else if lower.contains("refactor")
-            || lower.contains("feature")
-            || lower.contains("api")
-        {
+        } else if lower.contains("refactor") || lower.contains("feature") || lower.contains("api") {
             (SupervisionDecision::Yellow, false, "normal")
         } else {
             (SupervisionDecision::Green, false, "tiny")
@@ -198,7 +197,10 @@ impl SupervisionService {
             confidence: 0.95,
             requires_human_review: requires_human,
             suggested_route: route.to_string(),
-            explanation: format!("Deterministic rule-based classification based on keywords: {:?}", decision),
+            explanation: format!(
+                "Deterministic rule-based classification based on keywords: {:?}",
+                decision
+            ),
         }
     }
 }
