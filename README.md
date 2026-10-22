@@ -115,7 +115,7 @@ CREATE INDEX IF NOT EXISTS idx_work_item_assigned ON work_item(assigned_to);
 
 ## 🏷️ 3. Company Portfolio Work Item Types
 
-Harness implements Company's multi-tiered Portfolio Backlog hierarchy (`spec_new.md` Section 5.2 / 6.3):
+Harness implements Company's multi-tiered Portfolio Backlog hierarchy (`docs/spec_new.md` Section 5.2 / 6.3):
 
 ```text
                                ┌───────────────────────────┐
@@ -151,7 +151,7 @@ Harness implements Company's multi-tiered Portfolio Backlog hierarchy (`spec_new
 
 ## 🔄 4. State Machine Lifecycle Transitions
 
-Harness enforces strict state transition matrices for each work item type per Section 5.4 & 6.4 of `spec_new.md`:
+Harness enforces strict state transition matrices for each work item type per Section 5.4 & 6.4 of `docs/spec_new.md`:
 
 ### 1. User Story Lifecycle Matrix
 - **`New`** ➔ `Accepted`, `Removed` *(BA completes documentation & UI design)*
@@ -208,7 +208,7 @@ Harness enforces strict state transition matrices for each work item type per Se
 
 ## ✍️ 5. Title Syntax Formatting & Description Rules
 
-Per Section 5.5 of `spec_new.md`, all work item creation and updates must satisfy strict title syntax formatting and description structure rules enforced in `domain/validation.rs`:
+Per Section 5.5 of `docs/spec_new.md`, all work item creation and updates must satisfy strict title syntax formatting and description structure rules enforced in `domain/validation.rs`:
 
 | Work Item Type | Title Syntax Format Rule | Example Title | Mandatory Description Format |
 | :--- | :--- | :--- | :--- |
@@ -485,7 +485,9 @@ python3 tests/e2e/run_tests.py
 
 ## 📄 Compliance Index
 
-- **`spec_new.md`**: Full Software Development & Release Specification Manual (SM-QT-01..04, SM-QĐi-01, SM-QĐ-002, DDD-COMPANY-2026).
+- **`docs/spec_new.md`**: Full Software Development & Release Specification Manual (SM-QT-01..04, SM-QĐi-01, SM-QĐ-002, DDD-COMPANY-2026).
+- **`docs/spec.md`**: Architectural & Bot Orchestration Specification.
+- **`docs/doc_kev.md`**: Technical Analysis of Jared Palmer's Kev Decision Model.
 - **`AGENTS.md`**: Repository Agent Instructions & Harness Integration Shim.
 - **`docs/HARNESS.md`**: Operating Rules & Framework Conventions.
 - **`scripts/schema/006-work-item.sql`**: Unified Work Item Database Migration.
