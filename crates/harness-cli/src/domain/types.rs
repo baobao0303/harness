@@ -1,6 +1,8 @@
 use std::fmt;
 use std::str::FromStr;
 
+use serde::{Deserialize, Serialize};
+
 use super::errors::{ParseHarnessValueError, ParseWorkItemError};
 use super::validation::{escape_json_string, normalize_token};
 
@@ -193,20 +195,52 @@ impl FromStr for InputType {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RiskLane {
     Tiny,
     Normal,
     HighRisk,
+    Green,
+    Yellow,
+    Red,
 }
 
 impl RiskLane {
-    pub fn as_db_value(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             Self::Tiny => "tiny",
             Self::Normal => "normal",
             Self::HighRisk => "high_risk",
+            Self::Green => "green",
+            Self::Yellow => "yellow",
+            Self::Red => "red",
         }
+    }
+
+    pub fn as_db_value(&self) -> &'static str {
+        match self {
+            Self::Tiny | Self::Green => "tiny",
+            Self::Normal | Self::Yellow => "normal",
+            Self::HighRisk | Self::Red => "high_risk",
+        }
+    }
+
+    pub fn is_green(&self) -> bool {
+        matches!(self, Self::Tiny | Self::Green)
+    }
+
+    pub fn is_yellow(&self) -> bool {
+        matches!(self, Self::Normal | Self::Yellow)
+    }
+
+    pub fn is_red(&self) -> bool {
+        matches!(self, Self::HighRisk | Self::Red)
+    }
+}
+
+impl fmt::Display for RiskLane {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
@@ -219,6 +253,9 @@ impl FromStr for RiskLane {
             "tiny" => Ok(Self::Tiny),
             "normal" => Ok(Self::Normal),
             "high_risk" => Ok(Self::HighRisk),
+            "green" => Ok(Self::Green),
+            "yellow" => Ok(Self::Yellow),
+            "red" => Ok(Self::Red),
             _ => Err(ParseHarnessValueError::RiskLane(value.to_owned())),
         }
     }

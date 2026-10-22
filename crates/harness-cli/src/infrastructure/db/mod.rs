@@ -11,15 +11,17 @@ pub use schema::*;
 
 use crate::application::{
     BacklogAddInput, BacklogCloseInput, BrownfieldImportResult, DecisionAddInput,
-    DecisionVerifyResult, HarnessContext, InitResult, IntakeInput, InterventionAddInput,
-    InterventionFilter, MigrateResult, QueryTable, StoryAddInput, StoryUpdateInput,
-    StoryVerifyResult, ToolRegisterInput, TraceInput, WorkItemAddInput, WorkItemUpdateInput,
+    DecisionVerifyResult, ExperienceAddInput, HarnessContext, InitResult, IntakeInput,
+    InterventionAddInput, InterventionFilter, MigrateResult, QueryTable, StoryAddInput,
+    StoryUpdateInput, StoryVerifyResult, ToolRegisterInput, TraceInput, WorkItemAddInput,
+    WorkItemUpdateInput,
 };
 use crate::domain::{
-    compiled_tool_registry, normalize_token, score_context, score_trace, tags_to_json,
-    validate_state_transition, validate_tool_description, validate_work_item_description,
-    validate_work_item_title, AuditFinding, AuditResult, BacklogFilter, BacklogRecord,
-    ContextScoreResult, ContextScoreSource, DecisionRecord, FrictionRecord, HarnessStats,
+    compiled_tool_registry, evaluate_adaptive_transition, normalize_token, score_context,
+    score_trace, tags_to_json, validate_state_transition, validate_tool_description,
+    validate_work_item_description, validate_work_item_title, AdaptiveTransitionAdvice,
+    AuditFinding, AuditResult, BacklogFilter, BacklogRecord, ContextScoreResult,
+    ContextScoreSource, DecisionRecord, ExperienceRecord, FrictionRecord, HarnessStats,
     ImprovementProposal, IntakeRecord, InterventionRecord, StoryMatrixRecord, StoryVerifyAllItem,
     StoryVerifyAllResult, StoryVerifyStatus, ToolEntry, TraceRecord, TraceScoreResult, WorkItem,
     WorkItemState, WorkItemType,
@@ -302,6 +304,62 @@ impl HarnessRepository for SqliteHarnessRepository {
         )?;
 
         collect_rows(rows)
+    }
+
+    fn record_experience(&self, input: ExperienceAddInput) -> Result<i64> {
+        let connection = self.open_existing()?;
+        connection.execute(
+            "INSERT INTO harness_experience (domain, work_item_id, cue, lesson, evidence, confidence, harness_patch, pattern_hash, successful_harness, failure_trajectories)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10);",
+            params![
+                input.domain,
+                input.work_item_id,
+                input.cue,
+                input.lesson,
+                input.evidence,
+                input.confidence,
+                input.harness_patch,
+                input.pattern_hash,
+                input.successful_harness,
+                input.failure_trajectories,
+            ],
+        )?;
+        Ok(connection.last_insert_rowid())
+    }
+
+    fn query_experience(
+        &self,
+        domain: Option<&str>,
+        work_item_id: Option<i64>,
+    ) -> Result<Vec<ExperienceRecord>> {
+        let connection = self.open_existing()?;
+        let mut statement = connection.prepare(
+            "SELECT id, domain, work_item_id, cue, lesson, evidence, confidence, harness_patch, created_at, pattern_hash, successful_harness, failure_trajectories
+             FROM harness_experience
+             WHERE (?1 IS NULL OR domain = ?1)
+               AND (?2 IS NULL OR work_item_id = ?2)
+             ORDER BY id DESC;",
+        )?;
+
+        let rows = statement.query_map(
+            params![domain, work_item_id],
+            experience_from_row,
+        )?;
+
+        collect_rows(rows)
+    }
+
+    fn adaptive_transition(
+        &self,
+        work_item_id: i64,
+        target_state: WorkItemState,
+    ) -> Result<AdaptiveTransitionAdvice> {
+        let work_item = self
+            .get_work_item(work_item_id)?
+            .ok_or(HarnessInfraError::WorkItemNotFound(work_item_id))?;
+        let experiences = self.query_experience(None, None)?;
+        let advice = evaluate_adaptive_transition(&work_item, target_state, &experiences);
+        Ok(advice)
     }
 
     fn add_story(&self, input: StoryAddInput) -> Result<()> {
@@ -1202,7 +1260,7 @@ mod tests {
         assert_eq!(repository.query_stats().unwrap().intakes, 0);
         let connection = repository.open_existing().unwrap();
         let schema_version = schema_version(&connection).unwrap();
-        assert_eq!(schema_version, 6);
+        assert_eq!(schema_version, 7);
         let story_columns = story_columns(&connection);
         assert!(story_columns.contains(&"verify_command".to_owned()));
         assert!(story_columns.contains(&"last_verified_at".to_owned()));
@@ -1569,5 +1627,94 @@ mod tests {
             .query_work_items(Some(WorkItemType::Bug), None)
             .unwrap();
         assert_eq!(empty_list.len(), 0);
+    }
+
+    #[test]
+    fn manages_experience_records_and_adaptive_transition() {
+        let (_temp_dir, repository) = test_repository();
+        repository.init().unwrap();
+
+        let work_item_id = repository
+            .add_work_item(WorkItemAddInput {
+                work_type: WorkItemType::Task,
+                title: "[Task] - Optimize ledger reconciliation".to_string(),
+                description: Some("Accounting ledger balance check".to_string()),
+                assigned_to: Some("peer".to_string()),
+                story_points: Some(2),
+                remaining_work: Some(0.0),
+                priority: Priority::P1,
+                severity: None,
+                parent_id: None,
+                area_path: Some("accounting/ledger".to_string()),
+                iteration_path: None,
+                tags: vec!["accounting".to_string(), "ledger".to_string()],
+                acceptance_criteria: None,
+                repro_steps: None,
+                actual_result: None,
+                expected_result: None,
+                steps: None,
+            })
+            .unwrap();
+
+        let exp_id = repository
+            .record_experience(ExperienceAddInput {
+                domain: "accounting".to_string(),
+                work_item_id: Some(work_item_id),
+                cue: "When accounting ledger reconciliation has credits".to_string(),
+                lesson: "Always parse negative and positive numbers".to_string(),
+                evidence: "Probe found negative amounts dropped in base run".to_string(),
+                confidence: "high".to_string(),
+                harness_patch: None,
+                pattern_hash: Some("pat_acc_01".to_string()),
+                successful_harness: Some("{\"skills\":[\"accounting\"]}".to_string()),
+                failure_trajectories: Some("failed at rollout 1".to_string()),
+            })
+            .unwrap();
+        assert!(exp_id > 0);
+
+        let queried = repository.query_experience(Some("accounting"), None).unwrap();
+        assert_eq!(queried.len(), 1);
+        assert_eq!(queried[0].domain, "accounting");
+        assert_eq!(queried[0].confidence, "high");
+        assert_eq!(queried[0].pattern_hash.as_deref(), Some("pat_acc_01"));
+        assert_eq!(
+            queried[0].successful_harness.as_deref(),
+            Some("{\"skills\":[\"accounting\"]}")
+        );
+        assert_eq!(
+            queried[0].failure_trajectories.as_deref(),
+            Some("failed at rollout 1")
+        );
+
+        // Transition New -> Active
+        repository
+            .update_work_item(WorkItemUpdateInput {
+                id: work_item_id,
+                title: None,
+                description: None,
+                state: Some(WorkItemState::Active),
+                assigned_to: None,
+                story_points: None,
+                remaining_work: None,
+                priority: None,
+                severity: None,
+                parent_id: None,
+                area_path: None,
+                iteration_path: None,
+                tags: None,
+                acceptance_criteria: None,
+                repro_steps: None,
+                actual_result: None,
+                expected_result: None,
+                steps: None,
+            })
+            .unwrap();
+
+        let advice = repository
+            .adaptive_transition(work_item_id, WorkItemState::Resolved)
+            .unwrap();
+        assert!(advice.can_transition);
+        assert_eq!(advice.applicable_lessons.len(), 1);
+        assert!(!advice.warnings.is_empty());
     }
 }

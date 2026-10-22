@@ -1,16 +1,20 @@
 pub mod decision;
 pub mod entities;
 pub mod errors;
+pub mod experience;
 pub mod registry;
 pub mod scoring;
+pub mod supervision;
 pub mod types;
 pub mod validation;
 
 pub use decision::*;
 pub use entities::*;
 pub use errors::*;
+pub use experience::*;
 pub use registry::*;
 pub use scoring::*;
+pub use supervision::*;
 pub use types::*;
 pub use validation::*;
 

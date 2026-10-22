@@ -54,6 +54,10 @@ pub enum Command {
     Subagent(SubagentArgs),
     /// Discover and sync skills.
     Skill(SkillArgs),
+    /// Supervise task execution and determine traffic-light risk lane and routing.
+    Supervise(SuperviseArgs),
+    /// Manage self-learning experience library and adaptive transitions.
+    Learn(LearnArgs),
     /// Inspect or set harness configuration.
     Config(ConfigArgs),
 }
@@ -523,6 +527,21 @@ pub enum WorkItemAction {
         #[arg(long)]
         id: i64,
     },
+    /// Evaluate or apply adaptive state transition with experience checks.
+    Transition(WorkItemTransitionArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct WorkItemTransitionArgs {
+    /// Work item ID.
+    #[arg(long)]
+    pub id: i64,
+    /// Target state (e.g. active, resolved, closed).
+    #[arg(long)]
+    pub state: String,
+    /// Apply transition to the database if validation passes.
+    #[arg(long)]
+    pub apply: bool,
 }
 
 #[derive(Args, Debug)]
@@ -609,4 +628,100 @@ pub struct WorkItemListArgs {
     pub work_type: Option<String>,
     #[arg(long)]
     pub state: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct SuperviseArgs {
+    #[command(subcommand)]
+    pub action: SuperviseAction,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SuperviseAction {
+    /// Evaluate task risk and produce green/yellow/red decision with confidence.
+    Evaluate(SuperviseEvalArgs),
+    /// Route task to automated worker, review queue, or human supervisor.
+    Route(SuperviseEvalArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct SuperviseEvalArgs {
+    /// Spec or prompt text to evaluate.
+    #[arg(long)]
+    pub text: Option<String>,
+    /// Path to file containing spec or prompt text.
+    #[arg(long)]
+    pub file: Option<String>,
+    /// Output raw JSON instead of human-readable text.
+    #[arg(long)]
+    pub json: bool,
+}
+
+#[derive(Args, Debug)]
+pub struct LearnArgs {
+    #[command(subcommand)]
+    pub action: LearnAction,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum LearnAction {
+    /// Show learning status, experience statistics, and recent lessons.
+    Status {
+        /// Optional domain filter.
+        #[arg(long)]
+        domain: Option<String>,
+    },
+    /// Query learned experiences for a domain or work item.
+    Query(LearnQueryArgs),
+    /// Evaluate or apply adaptive transition on a work item.
+    Transition(LearnTransitionArgs),
+    /// Record a new experience manually.
+    Record(LearnRecordArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct LearnQueryArgs {
+    /// Filter by domain name.
+    #[arg(long)]
+    pub domain: Option<String>,
+    /// Filter by work item ID.
+    #[arg(long)]
+    pub work_item_id: Option<i64>,
+}
+
+#[derive(Args, Debug)]
+pub struct LearnTransitionArgs {
+    /// Work item ID to evaluate or transition.
+    #[arg(long)]
+    pub work_item_id: i64,
+    /// Target state (e.g. active, resolved, closed).
+    #[arg(long)]
+    pub state: String,
+    /// Apply transition to the database if validation passes.
+    #[arg(long)]
+    pub apply: bool,
+}
+
+#[derive(Args, Debug)]
+pub struct LearnRecordArgs {
+    #[arg(long)]
+    pub domain: String,
+    #[arg(long)]
+    pub work_item_id: Option<i64>,
+    #[arg(long)]
+    pub cue: String,
+    #[arg(long)]
+    pub lesson: String,
+    #[arg(long)]
+    pub evidence: String,
+    #[arg(long, default_value = "medium", value_name = "low|medium|high")]
+    pub confidence: String,
+    #[arg(long)]
+    pub harness_patch: Option<String>,
+    #[arg(long)]
+    pub pattern_hash: Option<String>,
+    #[arg(long)]
+    pub successful_harness: Option<String>,
+    #[arg(long)]
+    pub failure_trajectories: Option<String>,
 }

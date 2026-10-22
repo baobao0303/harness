@@ -13,6 +13,8 @@ pub use stubs::*;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::Parser;
+    use crate::interface::args::SuperviseAction;
     use clap::CommandFactory;
 
     #[test]
@@ -41,6 +43,34 @@ mod tests {
             .to_string();
         assert!(verify_help.contains("story verify only accepts the story id"));
         assert!(verify_help.contains("Configure proof with story add/update --verify"));
+    }
+
+    #[test]
+    fn parses_supervise_subcommand() {
+        let cli = Cli::parse_from(["harness", "supervise", "evaluate", "--text", "Fix typo in docs"]);
+        match cli.command {
+            Command::Supervise(args) => match args.action {
+                SuperviseAction::Evaluate(eval_args) => {
+                    assert_eq!(eval_args.text.as_deref(), Some("Fix typo in docs"));
+                }
+                _ => panic!("Expected Evaluate action"),
+            },
+            _ => panic!("Expected Supervise command"),
+        }
+    }
+
+    #[test]
+    fn parses_learn_status_subcommand() {
+        let cli = Cli::parse_from(["harness", "learn", "status", "--domain", "frontend"]);
+        match cli.command {
+            Command::Learn(args) => match args.action {
+                crate::interface::args::LearnAction::Status { domain } => {
+                    assert_eq!(domain.as_deref(), Some("frontend"));
+                }
+                _ => panic!("Expected Status action"),
+            },
+            _ => panic!("Expected Learn command"),
+        }
     }
 
     #[test]
