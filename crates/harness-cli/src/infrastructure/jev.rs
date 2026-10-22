@@ -22,17 +22,41 @@ pub struct JevClient {
 
 impl JevClient {
     pub fn from_env() -> Self {
-        let endpoint = env::var("HARNESS_JEV_ENDPOINT")
-            .unwrap_or_else(|_| "http://100.124.36.46:20128/v1/systemone".to_string());
+        let mut endpoint = env::var("HARNESS_JEV_ENDPOINT").ok();
+        let mut model = env::var("HARNESS_JEV_MODEL").ok();
         let api_key = env::var("HARNESS_JEV_API_KEY").ok();
-        let model =
-            env::var("HARNESS_JEV_MODEL").unwrap_or_else(|_| "oc/jev-1.13-free".to_string());
         let fallback_endpoint = env::var("HARNESS_JEV_FALLBACK_ENDPOINT").ok();
         let fallback_model = env::var("HARNESS_JEV_FALLBACK_MODEL").ok();
         let rate_limit_ms = env::var("HARNESS_JEV_RATE_LIMIT_MS")
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(200);
+
+        if endpoint.is_none() || model.is_none() {
+            for candidate in &[".env", "../.env"] {
+                if let Ok(content) = std::fs::read_to_string(candidate) {
+                    for line in content.lines() {
+                        let trimmed = line.trim();
+                        if trimmed.is_empty() || trimmed.starts_with('#') {
+                            continue;
+                        }
+                        if let Some((k, v)) = trimmed.split_once('=') {
+                            let k = k.trim();
+                            let v = v.trim().trim_matches('"').trim_matches('\'').to_string();
+                            if k == "HARNESS_JEV_ENDPOINT" && endpoint.is_none() {
+                                endpoint = Some(v);
+                            } else if k == "HARNESS_JEV_MODEL" && model.is_none() {
+                                model = Some(v);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let endpoint =
+            endpoint.unwrap_or_else(|| "http://100.124.36.46:8008/v1/systemone".to_string());
+        let model = model.unwrap_or_else(|| "kev-latest".to_string());
 
         Self {
             endpoint,
@@ -230,16 +254,10 @@ impl JevClient {
         Ok(parsed)
     }
 
-    pub fn call_with_retry_and_fallback(
-        &self,
-        spec_text: &str,
-    ) -> Result<SystemOneResponse, String> {
-        let req_primary = self.build_intake_request(spec_text, &self.model);
-
-        // 1. Try Primary endpoint with retry
+    pub fn call_request(&self, request: &SystemOneRequest) -> Result<SystemOneResponse, String> {
         let mut last_err = String::new();
         for attempt in 1..=3 {
-            match self.post_systemone(&self.endpoint, &req_primary) {
+            match self.post_systemone(&self.endpoint, request) {
                 Ok(resp) => return Ok(resp),
                 Err(e) => {
                     last_err = e;
@@ -250,23 +268,29 @@ impl JevClient {
             }
         }
 
-        // 2. Try Fallback endpoint if available
+        // Try Fallback endpoint if available
         if let Some(ref fallback_ep) = self.fallback_endpoint {
-            let fb_model = self
-                .fallback_model
-                .as_deref()
-                .unwrap_or("jaredpalmer/kev-0.8b");
-            let req_fallback = self.build_intake_request(spec_text, fb_model);
-
-            if let Ok(resp) = self.post_systemone(fallback_ep, &req_fallback) {
+            let mut fb_req = request.clone();
+            if let Some(ref fb_model) = self.fallback_model {
+                fb_req.model = fb_model.clone();
+            }
+            if let Ok(resp) = self.post_systemone(fallback_ep, &fb_req) {
                 return Ok(resp);
             }
         }
 
         Err(format!(
-            "JEV Decision Model call failed after retries. Last error: {}",
+            "SystemOne Decision Model call failed after retries. Last error: {}",
             last_err
         ))
+    }
+
+    pub fn call_with_retry_and_fallback(
+        &self,
+        spec_text: &str,
+    ) -> Result<SystemOneResponse, String> {
+        let req_primary = self.build_intake_request(spec_text, &self.model);
+        self.call_request(&req_primary)
     }
 }
 
