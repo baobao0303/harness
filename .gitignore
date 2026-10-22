@@ -21,12 +21,6 @@ scripts/bin/harness-cli.exe
 .agents/
 .cursor/
 
-# Local sub-projects workspace (do not commit to Git)
-projects/
-!projects/.gitkeep
-
-
-
 # Harness durable layer
 harness.db
 harness.db-wal

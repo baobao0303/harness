@@ -1,7 +1,5 @@
 # QUY TRÌNH PHÁT TRIỂN & PHÁT HÀNH SẢN PHẨM PHẦN MỀM (FULL SPECIFICATION MANUAL) 🚀
 
-> **CÔNG TY (Company)**  
-> **Địa chỉ**: Tầng 2,4 Lô III-26, Đường 19/5A, Nhóm CN III, Khu công nghiệp Tân Bình, Tân Phú, TPHCM  
 > **Mã số quy trình hợp nhất**: SM-QT-01 | SM-QT-02 | SM-QT-03 | SM-QT-04 | SM-QĐi-01 | SM-QĐ-002 | DDD-COMPANY-2026  
 > **Ngày hiệu lực**: 2024 – 2026 (Phiên bản v1.0 / v1.1 - Cập nhật 26/06/2026)  
 > **Tiêu chuẩn áp dụng**: Domain-Driven Design (DDD) | Microservices Architecture | ISO/IEC 27001:2022 | Scrum Framework 2020  

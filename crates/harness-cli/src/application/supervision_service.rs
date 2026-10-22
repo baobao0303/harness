@@ -30,6 +30,8 @@ pub struct SupervisionEvaluation {
     pub requires_human_review: bool,
     pub suggested_route: String,
     pub explanation: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub urgency_score: Option<f64>,
 }
 
 pub struct SupervisionService {
@@ -59,21 +61,21 @@ impl SupervisionService {
         let mut criteria = HashMap::new();
         criteria.insert(
             "green".to_string(),
-            "Safe, normal execution, automated path without supervision blocker".to_string(),
+            "Documentation fix, typos, trivial comments, zero code change risk, or safe read-only operations".to_string(),
         );
         criteria.insert(
             "yellow".to_string(),
-            "Moderate risk or uncertainty, needs caution or lead spot-check".to_string(),
+            "Feature development, bug fixes, refactoring within existing modules, or moderate changes".to_string(),
         );
         criteria.insert(
             "red".to_string(),
-            "High risk, breaking changes, auth/data migration, requires human approval".to_string(),
+            "Database drop, breaking API changes, security bypass, authentication alteration, high risk".to_string(),
         );
 
         questions.insert(
             "supervision_decision".to_string(),
             SystemOneQuestion::Choice {
-                instructions: "What is the supervision risk tier (green, yellow, or red)?"
+                instructions: "Classify the risk level of this software development task (green, yellow, or red)."
                     .to_string(),
                 criteria,
             },
@@ -85,14 +87,26 @@ impl SupervisionService {
                     .to_string(),
             },
         );
+        questions.insert(
+            "urgency_rating".to_string(),
+            SystemOneQuestion::Score {
+                instructions: "How urgent is this supervision request?".to_string(),
+                criteria: vec![
+                    "Low: can wait days".to_string(),
+                    "Medium: normal queue within 24h".to_string(),
+                    "High: needs attention today".to_string(),
+                    "Critical: immediate action required".to_string(),
+                ],
+            },
+        );
 
-        let _req = SystemOneRequest {
+        let req = SystemOneRequest {
             model: self.jev.model.clone(),
             state: prompt_or_spec.to_string(),
             questions,
         };
 
-        let response = match self.jev.call_with_retry_and_fallback(prompt_or_spec) {
+        let response = match self.jev.call_request(&req) {
             Ok(res) => res,
             Err(_) => {
                 // If remote JEV is not reachable, fallback to deterministic heuristic
@@ -103,6 +117,7 @@ impl SupervisionService {
         let mut decision = SupervisionDecision::Green;
         let mut confidence = 0.8;
         let mut requires_human = false;
+        let mut urgency_score = None;
 
         if let Some(ans) = response.answers.get("supervision_decision") {
             if let Some(ref choice) = ans.choice {
@@ -131,8 +146,15 @@ impl SupervisionService {
             if let Some(noul_val) = ans.noul {
                 requires_human = noul_val >= 0.5;
             }
-        } else if decision == SupervisionDecision::Red {
+        }
+        if decision == SupervisionDecision::Red {
             requires_human = true;
+        }
+
+        if let Some(ans) = response.answers.get("urgency_rating") {
+            if let Some(score) = ans.score {
+                urgency_score = Some(score);
+            }
         }
 
         let route = match decision {
@@ -159,6 +181,7 @@ impl SupervisionService {
             requires_human_review: requires_human,
             suggested_route: route,
             explanation,
+            urgency_score,
         })
     }
 
@@ -201,6 +224,7 @@ impl SupervisionService {
                 "Deterministic rule-based classification based on keywords: {:?}",
                 decision
             ),
+            urgency_score: None,
         }
     }
 }

@@ -1,0 +1,31 @@
+name: Security & Sensitive Data Scan
+
+on:
+  push:
+    branches:
+      - main
+      - "feat/**"
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  scan-sensitive-info:
+    name: Scan Company Info & Addresses
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Sensitive Data & Address Guard
+        run: |
+          python3 scripts/check-sensitive-info.py

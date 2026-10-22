@@ -526,6 +526,9 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
                         );
                         println!("Risk Lane:      {}", eval.risk_lane);
                         println!("Confidence:     {:.2}%", eval.confidence * 100.0);
+                        if let Some(score) = eval.urgency_score {
+                            println!("Urgency Score:  {:.2}", score);
+                        }
                         println!("Human Review:   {}", eval.requires_human_review);
                         println!("Suggested Route: {}", eval.suggested_route);
                         println!("Explanation:    {}", eval.explanation);
