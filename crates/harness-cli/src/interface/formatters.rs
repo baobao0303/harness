@@ -1,9 +1,11 @@
-use crate::application::{BrownfieldImportResult, InitResult, MigrateResult, QueryTable};
+use crate::application::{
+    BrownfieldImportResult, InitResult, LearningStatus, MigrateResult, QueryTable,
+};
 use crate::domain::{
-    escape_json_string, proof_display, AuditFinding, AuditResult, BacklogRecord,
-    ContextScoreResult, DecisionRecord, FrictionRecord, HarnessStats, ImprovementProposal,
-    IntakeRecord, InterventionRecord, StoryMatrixRecord, StoryVerifyAllResult, ToolEntry,
-    TraceQualityTier, TraceRecord, TraceScoreResult, WorkItem,
+    escape_json_string, proof_display, AdaptiveTransitionAdvice, AuditFinding, AuditResult,
+    BacklogRecord, ContextScoreResult, DecisionRecord, ExperienceRecord, FrictionRecord,
+    HarnessStats, ImprovementProposal, IntakeRecord, InterventionRecord, StoryMatrixRecord,
+    StoryVerifyAllResult, ToolEntry, TraceQualityTier, TraceRecord, TraceScoreResult, WorkItem,
 };
 
 pub fn export_trace_tldraw(traces: &[TraceRecord]) -> String {
@@ -671,4 +673,81 @@ pub fn print_row(values: &[String], widths: &[usize]) {
         print!("{value:<width$}");
     }
     println!();
+}
+
+pub fn print_learning_status(status: &LearningStatus) {
+    println!("Self-Learning & Adaptive Transition Status:");
+    println!("  Total Experiences:   {}", status.total_experiences);
+    println!("  High-Confidence:     {}", status.high_confidence_count);
+    println!("  Domain Breakdown:");
+    if status.domain_counts.is_empty() {
+        println!("    (No domain experiences recorded yet)");
+    } else {
+        for (domain, count) in &status.domain_counts {
+            println!("    - {domain}: {count}");
+        }
+    }
+    println!();
+    println!("Recent Learned Experiences:");
+    if status.recent_lessons.is_empty() {
+        println!("  (None)");
+    } else {
+        for exp in &status.recent_lessons {
+            println!(
+                "  #{} [{}] (Confidence: {}) - Cue: {}",
+                exp.id, exp.domain, exp.confidence, exp.cue
+            );
+            println!("     Lesson: {}", exp.lesson);
+        }
+    }
+}
+
+pub fn print_experiences(records: &[ExperienceRecord]) {
+    if records.is_empty() {
+        println!("No experiences found matching query.");
+        return;
+    }
+    let rows = records
+        .iter()
+        .map(|r| {
+            vec![
+                r.id.to_string(),
+                r.domain.clone(),
+                r.confidence.clone(),
+                r.cue.clone(),
+                r.lesson.clone(),
+            ]
+        })
+        .collect::<Vec<_>>();
+    print_table(
+        &["id", "domain", "confidence", "cue", "lesson"],
+        &rows,
+    );
+}
+
+pub fn print_adaptive_transition_advice(
+    advice: &AdaptiveTransitionAdvice,
+    applied: bool,
+) {
+    println!(
+        "Adaptive Transition: {:?} -> {:?}",
+        advice.current_state, advice.target_state
+    );
+    println!("  Allowed:             {}", advice.can_transition);
+    println!("  Applied to DB:       {}", applied);
+    println!("  Notes:               {}", advice.transition_notes);
+
+    if !advice.applicable_lessons.is_empty() {
+        println!("  Applicable Lessons ({}):", advice.applicable_lessons.len());
+        for lesson in &advice.applicable_lessons {
+            println!("    * {lesson}");
+        }
+    }
+
+    if !advice.warnings.is_empty() {
+        println!("  Warnings ({}):", advice.warnings.len());
+        for warning in &advice.warnings {
+            println!("    ! [WARNING] {warning}");
+        }
+    }
 }

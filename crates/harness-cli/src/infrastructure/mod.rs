@@ -12,15 +12,15 @@ pub use process::*;
 
 use crate::application::{
     BacklogAddInput, BacklogCloseInput, BrownfieldImportResult, DecisionAddInput,
-    DecisionVerifyResult, InitResult, IntakeInput, InterventionAddInput, InterventionFilter,
-    MigrateResult, QueryTable, StoryAddInput, StoryUpdateInput, StoryVerifyResult,
-    ToolRegisterInput, TraceInput, WorkItemAddInput, WorkItemUpdateInput,
+    DecisionVerifyResult, ExperienceAddInput, InitResult, IntakeInput, InterventionAddInput,
+    InterventionFilter, MigrateResult, QueryTable, StoryAddInput, StoryUpdateInput,
+    StoryVerifyResult, ToolRegisterInput, TraceInput, WorkItemAddInput, WorkItemUpdateInput,
 };
 use crate::domain::{
-    AuditResult, BacklogFilter, BacklogRecord, ContextScoreResult, DecisionRecord, FrictionRecord,
-    HarnessStats, ImprovementProposal, IntakeRecord, InterventionRecord, StoryMatrixRecord,
-    StoryVerifyAllResult, StoryVerifyStatus, ToolEntry, TraceRecord, TraceScoreResult, WorkItem,
-    WorkItemState, WorkItemType,
+    AdaptiveTransitionAdvice, AuditResult, BacklogFilter, BacklogRecord, ContextScoreResult,
+    DecisionRecord, ExperienceRecord, FrictionRecord, HarnessStats, ImprovementProposal,
+    IntakeRecord, InterventionRecord, StoryMatrixRecord, StoryVerifyAllResult, StoryVerifyStatus,
+    ToolEntry, TraceRecord, TraceScoreResult, WorkItem, WorkItemState, WorkItemType,
 };
 
 pub trait HarnessRepository {
@@ -36,6 +36,17 @@ pub trait HarnessRepository {
         work_type: Option<WorkItemType>,
         state: Option<WorkItemState>,
     ) -> Result<Vec<WorkItem>>;
+    fn record_experience(&self, input: ExperienceAddInput) -> Result<i64>;
+    fn query_experience(
+        &self,
+        domain: Option<&str>,
+        work_item_id: Option<i64>,
+    ) -> Result<Vec<ExperienceRecord>>;
+    fn adaptive_transition(
+        &self,
+        work_item_id: i64,
+        target_state: WorkItemState,
+    ) -> Result<AdaptiveTransitionAdvice>;
     fn add_story(&self, input: StoryAddInput) -> Result<()>;
 
     fn update_story(&self, input: StoryUpdateInput) -> Result<()>;

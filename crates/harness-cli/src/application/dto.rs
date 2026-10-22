@@ -83,6 +83,20 @@ pub struct StoryUpdateInput {
     pub priority: Option<Priority>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExperienceAddInput {
+    pub domain: String,
+    pub work_item_id: Option<i64>,
+    pub cue: String,
+    pub lesson: String,
+    pub evidence: String,
+    pub confidence: String,
+    pub harness_patch: Option<String>,
+    pub pattern_hash: Option<String>,
+    pub successful_harness: Option<String>,
+    pub failure_trajectories: Option<String>,
+}
+
 #[derive(Clone, Debug)]
 pub struct DecisionAddInput {
     pub id: String,
@@ -196,4 +210,16 @@ pub struct StoryVerifyResult {
 pub struct QueryTable {
     pub headers: Vec<String>,
     pub rows: Vec<Vec<String>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LearningStatus {
+    pub domain: Option<String>,
+    pub total_experiences: usize,
+    pub high_confidence_count: usize,
+    pub medium_confidence_count: usize,
+    pub low_confidence_count: usize,
+    pub domain_counts: Vec<(String, usize)>,
+    pub recent_lessons: Vec<crate::domain::ExperienceRecord>,
+    pub recent_experiences: Vec<crate::domain::ExperienceRecord>,
 }

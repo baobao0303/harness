@@ -230,3 +230,22 @@ pub fn sql_value_to_string(value: ValueRef<'_>) -> String {
         ValueRef::Blob(value) => format!("<{} bytes>", value.len()),
     }
 }
+
+pub fn experience_from_row(
+    row: &rusqlite::Row<'_>,
+) -> rusqlite::Result<crate::domain::ExperienceRecord> {
+    Ok(crate::domain::ExperienceRecord {
+        id: row.get(0)?,
+        domain: row.get(1)?,
+        work_item_id: row.get(2)?,
+        cue: row.get(3)?,
+        lesson: row.get(4)?,
+        evidence: row.get(5)?,
+        confidence: row.get(6)?,
+        harness_patch: row.get(7)?,
+        created_at: row.get(8)?,
+        pattern_hash: row.get(9).unwrap_or(None),
+        successful_harness: row.get(10).unwrap_or(None),
+        failure_trajectories: row.get(11).unwrap_or(None),
+    })
+}

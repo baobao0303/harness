@@ -13,9 +13,7 @@ pub enum SystemOneQuestion {
         criteria: HashMap<String, String>,
     },
     #[serde(rename = "noul")]
-    Noul {
-        instructions: String,
-    },
+    Noul { instructions: String },
     #[serde(rename = "score")]
     Score {
         instructions: String,

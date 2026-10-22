@@ -7,9 +7,9 @@ use super::errors::InterfaceError;
 use super::formatters::*;
 use super::stubs::*;
 use crate::application::{
-    BacklogAddInput, BacklogCloseInput, DecisionAddInput, HarnessContext, HarnessService,
-    IntakeInput, InterventionAddInput, InterventionFilter, StoryAddInput, StoryUpdateInput,
-    ToolRegisterInput, TraceInput, WorkItemAddInput, WorkItemUpdateInput,
+    BacklogAddInput, BacklogCloseInput, DecisionAddInput, ExperienceAddInput, HarnessContext,
+    HarnessService, IntakeInput, InterventionAddInput, InterventionFilter, StoryAddInput,
+    StoryUpdateInput, ToolRegisterInput, TraceInput, WorkItemAddInput, WorkItemUpdateInput,
 };
 use crate::domain::{
     parse_optional_integer, parse_tags_string, parse_tool_args, validate_responsibility,
@@ -32,7 +32,10 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
             if args.auto {
                 let spec_text = if let Some(ref path) = args.spec {
                     std::fs::read_to_string(path).map_err(|e| {
-                        InterfaceError::Execution(format!("Failed to read spec file {}: {}", path, e))
+                        InterfaceError::Execution(format!(
+                            "Failed to read spec file {}: {}",
+                            path, e
+                        ))
                     })?
                 } else if let Some(ref prompt) = args.prompt {
                     prompt.clone()
@@ -40,7 +43,8 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
                     summary.clone()
                 } else {
                     return Err(InterfaceError::Execution(
-                        "--auto requires --spec <path>, --prompt <text>, or --summary <text>".to_string(),
+                        "--auto requires --spec <path>, --prompt <text>, or --summary <text>"
+                            .to_string(),
                     ));
                 };
 
@@ -68,13 +72,19 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
                 }
             } else {
                 let input_type_str = args.input_type.ok_or_else(|| {
-                    InterfaceError::Execution("Missing required flag: --type (or use --auto)".to_string())
+                    InterfaceError::Execution(
+                        "Missing required flag: --type (or use --auto)".to_string(),
+                    )
                 })?;
                 let summary_str = args.summary.ok_or_else(|| {
-                    InterfaceError::Execution("Missing required flag: --summary (or use --auto)".to_string())
+                    InterfaceError::Execution(
+                        "Missing required flag: --summary (or use --auto)".to_string(),
+                    )
                 })?;
                 let lane_str = args.lane.ok_or_else(|| {
-                    InterfaceError::Execution("Missing required flag: --lane (or use --auto)".to_string())
+                    InterfaceError::Execution(
+                        "Missing required flag: --lane (or use --auto)".to_string(),
+                    )
                 })?;
 
                 let id = service.record_intake(IntakeInput {
@@ -135,6 +145,26 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
                     .transpose()?;
                 let tags = args.tags.map(|value| parse_tags_string(Some(&value)));
 
+                if let Some(target_state) = state {
+                    let advice = service.query_adaptive_guidance(args.id, target_state)?;
+                    if !advice.can_transition {
+                        return Err(InterfaceError::Execution(format!(
+                            "Invalid transition to {:?}: {}",
+                            target_state,
+                            advice.warnings.join("; ")
+                        )));
+                    }
+                    if !advice.applicable_lessons.is_empty() {
+                        println!("Adaptive guidance for WorkItem #{}:", args.id);
+                        for lesson in &advice.applicable_lessons {
+                            println!("  [LEARNED] {lesson}");
+                        }
+                    }
+                    for warning in &advice.warnings {
+                        println!("  [ADVICE] {warning}");
+                    }
+                }
+
                 service.update_work_item(WorkItemUpdateInput {
                     id: args.id,
                     title: args.title,
@@ -174,6 +204,54 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
                     crate::infrastructure::HarnessInfraError::WorkItemNotFound(id),
                 )?;
                 print_work_item_detail(&item);
+            }
+            WorkItemAction::Transition(t_args) => {
+                let target_state = WorkItemState::from_str(&t_args.state)?;
+                let advice = service.adaptive_transition(t_args.id, target_state)?;
+                println!("=== Adaptive Transition Advice ===");
+                println!("Current State:  {:?}", advice.current_state);
+                println!("Target State:   {:?}", advice.target_state);
+                println!("Can Transition: {}", advice.can_transition);
+                println!("Notes:          {}", advice.transition_notes);
+                if !advice.applicable_lessons.is_empty() {
+                    println!("Applicable Lessons:");
+                    for l in &advice.applicable_lessons {
+                        println!("  * {}", l);
+                    }
+                }
+                if !advice.warnings.is_empty() {
+                    println!("Warnings:");
+                    for w in &advice.warnings {
+                        println!("  ! {}", w);
+                    }
+                }
+                if t_args.apply {
+                    if advice.can_transition {
+                        service.update_work_item(WorkItemUpdateInput {
+                            id: t_args.id,
+                            state: Some(target_state),
+                            title: None,
+                            description: None,
+                            assigned_to: None,
+                            story_points: None,
+                            remaining_work: None,
+                            priority: None,
+                            severity: None,
+                            parent_id: None,
+                            area_path: None,
+                            iteration_path: None,
+                            tags: None,
+                            acceptance_criteria: None,
+                            repro_steps: None,
+                            actual_result: None,
+                            expected_result: None,
+                            steps: None,
+                        })?;
+                        println!("State transition applied to Work Item #{}.", t_args.id);
+                    } else {
+                        println!("Cannot apply transition: state machine validation failed.");
+                    }
+                }
             }
         },
         Command::Story(args) => match args.action {
@@ -412,7 +490,132 @@ pub fn run(cli: Cli) -> Result<(), InterfaceError> {
         Command::Worktree(args) => handle_worktree_subcommand(args),
         Command::Subagent(args) => handle_subagent_subcommand(args),
         Command::Skill(args) => handle_skill_subcommand(args),
+        Command::Supervise(args) => {
+            let supervision_service = crate::application::SupervisionService::new();
+            match args.action {
+                SuperviseAction::Evaluate(eval_args) => {
+                    let content = if let Some(ref path) = eval_args.file {
+                        std::fs::read_to_string(path).map_err(|e| {
+                            InterfaceError::Execution(format!("Failed to read file {}: {}", path, e))
+                        })?
+                    } else if let Some(ref txt) = eval_args.text {
+                        txt.clone()
+                    } else {
+                        return Err(InterfaceError::Execution(
+                            "supervise evaluate requires either --text <str> or --file <path>".to_string(),
+                        ));
+                    };
+
+                    let eval = supervision_service.evaluate(&content).map_err(|e| {
+                        InterfaceError::Execution(format!("Supervision evaluation failed: {}", e))
+                    })?;
+
+                    if eval_args.json {
+                        let json = serde_json::to_string_pretty(&eval).map_err(|e| {
+                            InterfaceError::Execution(format!("JSON serialization failed: {}", e))
+                        })?;
+                        println!("{}", json);
+                    } else {
+                        println!("=== Supervision Decision: [{}] ===", eval.decision.as_str().to_uppercase());
+                        println!("Risk Lane:      {}", eval.risk_lane);
+                        println!("Confidence:     {:.2}%", eval.confidence * 100.0);
+                        println!("Human Review:   {}", eval.requires_human_review);
+                        println!("Suggested Route: {}", eval.suggested_route);
+                        println!("Explanation:    {}", eval.explanation);
+                    }
+                }
+                SuperviseAction::Route(eval_args) => {
+                    let content = if let Some(ref path) = eval_args.file {
+                        std::fs::read_to_string(path).map_err(|e| {
+                            InterfaceError::Execution(format!("Failed to read file {}: {}", path, e))
+                        })?
+                    } else if let Some(ref txt) = eval_args.text {
+                        txt.clone()
+                    } else {
+                        return Err(InterfaceError::Execution(
+                            "supervise route requires either --text <str> or --file <path>".to_string(),
+                        ));
+                    };
+
+                    let route = supervision_service.route(&content).map_err(|e| {
+                        InterfaceError::Execution(format!("Supervision routing failed: {}", e))
+                    })?;
+
+                    if eval_args.json {
+                        println!("{{\"route\": \"{}\"}}", route);
+                    } else {
+                        println!("{}", route);
+                    }
+                }
+            }
+        }
         Command::Config(args) => handle_config_subcommand(args),
+        Command::Learn(args) => {
+            match args.action {
+                LearnAction::Status { domain } => {
+                    let status = service.get_learning_status(domain.as_deref())?;
+                    println!("=== Harness Experience Learning Status ===");
+                    println!("Domain:               {}", domain.as_deref().unwrap_or("all"));
+                    println!("Total Experiences:    {}", status.total_experiences);
+                    println!("High Confidence:      {}", status.high_confidence_count);
+                    if !status.domain_counts.is_empty() {
+                        println!("Domain Counts:");
+                        for (d, count) in status.domain_counts {
+                            println!("  - {}: {}", d, count);
+                        }
+                    }
+                    if !status.recent_experiences.is_empty() {
+                        println!("\nRecent Lessons:");
+                        for l in status.recent_experiences {
+                            println!("- [{}] {}: {}", l.domain, l.cue, l.lesson);
+                        }
+                    }
+                }
+                LearnAction::Query(q_args) => {
+                    let exps = service.query_experience(q_args.domain.as_deref(), q_args.work_item_id)?;
+                    println!("Found {} experience record(s).", exps.len());
+                    for e in exps {
+                        println!("- #{} [{}] ({}) Cue: {} | Lesson: {}", e.id, e.domain, e.confidence, e.cue, e.lesson);
+                    }
+                }
+                LearnAction::Transition(t_args) => {
+                    let target_state = WorkItemState::from_str(&t_args.state)?;
+                    let advice = service.adaptive_transition(t_args.work_item_id, target_state)?;
+                    println!("=== Adaptive Transition Advice ===");
+                    println!("Current State:  {:?}", advice.current_state);
+                    println!("Target State:   {:?}", advice.target_state);
+                    println!("Can Transition: {}", advice.can_transition);
+                    println!("Notes:          {}", advice.transition_notes);
+                    if !advice.applicable_lessons.is_empty() {
+                        println!("Applicable Lessons:");
+                        for l in &advice.applicable_lessons {
+                            println!("  * {}", l);
+                        }
+                    }
+                    if !advice.warnings.is_empty() {
+                        println!("Warnings:");
+                        for w in &advice.warnings {
+                            println!("  ! {}", w);
+                        }
+                    }
+                }
+                LearnAction::Record(r_args) => {
+                    let id = service.record_experience(ExperienceAddInput {
+                        domain: r_args.domain,
+                        work_item_id: r_args.work_item_id,
+                        cue: r_args.cue,
+                        lesson: r_args.lesson,
+                        evidence: r_args.evidence,
+                        confidence: r_args.confidence,
+                        harness_patch: r_args.harness_patch,
+                        pattern_hash: r_args.pattern_hash,
+                        successful_harness: r_args.successful_harness,
+                        failure_trajectories: r_args.failure_trajectories,
+                    })?;
+                    println!("Experience #{} recorded.", id);
+                }
+            }
+        }
     }
 
     Ok(())

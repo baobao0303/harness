@@ -71,6 +71,122 @@ impl HarnessService {
         self.repository.query_work_items(work_type, state)
     }
 
+    pub fn record_experience(
+        &self,
+        input: ExperienceAddInput,
+    ) -> crate::infrastructure::Result<i64> {
+        self.repository.record_experience(input)
+    }
+
+    pub fn query_experience(
+        &self,
+        domain: Option<&str>,
+        work_item_id: Option<i64>,
+    ) -> crate::infrastructure::Result<Vec<crate::domain::ExperienceRecord>> {
+        self.repository.query_experience(domain, work_item_id)
+    }
+
+    pub fn adaptive_transition(
+        &self,
+        work_item_id: i64,
+        target_state: crate::domain::WorkItemState,
+    ) -> crate::infrastructure::Result<crate::domain::AdaptiveTransitionAdvice> {
+        self.repository.adaptive_transition(work_item_id, target_state)
+    }
+
+    pub fn record_task_experience(
+        &self,
+        input: ExperienceAddInput,
+    ) -> crate::infrastructure::Result<i64> {
+        self.repository.record_experience(input)
+    }
+
+    pub fn query_adaptive_guidance(
+        &self,
+        work_item_id: i64,
+        target_state: crate::domain::WorkItemState,
+    ) -> crate::infrastructure::Result<crate::domain::AdaptiveTransitionAdvice> {
+        self.repository.adaptive_transition(work_item_id, target_state)
+    }
+
+    pub fn apply_adaptive_transition(
+        &self,
+        work_item_id: i64,
+        target_state: crate::domain::WorkItemState,
+    ) -> crate::infrastructure::Result<crate::domain::AdaptiveTransitionAdvice> {
+        let advice = self.repository.adaptive_transition(work_item_id, target_state)?;
+        if advice.can_transition {
+            self.repository.update_work_item(WorkItemUpdateInput {
+                id: work_item_id,
+                title: None,
+                description: None,
+                state: Some(target_state),
+                assigned_to: None,
+                story_points: None,
+                remaining_work: None,
+                priority: None,
+                severity: None,
+                parent_id: None,
+                area_path: None,
+                iteration_path: None,
+                tags: None,
+                acceptance_criteria: None,
+                repro_steps: None,
+                actual_result: None,
+                expected_result: None,
+                steps: None,
+            })?;
+        }
+        Ok(advice)
+    }
+
+    pub fn learning_status(
+        &self,
+        domain: Option<&str>,
+    ) -> crate::infrastructure::Result<LearningStatus> {
+        let all_exps = self.repository.query_experience(domain, None)?;
+        let total_experiences = all_exps.len();
+        let high_confidence_count = all_exps
+            .iter()
+            .filter(|e| e.confidence.eq_ignore_ascii_case("high"))
+            .count();
+        let medium_confidence_count = all_exps
+            .iter()
+            .filter(|e| e.confidence.eq_ignore_ascii_case("medium"))
+            .count();
+        let low_confidence_count = all_exps
+            .iter()
+            .filter(|e| e.confidence.eq_ignore_ascii_case("low"))
+            .count();
+
+        let mut counts = std::collections::BTreeMap::new();
+        for exp in &all_exps {
+            *counts.entry(exp.domain.clone()).or_insert(0usize) += 1;
+        }
+        let domain_counts = counts.into_iter().collect();
+
+        let recent_lessons: Vec<crate::domain::ExperienceRecord> = all_exps.into_iter().take(5).collect();
+        let recent_experiences = recent_lessons.clone();
+
+        Ok(LearningStatus {
+            domain: domain.map(|d| d.to_string()),
+            total_experiences,
+            high_confidence_count,
+            medium_confidence_count,
+            low_confidence_count,
+            domain_counts,
+            recent_lessons,
+            recent_experiences,
+        })
+    }
+
+    pub fn get_learning_status(
+        &self,
+        domain: Option<&str>,
+    ) -> crate::infrastructure::Result<LearningStatus> {
+        self.learning_status(domain)
+    }
+
     pub fn record_intake(&self, input: IntakeInput) -> crate::infrastructure::Result<i64> {
         self.repository.record_intake(input)
     }
@@ -251,5 +367,112 @@ impl HarnessService {
         })?;
 
         Ok((intake_id, decision))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+    use crate::domain::{Priority, WorkItemState, WorkItemType};
+
+    fn test_service() -> (TempDir, HarnessService) {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .ancestors()
+            .nth(2)
+            .unwrap()
+            .to_path_buf();
+        let context = HarnessContext {
+            repo_root: repo_root.clone(),
+            db_path: temp_dir.path().join("harness.db"),
+            schema_dir: repo_root.join("scripts/schema"),
+        };
+        let service = HarnessService::new(context);
+        service.init().unwrap();
+        (temp_dir, service)
+    }
+
+    #[test]
+    fn test_adaptive_transition_service_flow() {
+        let (_tmp, service) = test_service();
+
+        let item_id = service
+            .add_work_item(WorkItemAddInput {
+                work_type: WorkItemType::Task,
+                title: "[Task] - Refactor auth handler".to_string(),
+                description: Some("Handle expired JWT token".to_string()),
+                assigned_to: Some("peer".to_string()),
+                story_points: Some(2),
+                remaining_work: Some(0.0),
+                priority: Priority::P1,
+                severity: None,
+                parent_id: None,
+                area_path: Some("security/auth".to_string()),
+                iteration_path: None,
+                tags: vec!["auth".to_string(), "jwt".to_string()],
+                acceptance_criteria: None,
+                repro_steps: None,
+                actual_result: None,
+                expected_result: None,
+                steps: None,
+            })
+            .unwrap();
+
+        // Record experience
+        let exp_id = service
+            .record_task_experience(ExperienceAddInput {
+                domain: "security".to_string(),
+                work_item_id: Some(item_id),
+                cue: "When handling jwt tokens in auth handler".to_string(),
+                lesson: "Verify signature before claims".to_string(),
+                evidence: "Expired token check skipped signature".to_string(),
+                confidence: "high".to_string(),
+                harness_patch: None,
+                pattern_hash: Some("hash_sec_jwt".to_string()),
+                successful_harness: None,
+                failure_trajectories: None,
+            })
+            .unwrap();
+        assert!(exp_id > 0);
+
+        // Check learning status
+        let status = service.learning_status(Some("security")).unwrap();
+        assert_eq!(status.total_experiences, 1);
+        assert_eq!(status.high_confidence_count, 1);
+        assert_eq!(status.recent_lessons.len(), 1);
+        assert_eq!(status.recent_lessons[0].domain, "security");
+
+        // Transition: New -> Active
+        let advice = service
+            .apply_adaptive_transition(item_id, WorkItemState::Active)
+            .unwrap();
+        assert!(advice.can_transition);
+        let updated = service.get_work_item(item_id).unwrap().unwrap();
+        assert_eq!(updated.state, WorkItemState::Active);
+
+        // Transition: Active -> Resolved (has advice with high confidence lesson)
+        let guidance = service
+            .query_adaptive_guidance(item_id, WorkItemState::Resolved)
+            .unwrap();
+        assert!(guidance.can_transition);
+        assert_eq!(guidance.applicable_lessons.len(), 1);
+        assert!(!guidance.warnings.is_empty());
+
+        let advice = service
+            .apply_adaptive_transition(item_id, WorkItemState::Resolved)
+            .unwrap();
+        assert!(advice.can_transition);
+        let resolved = service.get_work_item(item_id).unwrap().unwrap();
+        assert_eq!(resolved.state, WorkItemState::Resolved);
+
+        // Invalid transition: Resolved -> New (should fail / not transition)
+        let invalid_advice = service
+            .apply_adaptive_transition(item_id, WorkItemState::New)
+            .unwrap();
+        assert!(!invalid_advice.can_transition);
+        let unchanged = service.get_work_item(item_id).unwrap().unwrap();
+        assert_eq!(unchanged.state, WorkItemState::Resolved);
     }
 }

@@ -6,8 +6,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::domain::{
-    DecisionEngine, InputType, IntakeDecisionResult, Priority, RiskLane,
-    SystemOneQuestion, SystemOneRequest, SystemOneResponse, WorkItemType,
+    DecisionEngine, InputType, IntakeDecisionResult, Priority, RiskLane, SystemOneQuestion,
+    SystemOneRequest, SystemOneResponse, WorkItemType,
 };
 
 pub struct JevClient {
@@ -206,9 +206,7 @@ impl JevClient {
             .timeout(Duration::from_secs(10))
             .build();
 
-        let mut req = agent
-            .post(endpoint)
-            .set("Content-Type", "application/json");
+        let mut req = agent.post(endpoint).set("Content-Type", "application/json");
 
         if let Some(ref key) = self.api_key {
             req = req.set("Authorization", &format!("Bearer {}", key));
